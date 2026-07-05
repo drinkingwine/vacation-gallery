@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteTrip, getTrip } from "@/lib/github";
+import { deleteTrip, getTrip, updateTripMetadata } from "@/lib/github";
+import { tripLabel } from "@/lib/trip-meta";
+import type { TripMetadata } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,46 @@ export async function DELETE(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[API /trips/[slug] DELETE]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  try {
+    const { slug } = await params;
+    const tripName = decodeURIComponent(slug);
+    const trip = await getTrip(tripName);
+
+    if (!trip) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    }
+
+    const body = await req.json();
+    const metadata: TripMetadata = {
+      title:
+        typeof body.title === "string" && body.title.trim()
+          ? body.title.trim()
+          : tripLabel(tripName),
+      location:
+        typeof body.location === "string" ? body.location.trim() : undefined,
+      startDate:
+        typeof body.startDate === "string" ? body.startDate.trim() : undefined,
+      endDate:
+        typeof body.endDate === "string" ? body.endDate.trim() : undefined,
+      description:
+        typeof body.description === "string"
+          ? body.description.trim()
+          : undefined,
+    };
+
+    await updateTripMetadata(tripName, metadata);
+    return NextResponse.json({ success: true, ...metadata });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[API /trips/[slug] PATCH]", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

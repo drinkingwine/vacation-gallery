@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { SpotlightCard } from "@/components/SpotlightCard";
 
 function LoginForm() {
   const router = useRouter();
@@ -65,55 +66,63 @@ function LoginForm() {
     <div className="flex min-h-full flex-1 items-center justify-center px-6 py-16">
       <div className="w-full max-w-md">
         <div className="text-center">
-          <p className="text-sm font-medium uppercase tracking-widest text-terracotta">
+          <p className="text-xs uppercase tracking-[0.4em] text-zinc-600/80">
             Vacation Photos
           </p>
-          <h1 className="font-display mt-3 text-4xl tracking-tight text-stone-900">
+          <h1 className="font-serif mt-3 text-4xl font-semibold tracking-tight text-zinc-900 dark:text-white">
             Welcome
           </h1>
-          <p className="mt-3 text-stone-600">
+          <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
             Browse as a guest or sign in as admin to upload.
           </p>
         </div>
 
         {error && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
         {mode === "choose" ? (
           <div className="mt-8 space-y-3">
-            <button
-              type="button"
-              onClick={handleGuest}
-              disabled={loading}
-              className="w-full rounded-2xl border border-stone-200 bg-white px-6 py-5 text-left shadow-sm transition-all hover:border-terracotta/40 hover:shadow-md disabled:opacity-60"
-            >
-              <p className="font-medium text-stone-900">Continue as guest</p>
-              <p className="mt-1 text-sm text-stone-500">
-                Browse trips and photos
-              </p>
-            </button>
+            <SpotlightCard>
+              <button
+                type="button"
+                onClick={handleGuest}
+                disabled={loading}
+                className="w-full px-6 py-5 text-left transition disabled:opacity-60"
+              >
+                <p className="font-medium text-zinc-900 dark:text-white">
+                  Continue as guest
+                </p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  Browse trips and photos
+                </p>
+              </button>
+            </SpotlightCard>
 
-            <button
-              type="button"
-              onClick={() => setMode("admin")}
-              disabled={loading}
-              className="w-full rounded-2xl border border-stone-200 bg-white px-6 py-5 text-left shadow-sm transition-all hover:border-terracotta/40 hover:shadow-md disabled:opacity-60"
-            >
-              <p className="font-medium text-stone-900">Admin sign in</p>
-              <p className="mt-1 text-sm text-stone-500">
-                Upload and manage photos
-              </p>
-            </button>
+            <SpotlightCard>
+              <button
+                type="button"
+                onClick={() => setMode("admin")}
+                disabled={loading}
+                className="w-full px-6 py-5 text-left transition disabled:opacity-60"
+              >
+                <p className="font-medium text-zinc-900 dark:text-white">
+                  Admin sign in
+                </p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  Upload and manage photos
+                </p>
+              </button>
+            </SpotlightCard>
           </div>
         ) : (
           <form onSubmit={handleAdmin} className="mt-8 space-y-4">
             <div>
               <label
                 htmlFor="username"
-                className="mb-1.5 block text-sm font-medium text-stone-700"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
                 Username
               </label>
@@ -123,14 +132,14 @@ function LoginForm() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-2.5 text-zinc-900 backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-white"
               />
             </div>
 
             <div>
               <label
                 htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-stone-700"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
                 Password
               </label>
@@ -140,7 +149,7 @@ function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-2.5 text-zinc-900 backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-white"
               />
             </div>
 
@@ -151,14 +160,14 @@ function LoginForm() {
                   setMode("choose");
                   setError(null);
                 }}
-                className="flex-1 rounded-xl border border-stone-200 px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50"
+                className="flex-1 rounded-full border border-zinc-200 px-4 py-2.5 text-sm text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
                 Back
               </button>
               <button
                 type="submit"
                 disabled={loading || !username || !password}
-                className="flex-1 rounded-xl bg-terracotta px-4 py-2.5 text-sm font-medium text-white hover:bg-terracotta/90 disabled:opacity-50"
+                className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
               >
                 {loading ? "Signing in…" : "Sign in"}
               </button>
@@ -174,7 +183,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-full flex-1 items-center justify-center text-stone-500">
+        <div className="flex min-h-full flex-1 items-center justify-center text-zinc-500">
           Loading…
         </div>
       }

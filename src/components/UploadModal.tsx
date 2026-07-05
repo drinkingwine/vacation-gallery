@@ -295,10 +295,10 @@ export function UploadModal({
       />
 
       <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
           <div>
-            <h2 className="font-display text-xl text-stone-900">Upload photos</h2>
-            <p className="mt-0.5 text-xs text-stone-500">
+            <h2 className="font-serif text-xl text-zinc-900">Upload photos</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
               Up to {MAX_FILES} photos · {MAX_SIZE_MB}MB each
             </p>
           </div>
@@ -306,7 +306,7 @@ export function UploadModal({
             type="button"
             onClick={onClose}
             disabled={isUploading}
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 disabled:opacity-40"
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-40"
           >
             ✕
           </button>
@@ -314,7 +314,7 @@ export function UploadModal({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
               Destination trip
             </label>
 
@@ -324,7 +324,7 @@ export function UploadModal({
                   value={selectedTrip}
                   onChange={(e) => setSelectedTrip(e.target.value)}
                   disabled={isUploading}
-                  className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-terracotta/40 disabled:opacity-60"
+                  className="flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/40 disabled:opacity-60"
                 >
                   <option value="">Root (no trip folder)</option>
                   {localTrips.map((t) => (
@@ -337,7 +337,7 @@ export function UploadModal({
                   type="button"
                   onClick={() => setTripMode("create")}
                   disabled={isUploading}
-                  className="whitespace-nowrap rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-60"
+                  className="whitespace-nowrap rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 disabled:opacity-60"
                 >
                   + New trip
                 </button>
@@ -350,40 +350,40 @@ export function UploadModal({
                     value={newTripName}
                     onChange={(e) => setNewTripName(e.target.value)}
                     placeholder="Folder name (e.g. amalfi-coast-2024)"
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40 sm:col-span-2"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40 sm:col-span-2"
                   />
                   <input
                     type="text"
                     value={newTripTitle}
                     onChange={(e) => setNewTripTitle(e.target.value)}
                     placeholder="Display title (optional)"
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40"
                   />
                   <input
                     type="text"
                     value={newTripLocation}
                     onChange={(e) => setNewTripLocation(e.target.value)}
                     placeholder="Location (optional)"
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40"
                   />
                   <input
                     type="date"
                     value={newTripStart}
                     onChange={(e) => setNewTripStart(e.target.value)}
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40"
                   />
                   <input
                     type="date"
                     value={newTripEnd}
                     onChange={(e) => setNewTripEnd(e.target.value)}
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40"
                   />
                   <textarea
                     value={newTripDescription}
                     onChange={(e) => setNewTripDescription(e.target.value)}
                     placeholder="Description (optional)"
                     rows={2}
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40 sm:col-span-2"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40 sm:col-span-2"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -391,7 +391,7 @@ export function UploadModal({
                     type="button"
                     onClick={handleCreateTrip}
                     disabled={!newTripName.trim() || creatingTrip}
-                    className="rounded-xl bg-terracotta px-4 py-2 text-sm font-medium text-white hover:bg-terracotta/90 disabled:opacity-50"
+                    className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-900/90 disabled:opacity-50"
                   >
                     {creatingTrip ? "Creating…" : "Create trip"}
                   </button>
@@ -406,7 +406,7 @@ export function UploadModal({
                       setNewTripEnd("");
                       setNewTripDescription("");
                     }}
-                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-500"
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-500"
                   >
                     Cancel
                   </button>
@@ -422,15 +422,15 @@ export function UploadModal({
               atLimit
                 ? "cursor-not-allowed border-amber-300 bg-amber-50 opacity-60"
                 : isDragActive
-                  ? "border-terracotta bg-terracotta/5"
-                  : "border-stone-300 hover:border-terracotta hover:bg-stone-50",
+                  ? "border-zinc-900 bg-zinc-900/5"
+                  : "border-zinc-300 hover:border-zinc-900 hover:bg-zinc-50",
             ].join(" ")}
           >
             <input {...getInputProps()} disabled={atLimit} />
-            <p className="text-sm font-medium text-stone-700">
+            <p className="text-sm font-medium text-zinc-700">
               {isDragActive ? "Drop your photos here" : "Drag & drop photos here"}
             </p>
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-1 text-xs text-zinc-400">
               or click to browse · JPG, PNG, WebP, HEIC, and more
             </p>
           </div>
@@ -445,7 +445,7 @@ export function UploadModal({
                   <button
                     type="button"
                     onClick={retryFailed}
-                    className="text-terracotta underline"
+                    className="text-zinc-900 underline"
                   >
                     Retry failed
                   </button>
@@ -455,7 +455,7 @@ export function UploadModal({
               {files.map((f, i) => (
                 <div
                   key={f.id}
-                  className="relative aspect-square overflow-hidden rounded-lg bg-stone-100"
+                  className="relative aspect-square overflow-hidden rounded-lg bg-zinc-100"
                   title={f.error}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -495,18 +495,18 @@ export function UploadModal({
           )}
         </div>
 
-        <div className="space-y-3 border-t border-stone-200 px-5 py-4">
+        <div className="space-y-3 border-t border-zinc-200 px-5 py-4">
           {doneCount > 0 && total > 0 && (
-            <div className="h-1.5 overflow-hidden rounded-full bg-stone-200">
+            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200">
               <div
-                className="h-full rounded-full bg-terracotta transition-all"
+                className="h-full rounded-full bg-zinc-900 transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
           )}
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-zinc-500">
               {total === 0 && "No files selected"}
               {total > 0 && !allDone && `${pendingCount} ready`}
               {allDone && (
@@ -521,7 +521,7 @@ export function UploadModal({
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="rounded-xl px-3 py-2 text-sm text-stone-500 hover:bg-stone-100"
+                  className="rounded-xl px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100"
                 >
                   Clear
                 </button>
@@ -530,7 +530,7 @@ export function UploadModal({
                 type="button"
                 onClick={onClose}
                 disabled={isUploading}
-                className="rounded-xl px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-50"
+                className="rounded-xl px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
               >
                 {allDone ? "Done" : "Cancel"}
               </button>
@@ -539,7 +539,7 @@ export function UploadModal({
                   type="button"
                   onClick={handleUpload}
                   disabled={!canUpload}
-                  className="rounded-xl bg-terracotta px-5 py-2 text-sm font-medium text-white hover:bg-terracotta/90 disabled:opacity-50"
+                  className="rounded-xl bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-900/90 disabled:opacity-50"
                 >
                   {isUploading
                     ? `Uploading ${uploadingCount}…`

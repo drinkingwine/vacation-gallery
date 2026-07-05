@@ -10,7 +10,8 @@ type LightboxProps = {
   onNavigate: (index: number) => void;
   isAdmin?: boolean;
   onDelete?: (photo: Photo) => void;
-  deleting?: boolean;
+  onEdit?: (photo: Photo) => void;
+  busy?: boolean;
 };
 
 function formatBytes(bytes: number): string {
@@ -26,7 +27,8 @@ export function Lightbox({
   onNavigate,
   isAdmin = false,
   onDelete,
-  deleting = false,
+  onEdit,
+  busy = false,
 }: LightboxProps) {
   const photo = photos[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -60,7 +62,7 @@ export function Lightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
       role="dialog"
       aria-modal
       aria-label="Photo viewer"
@@ -68,7 +70,7 @@ export function Lightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 z-10 rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+        className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-white/10 p-2 text-white/70 backdrop-blur transition-colors hover:bg-white/20 hover:text-white"
         aria-label="Close"
       >
         ✕
@@ -78,7 +80,7 @@ export function Lightbox({
         <button
           type="button"
           onClick={goPrev}
-          className="absolute left-4 z-10 rounded-full p-3 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          className="absolute left-4 z-10 rounded-full border border-white/10 bg-white/5 p-3 text-white/60 backdrop-blur transition hover:bg-white/15 hover:text-white"
           aria-label="Previous photo"
         >
           ←
@@ -89,7 +91,7 @@ export function Lightbox({
         <button
           type="button"
           onClick={goNext}
-          className="absolute right-4 top-16 z-10 rounded-full p-3 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          className="absolute right-4 top-16 z-10 rounded-full border border-white/10 bg-white/5 p-3 text-white/60 backdrop-blur transition hover:bg-white/15 hover:text-white"
           aria-label="Next photo"
         >
           →
@@ -107,22 +109,42 @@ export function Lightbox({
         />
 
         <div className="mt-4 text-center text-white/80">
-          <p className="text-lg text-white/90">{photo.name}</p>
+          <p className="font-serif text-lg text-white/90">{photo.name}</p>
+          {photo.caption && (
+            <p className="mt-1 text-base text-white/70">{photo.caption}</p>
+          )}
           <p className="mt-1 text-sm text-white/50">
             {formatBytes(photo.size)} · {currentIndex + 1} of {photos.length}
           </p>
-          {isAdmin && onDelete && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(photo);
-              }}
-              disabled={deleting}
-              className="mt-3 rounded-full border border-red-400/60 px-4 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-            >
-              {deleting ? "Deleting…" : "Delete photo"}
-            </button>
+          {isAdmin && (onEdit || onDelete) && (
+            <div className="mt-3 flex justify-center gap-2">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(photo);
+                  }}
+                  disabled={busy}
+                  className="rounded-full border border-white/30 px-4 py-1.5 text-sm text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                >
+                  Edit
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(photo);
+                  }}
+                  disabled={busy}
+                  className="rounded-full border border-red-400/60 px-4 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                >
+                  {busy ? "Working…" : "Delete"}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
         hostname: "raw.githubusercontent.com",
       },
     ],
+    qualities: [75, 85, 90],
   },
 };
 

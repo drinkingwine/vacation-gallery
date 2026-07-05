@@ -1,0 +1,56 @@
+import type { GalleryPhoto, GallerySortOrder } from "@/lib/types";
+
+export function sortGalleryPhotos(
+  photos: GalleryPhoto[],
+  sortOrder: GallerySortOrder,
+) {
+  return [...photos].sort((a, b) => {
+    const aDate = a.tripStartDate ? new Date(a.tripStartDate).getTime() : 0;
+    const bDate = b.tripStartDate ? new Date(b.tripStartDate).getTime() : 0;
+    if (aDate !== bDate) {
+      return sortOrder === "newest" ? bDate - aDate : aDate - bDate;
+    }
+    const cmp = a.name.localeCompare(b.name);
+    return sortOrder === "newest" ? -cmp : cmp;
+  });
+}
+
+export function filterGalleryPhotos(photos: GalleryPhoto[], keyword: string) {
+  const q = keyword.trim().toLowerCase();
+  if (!q) return photos;
+  return photos.filter(
+    (p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.caption?.toLowerCase().includes(q) ||
+      p.tripTitle.toLowerCase().includes(q) ||
+      p.tripLocation?.toLowerCase().includes(q),
+  );
+}
+
+export function filterGalleryPhotosByMediaType(
+  photos: GalleryPhoto[],
+  mediaType: string,
+) {
+  if (mediaType === "photo") {
+    return photos;
+  }
+  if (mediaType === "video") {
+    return [];
+  }
+  return photos;
+}
+
+export function paginateGalleryPhotos<T>(
+  items: T[],
+  page: number,
+  pageSize: number,
+) {
+  const start = (page - 1) * pageSize;
+  const slice = items.slice(start, start + pageSize);
+  return {
+    items: slice,
+    page,
+    hasNext: start + pageSize < items.length,
+    total: items.length,
+  };
+}

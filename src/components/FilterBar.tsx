@@ -23,9 +23,9 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <div className="mb-6 flex flex-wrap items-center gap-3">
-      <div className="relative min-w-[160px] flex-1 max-w-xs">
+      <div className="relative min-w-[160px] max-w-xs flex-1">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
           width="14"
           height="14"
           viewBox="0 0 24 24"
@@ -38,14 +38,14 @@ export function FilterBar({
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Search photos..."
-          className="w-full rounded-xl border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+          className="h-9 w-full rounded-full border border-zinc-200 bg-white/80 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder-zinc-400 backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100"
         />
       </div>
 
       <select
         value={sortField}
         onChange={(e) => onSortField(e.target.value as SortField)}
-        className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+        className="h-9 rounded-full border border-zinc-200 bg-white/80 px-3 text-sm text-zinc-700 backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-200"
       >
         <option value="name">Name</option>
         <option value="size">Size</option>
@@ -54,13 +54,13 @@ export function FilterBar({
       <button
         type="button"
         onClick={() => onSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-        className="rounded-xl border border-stone-200 bg-white p-2 text-stone-600 transition-colors hover:bg-stone-50"
+        className="h-9 rounded-full border border-zinc-200 bg-white/80 px-3 text-zinc-600 backdrop-blur transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:bg-zinc-800"
         title={sortOrder === "asc" ? "Sort descending" : "Sort ascending"}
       >
         {sortOrder === "asc" ? "↑" : "↓"}
       </button>
 
-      <span className="ml-auto text-sm text-stone-500">
+      <span className="ml-auto text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
         {total} photo{total !== 1 ? "s" : ""}
       </span>
     </div>

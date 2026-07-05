@@ -1,0 +1,58 @@
+export const galleryCopy = {
+  eyebrow: "Gallery / Archive",
+  title: "Gallery",
+  description:
+    "Browse the archive by timeline or media type and trace the light of each shoot.",
+  scrollMore: "Scroll to load more",
+  loadingMore: "Loading more...",
+  allLoaded: "All content loaded",
+  loadError: "Failed to load more content.",
+  retryLoad: "Retry",
+  backToTop: "Back to top",
+  searchPlaceholder: "Search title, trip, or caption",
+  searchAria: "Search gallery content",
+  clearSearch: "Clear search",
+  noResults: "No matching content. Try a shorter keyword.",
+  filters: {
+    all: "All",
+    photo: "Photo",
+    video: "Video",
+    timeline: "Timeline",
+    newest: "Newest First",
+    oldest: "Oldest First",
+  },
+  grid: {
+    summary: (visible: number, total: number) =>
+      `Showing ${visible} / ${total} items`,
+    columns: {
+      label: "Per row",
+      aria: "Items per row",
+      count: (count: number) => `${count} cols`,
+    },
+    fullBleed: {
+      on: "Full bleed",
+      off: "Add margins",
+    },
+    modal: {
+      closeAria: "Close",
+      viewFrame: "Frame View",
+      viewOriginal: "Original View",
+      keyboardShortcuts: "Keyboard Shortcuts",
+      shortcuts: {
+        prevNext: "Previous/Next",
+        close: "Close",
+      },
+      authorPrefix: "Captured by",
+      authorFallback: "Vacations",
+      dateFallback: "--",
+      untitled: "Untitled",
+      share: "Share",
+      shareCopied: "Share link copied",
+      download: "Download",
+      trip: "Trip",
+      location: "Location",
+      size: "File size",
+      captured: "Captured",
+    },
+  },
+} as const;

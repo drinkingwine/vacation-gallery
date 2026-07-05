@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { FeaturedTripCard } from "@/components/FeaturedTripCard";
+import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { TripCard } from "@/components/TripCard";
+import { HomeHero } from "@/components/HomeHero";
+import { SectionHeader } from "@/components/SectionHeader";
 import { UploadModal } from "@/components/UploadModal";
 import type { Trip } from "@/lib/types";
 
@@ -69,23 +72,11 @@ export default function Home() {
       <Header onUpload={isAdmin ? () => setShowUpload(true) : undefined} />
 
       <main className="flex-1">
-        <section className="border-b border-stone-200/80 bg-white/50 px-6 py-16 text-center">
-          <div className="mx-auto max-w-2xl">
-            <p className="text-sm font-medium uppercase tracking-widest text-terracotta">
-              Photo library
-            </p>
-            <h1 className="font-display mt-3 text-5xl font-medium tracking-tight text-stone-900 sm:text-6xl">
-              Every trip, every moment
-            </h1>
-            <p className="mt-4 text-lg leading-relaxed text-stone-600">
-              Photos stored in GitHub — browse by trip, upload from anywhere.
-            </p>
-          </div>
-        </section>
+        <HomeHero primaryHref="/gallery" secondaryHref="/#trips" />
 
         {error && (
-          <div className="mx-auto max-w-6xl px-6 pt-8">
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="mx-auto w-[88vw] max-w-none px-0 pt-8">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
               <p className="text-sm font-medium">Failed to load trips</p>
               <p className="mt-1 text-sm opacity-80">{error}</p>
               {error.includes("GITHUB") && (
@@ -106,20 +97,30 @@ export default function Home() {
           </div>
         )}
 
-        <section className="mx-auto max-w-6xl px-6 py-12">
+        <section
+          id="trips"
+          className="front-fade-up mx-auto w-[88vw] max-w-none space-y-8 px-0 py-16 lg:space-y-10"
+        >
+          <SectionHeader
+            title="Featured trips"
+            description="Signature albums blending place, light, and moment into a unified travel narrative."
+            actionLabel="View all"
+            actionHref="/#trips"
+          />
+
           {loading ? (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="aspect-[4/3] animate-pulse rounded-2xl bg-stone-200"
+                  className="min-h-[280px] animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
                 />
               ))}
             </div>
           ) : trips.length === 0 ? (
-            <div className="flex flex-col items-center py-20 text-stone-400">
-              <p className="text-lg text-stone-600">No trips yet</p>
-              <p className="mt-2 text-sm">
+            <div className="flex flex-col items-center py-20 text-zinc-400">
+              <p className="text-lg text-zinc-600 dark:text-zinc-300">No trips yet</p>
+              <p className="mt-2 text-sm text-zinc-500">
                 {isAdmin
                   ? "Upload photos and create your first trip folder."
                   : "Sign in as admin to upload photos."}
@@ -128,16 +129,16 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setShowUpload(true)}
-                  className="mt-6 rounded-full bg-terracotta px-6 py-2.5 text-sm font-medium text-white hover:bg-terracotta/90"
+                  className="mt-6 rounded-full border border-zinc-900 bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                 >
                   Upload photos
                 </button>
               )}
             </div>
           ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {trips.map((trip) => (
-                <TripCard
+                <FeaturedTripCard
                   key={trip.path}
                   trip={trip}
                   isAdmin={isAdmin}
@@ -150,11 +151,13 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-stone-200/80 px-6 py-8 text-center text-sm text-stone-500">
-        {loading
-          ? "Loading…"
-          : `${totalPhotos} photos across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`}
-      </footer>
+      <Footer
+        stats={
+          loading
+            ? "Loading…"
+            : `${totalPhotos} photos across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`
+        }
+      />
 
       {showUpload && isAdmin && (
         <UploadModal

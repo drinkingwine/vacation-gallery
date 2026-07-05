@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { Header } from "@/components/Header";
+import { EditTripModal } from "@/components/EditTripModal";
+import { Footer } from "@/components/Footer";
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { UploadModal } from "@/components/UploadModal";
 import { formatDateRange } from "@/lib/trip-meta";
+import { cn } from "@/lib/utils";
 import type { Photo, Trip } from "@/lib/types";
 
 export default function TripPage() {
@@ -20,6 +23,8 @@ export default function TripPage() {
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
+  const [showEditTrip, setShowEditTrip] = useState(false);
+  const [heroIndex, setHeroIndex] = useState(0);
   const { isAdmin } = useAuth();
   const router = useRouter();
 
@@ -64,8 +69,24 @@ export default function TripPage() {
     fetchTrips();
   }, [fetchTrip, fetchTrips]);
 
-  const coverUrl = trip?.coverUrl ?? photos[0]?.downloadUrl;
+  const heroImages = useMemo(() => {
+    const urls = photos.map((p) => p.downloadUrl);
+    if (trip?.coverUrl && !urls.includes(trip.coverUrl)) {
+      return [trip.coverUrl, ...urls].slice(0, 8);
+    }
+    return urls.length > 0 ? urls.slice(0, 8) : trip?.coverUrl ? [trip.coverUrl] : [];
+  }, [photos, trip?.coverUrl]);
+
+  const safeHeroIndex = heroImages.length ? heroIndex % heroImages.length : 0;
   const dates = trip ? formatDateRange(trip.startDate, trip.endDate) : null;
+
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 6500);
+    return () => window.clearInterval(timer);
+  }, [heroImages.length]);
 
   const handleDeleteTrip = async () => {
     if (
@@ -94,65 +115,114 @@ export default function TripPage() {
 
   return (
     <>
-      <Header
-        backHref="/"
-        backLabel="All trips"
-        onUpload={isAdmin ? () => setShowUpload(true) : undefined}
-      />
+      <main className="flex-1 pb-16 pt-8">
+        <section className="front-fade-up relative mx-auto -mt-2 h-[78vh] min-h-[560px] max-h-[900px] w-[88vw] max-w-none overflow-hidden rounded-[32px] bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900">
+          <div className="absolute left-6 top-6 z-20">
+            <Link
+              href="/"
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white"
+            >
+              ← All trips
+            </Link>
+          </div>
 
-      <main className="flex-1">
-        <section className="relative h-[40vh] min-h-[280px] overflow-hidden bg-stone-200">
-          {coverUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverUrl}
-              alt={trip?.title ?? tripName}
-              className="h-full w-full object-cover"
-            />
+          {heroImages.length > 0 ? (
+            heroImages.map((src, index) => (
+              <div
+                key={`${src}-${index}`}
+                className={cn(
+                  "absolute inset-0 bg-cover bg-center transition-opacity",
+                  index === safeHeroIndex ? "opacity-100" : "opacity-0",
+                )}
+                style={{
+                  backgroundImage: `url(${src})`,
+                  transitionDuration: "1200ms",
+                }}
+              />
+            ))
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-700 to-zinc-900" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
-          <div className="absolute bottom-0 left-0 right-0 px-6 pb-10">
-            <div className="mx-auto max-w-6xl text-white">
-              {trip?.location && (
-                <p className="text-sm font-medium uppercase tracking-widest text-white/70">
-                  {trip.location}
-                </p>
-              )}
-              <h1 className="font-display mt-2 text-4xl font-medium tracking-tight sm:text-5xl">
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-transparent" />
+
+          {heroImages.length > 1 && (
+            <div className="absolute bottom-10 right-10 z-20 flex gap-2">
+              {heroImages.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setHeroIndex(index)}
+                  className={cn(
+                    "h-0.5 transition-all",
+                    index === safeHeroIndex ? "w-8 bg-white" : "w-4 bg-white/30",
+                  )}
+                  aria-label={`Slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="absolute inset-0 flex items-end px-6 pb-10 pt-24 md:px-12 md:pb-14">
+            <div className="w-full space-y-6 text-white">
+              <div className="flex flex-wrap gap-2">
+                {trip?.location && (
+                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
+                    {trip.location}
+                  </span>
+                )}
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
+                  {photos.length} photo{photos.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <h1 className="font-serif text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">
                 {trip?.title ?? tripName.replace(/-/g, " ")}
               </h1>
-              {!loading && (
-                <p className="mt-2 text-white/80">
-                  {dates && <span>{dates} · </span>}
-                  {photos.length} photo{photos.length !== 1 ? "s" : ""}
+              {trip?.description && (
+                <p className="max-w-2xl text-sm font-light leading-relaxed text-white/70 md:text-lg">
+                  {trip.description}
+                </p>
+              )}
+              {dates && (
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/60">
+                  {dates}
                 </p>
               )}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 py-10">
+        <section className="mx-auto w-[88vw] max-w-none space-y-8 px-0 py-12">
           {isAdmin && (
-            <div className="mb-6 flex justify-end">
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowUpload(true)}
+                className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+              >
+                Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditTrip(true)}
+                className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+              >
+                Edit trip
+              </button>
               <button
                 type="button"
                 onClick={handleDeleteTrip}
                 disabled={deletingTrip}
-                className="rounded-xl border border-red-200 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                className="rounded-full border border-red-200 px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-red-600 transition hover:bg-red-50 disabled:opacity-50"
               >
-                {deletingTrip ? "Deleting trip…" : "Delete trip"}
+                {deletingTrip ? "Deleting…" : "Delete trip"}
               </button>
             </div>
           )}
 
-          {trip?.description && (
-            <p className="mb-8 max-w-2xl text-lg leading-relaxed text-stone-600">
-              {trip.description}
-            </p>
-          )}
-
           {error && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
               <p className="text-sm">{error}</p>
               <button
                 type="button"
@@ -169,10 +239,21 @@ export default function TripPage() {
             loading={loading}
             emptyMessage={`No photos in "${trip?.title ?? tripName}" yet. Upload some!`}
             isAdmin={isAdmin}
-            onPhotoDeleted={fetchTrip}
+            tripName={tripName}
+            onPhotoChanged={fetchTrip}
           />
         </section>
       </main>
+
+      <Footer />
+
+      {showEditTrip && trip && isAdmin && (
+        <EditTripModal
+          trip={trip}
+          onClose={() => setShowEditTrip(false)}
+          onSaved={fetchTrip}
+        />
+      )}
 
       {showUpload && isAdmin && (
         <UploadModal

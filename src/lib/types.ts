@@ -13,6 +13,7 @@ export interface Photo {
   downloadUrl: string;
   size: number;
   trip?: string;
+  caption?: string;
 }
 
 export interface Trip {
@@ -47,3 +48,36 @@ export interface CreateTripInput {
   endDate?: string;
   description?: string;
 }
+
+export type UpdateTripInput = Omit<CreateTripInput, "name">;
+
+export type PhotoMetaEntry = {
+  caption?: string;
+};
+
+export type PhotosMetadata = Record<string, PhotoMetaEntry>;
+
+export type UpdatePhotoInput = {
+  trip: string;
+  path: string;
+  sha: string;
+  caption?: string;
+  newName?: string;
+};
+
+export type GalleryPhoto = Photo & {
+  id: string;
+  tripName: string;
+  tripTitle: string;
+  tripLocation?: string;
+  tripStartDate?: string;
+};
+
+export type GallerySortOrder = "newest" | "oldest";
+
+export type GalleryResponse = {
+  items: GalleryPhoto[];
+  page: number;
+  hasNext: boolean;
+  total: number;
+};

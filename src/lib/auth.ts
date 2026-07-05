@@ -109,6 +109,8 @@ export function requiresAdmin(pathname: string, method: string): boolean {
   if (pathname.startsWith("/api/upload")) return true;
   if (pathname.startsWith("/api/trips/create")) return true;
   if (pathname.startsWith("/api/photos/delete")) return true;
+  if (pathname.startsWith("/api/photos/update")) return true;
   if (method === "DELETE" && /^\/api\/trips\/[^/]+$/.test(pathname)) return true;
+  if (method === "PATCH" && /^\/api\/trips\/[^/]+$/.test(pathname)) return true;
   return false;
 }
