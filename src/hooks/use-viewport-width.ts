@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+function readViewportWidth() {
+  return typeof window !== "undefined" ? window.innerWidth : 0;
+}
+
 export function useViewportWidth() {
-  const [width, setWidth] = useState(0);
+  const [width, setWidth] = useState(readViewportWidth);
 
   useEffect(() => {
     const update = () => setWidth(window.innerWidth);

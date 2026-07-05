@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
 import { GalleryHeader } from "@/components/gallery/GalleryHeader";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
+import { getResponsiveColumnCount } from "@/lib/responsive";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
@@ -53,14 +54,6 @@ type FilterValue = (typeof filters)[number]["value"];
 
 const clampColumnCount = (value: number, max = 10) =>
   Math.min(max, Math.max(2, value));
-
-const getResponsiveColumnCount = (width: number) => {
-  if (width >= 1536) return 8;
-  if (width >= 1280) return 6;
-  if (width >= 1024) return 5;
-  if (width >= 640) return 4;
-  return 3;
-};
 
 const getColumnSliderMax = (width: number) => {
   if (width >= 1024) return getResponsiveColumnCount(width);
@@ -196,14 +189,17 @@ export function Gallery25({
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
   const usesResponsiveColumns = viewportWidth >= 1024;
+  const responsiveColumnCount = getResponsiveColumnCount(viewportWidth);
   const targetColumnCount = usesResponsiveColumns
-    ? getResponsiveColumnCount(viewportWidth)
+    ? responsiveColumnCount
     : columnCount;
-  const displayColumnCount = Math.min(
-    targetColumnCount,
-    columnSliderMax,
-    Math.max(1, visibleItems.length),
-  );
+  const displayColumnCount = usesResponsiveColumns
+    ? responsiveColumnCount
+    : Math.min(
+        targetColumnCount,
+        columnSliderMax,
+        Math.max(1, visibleItems.length),
+      );
   const gridSizes = `(max-width: 640px) 47vw, (max-width: 1024px) 33vw, ${Math.round(
     (isFullBleed ? 100 : 88) / displayColumnCount,
   )}vw`;

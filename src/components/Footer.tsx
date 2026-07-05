@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FooterPageSize } from "@/components/FooterPageSize";
 
 type FooterProps = {
   stats?: string;
@@ -21,7 +22,8 @@ export function Footer({ stats }: FooterProps) {
             <p className="text-xs text-muted-foreground">{stats}</p>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-4 text-xs uppercase tracking-[0.2em]">
+        <div className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.2em]">
+          <FooterPageSize />
           {footerLinks.map((item) => (
             <Link
               key={item.href}

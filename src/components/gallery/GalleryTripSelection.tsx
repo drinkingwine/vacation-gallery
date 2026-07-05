@@ -107,7 +107,7 @@ export function GalleryTripSelection() {
           ) : null}
 
           {loading ? (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
@@ -145,7 +145,7 @@ export function GalleryTripSelection() {
               ) : null}
             </div>
           ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
               {trips.map((trip) => (
                 <TripCard
                   key={trip.path}
