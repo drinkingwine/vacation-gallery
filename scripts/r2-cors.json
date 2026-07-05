@@ -4,7 +4,10 @@
       "allowed": {
         "origins": [
           "http://localhost:3000",
-          "http://127.0.0.1:3000"
+          "http://127.0.0.1:3000",
+          "https://ralphporter.net",
+          "https://www.ralphporter.net",
+          "https://vc-koaxwkpd7-drinkingwines-projects.vercel.app"
         ],
         "methods": ["GET", "PUT", "HEAD"],
         "headers": ["Content-Type", "Content-Length"]

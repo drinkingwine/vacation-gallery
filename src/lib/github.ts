@@ -224,21 +224,23 @@ export async function listTrips(): Promise<Trip[]> {
   const items = await listContents("");
   const dirs = items.filter((item) => item.type === "dir");
 
-  const trips = await Promise.allSettled(
+  const trips = await Promise.all(
     dirs.map(async (dir): Promise<Trip> => {
-      const [photos, metadata] = await Promise.all([
-        listPhotos(dir.path),
-        getTripMetadata(dir.path),
-      ]);
+      const metadata = await getTripMetadata(dir.path);
+      let photos: Photo[] = [];
+      try {
+        photos = await listPhotos(dir.path);
+      } catch (err) {
+        console.error(
+          `[listTrips] failed to list media for ${dir.path}:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
       return buildTrip(dir, photos, metadata);
     }),
   );
 
-  const fulfilled = trips
-    .filter((r): r is PromiseFulfilledResult<Trip> => r.status === "fulfilled")
-    .map((r) => r.value);
-
-  return sortTripsByDateDesc(fulfilled);
+  return sortTripsByDateDesc(trips);
 }
 
 export async function listAllGalleryPhotos(): Promise<GalleryPhoto[]> {
