@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CreateTripModal } from "@/components/CreateTripModal";
-import { EditTripModal } from "@/components/EditTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { PhotoGrid } from "@/components/PhotoGrid";
+import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { UploadModal } from "@/components/UploadModal";
+import { tripEditPath } from "@/lib/edit-paths";
 import { formatDateRange } from "@/lib/trip-meta";
 import { cn } from "@/lib/utils";
 import type { Photo, Trip } from "@/lib/types";
@@ -25,7 +26,6 @@ export default function TripPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
-  const [showEditTrip, setShowEditTrip] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const { isAdmin } = useAuth();
   const router = useRouter();
@@ -73,10 +73,11 @@ export default function TripPage() {
 
   const heroImages = useMemo(() => {
     const urls = photos.map((p) => p.downloadUrl);
-    if (trip?.coverUrl && !urls.includes(trip.coverUrl)) {
-      return [trip.coverUrl, ...urls].slice(0, 8);
+    if (trip?.coverUrl) {
+      const rest = urls.filter((url) => url !== trip.coverUrl);
+      return [trip.coverUrl, ...rest].slice(0, 8);
     }
-    return urls.length > 0 ? urls.slice(0, 8) : trip?.coverUrl ? [trip.coverUrl] : [];
+    return urls.length > 0 ? urls.slice(0, 8) : [];
   }, [photos, trip?.coverUrl]);
 
   const safeHeroIndex = heroImages.length ? heroIndex % heroImages.length : 0;
@@ -122,8 +123,8 @@ export default function TripPage() {
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
-      <main className="flex-1 pb-16 pt-24">
-        <section className="front-fade-up relative mx-auto h-[78vh] min-h-[560px] max-h-[900px] w-[88vw] max-w-none overflow-hidden rounded-[32px] bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900">
+      <main className="main-offset relative z-0 flex-1 pb-16">
+        <section className="front-fade-up page-container relative mx-auto h-[52vh] min-h-[320px] max-h-[900px] overflow-hidden rounded-2xl bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900 sm:h-[65vh] sm:min-h-[420px] sm:rounded-[32px] md:h-[78vh] md:min-h-[560px]">
           {heroImages.length > 0 ? (
             heroImages.map((src, index) => (
               <div
@@ -146,7 +147,7 @@ export default function TripPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-transparent" />
 
           {heroImages.length > 1 && (
-            <div className="absolute bottom-10 right-10 z-20 flex gap-2">
+            <div className="absolute bottom-6 right-4 z-20 flex gap-2 sm:bottom-10 sm:right-10">
               {heroImages.map((_, index) => (
                 <button
                   key={index}
@@ -162,8 +163,8 @@ export default function TripPage() {
             </div>
           )}
 
-          <div className="absolute inset-0 flex items-end px-6 pb-10 pt-24 md:px-12 md:pb-14">
-            <div className="w-full space-y-6 text-white">
+          <div className="absolute inset-0 flex items-end px-4 pb-8 pt-20 sm:px-6 sm:pb-10 sm:pt-24 md:px-12 md:pb-14">
+            <div className="w-full space-y-4 text-white sm:space-y-6">
               <div className="flex flex-wrap gap-2">
                 {trip?.location && (
                   <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
@@ -174,7 +175,7 @@ export default function TripPage() {
                   {photos.length} photo{photos.length !== 1 ? "s" : ""}
                 </span>
               </div>
-              <h1 className="font-serif text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">
+              <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">
                 {trip?.title ?? tripName.replace(/-/g, " ")}
               </h1>
               {trip?.description && (
@@ -191,9 +192,9 @@ export default function TripPage() {
           </div>
         </section>
 
-        <section className="mx-auto w-[88vw] max-w-none space-y-8 px-0 py-12">
+        <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           {isAdmin && (
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowUpload(true)}
@@ -201,13 +202,12 @@ export default function TripPage() {
               >
                 Upload
               </button>
-              <button
-                type="button"
-                onClick={() => setShowEditTrip(true)}
+              <Link
+                href={tripEditPath(tripName)}
                 className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
               >
                 Edit trip
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={handleDeleteTrip}
@@ -232,26 +232,21 @@ export default function TripPage() {
             </div>
           )}
 
-          <PhotoGrid
+          <TripPhotoGallery
             photos={photos}
+            trip={trip}
+            tripName={tripName}
             loading={loading}
             emptyMessage={`No photos in "${trip?.title ?? tripName}" yet. Upload some!`}
             isAdmin={isAdmin}
-            tripName={tripName}
+            coverPhoto={trip?.coverPhoto ?? null}
+            coverUrl={trip?.coverUrl ?? null}
             onPhotoChanged={fetchTrip}
           />
         </section>
       </main>
 
       <Footer />
-
-      {showEditTrip && trip && isAdmin && (
-        <EditTripModal
-          trip={trip}
-          onClose={() => setShowEditTrip(false)}
-          onSaved={fetchTrip}
-        />
-      )}
 
       {showCreateTrip && isAdmin && (
         <CreateTripModal

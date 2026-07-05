@@ -1,10 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { EditPhotoModal } from "@/components/EditPhotoModal";
 import { FilterBar } from "@/components/FilterBar";
 import { Lightbox } from "@/components/Lightbox";
 import { SpotlightCard } from "@/components/SpotlightCard";
+import { photoEditPath } from "@/lib/edit-paths";
 import type { Photo, SortField, SortOrder } from "@/lib/types";
 
 type PhotoGridProps = {
@@ -13,6 +14,8 @@ type PhotoGridProps = {
   emptyMessage?: string;
   isAdmin?: boolean;
   tripName?: string;
+  coverPhoto?: string | null;
+  coverUrl?: string | null;
   onPhotoChanged?: () => void;
 };
 
@@ -22,10 +25,12 @@ export function PhotoGrid({
   emptyMessage,
   isAdmin = false,
   tripName = "",
+  coverPhoto = null,
+  coverUrl = null,
   onPhotoChanged,
 }: PhotoGridProps) {
+  const router = useRouter();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [search, setSearch] = useState("");
@@ -52,6 +57,40 @@ export function PhotoGrid({
 
     return result;
   }, [photos, sortField, sortOrder, search]);
+
+  const openPhotoEdit = (photo: Photo) => {
+    if (!tripName) return;
+    router.push(photoEditPath(tripName, photo.name));
+  };
+
+  const isCoverPhoto = (photo: Photo) => {
+    if (coverPhoto) return photo.name === coverPhoto;
+    if (coverUrl) return photo.downloadUrl === coverUrl;
+    return false;
+  };
+
+  const makeDefault = async (photo: Photo) => {
+    if (!tripName || busyPath) return;
+
+    setBusyPath(photo.path);
+    try {
+      const res = await fetch(
+        `/api/trips/${encodeURIComponent(tripName)}/cover`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoName: photo.name }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to set default photo");
+      onPhotoChanged?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to set default photo");
+    } finally {
+      setBusyPath(null);
+    }
+  };
 
   const deletePhoto = async (photo: Photo) => {
     if (
@@ -122,9 +161,12 @@ export function PhotoGrid({
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((photo, idx) => (
-            <div key={photo.sha + photo.path} className="group relative">
-              <SpotlightCard className="aspect-[4/5] cursor-pointer border-zinc-200 bg-zinc-100 shadow-lg shadow-zinc-200/50 transition duration-300 hover:-translate-y-1 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-2xl dark:shadow-black/50">
+          {filtered.map((photo, idx) => {
+            const isDefault = isCoverPhoto(photo);
+
+            return (
+            <div key={photo.sha + photo.path} className="relative">
+              <SpotlightCard className="aspect-[4/5] cursor-pointer border-zinc-200 bg-zinc-100 shadow-lg shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-2xl dark:shadow-black/50">
                 <button
                   type="button"
                   onClick={() => setLightboxIndex(idx)}
@@ -149,28 +191,58 @@ export function PhotoGrid({
                 </button>
               </SpotlightCard>
 
-              {isAdmin && (
-                <div className="absolute right-3 top-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => setEditingPhoto(photo)}
-                    disabled={busyPath === photo.path}
-                    className="rounded-full border border-white/20 bg-black/50 px-2 py-1 text-xs text-white backdrop-blur hover:bg-indigo-600 disabled:opacity-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deletePhoto(photo)}
-                    disabled={busyPath === photo.path}
-                    className="rounded-full border border-white/20 bg-black/50 px-2 py-1 text-xs text-white backdrop-blur hover:bg-red-600 disabled:opacity-50"
-                  >
-                    {busyPath === photo.path ? "…" : "Delete"}
-                  </button>
-                </div>
-              )}
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3">
+                {isDefault ? (
+                  <span className="shrink-0 rounded-full border border-white/30 bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-white backdrop-blur">
+                    Default
+                  </span>
+                ) : (
+                  <span className="shrink-0" />
+                )}
+
+                {isAdmin && (
+                  <div className="pointer-events-auto flex shrink-0 flex-nowrap items-center gap-1">
+                    {!isDefault && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void makeDefault(photo);
+                        }}
+                        disabled={busyPath === photo.path}
+                        className="shrink-0 rounded-full border border-white/20 bg-black/60 px-2 py-1 text-xs text-white backdrop-blur hover:bg-amber-600 disabled:opacity-50"
+                      >
+                        {busyPath === photo.path ? "…" : "Make default"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openPhotoEdit(photo);
+                      }}
+                      disabled={busyPath === photo.path}
+                      className="shrink-0 rounded-full border border-white/20 bg-black/60 px-2 py-1 text-xs text-white backdrop-blur hover:bg-indigo-600 disabled:opacity-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void deletePhoto(photo);
+                      }}
+                      disabled={busyPath === photo.path}
+                      className="shrink-0 rounded-full border border-white/20 bg-black/60 px-2 py-1 text-xs text-white backdrop-blur hover:bg-red-600 disabled:opacity-50"
+                    >
+                      {busyPath === photo.path ? "…" : "Delete"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 
@@ -182,20 +254,10 @@ export function PhotoGrid({
           onNavigate={setLightboxIndex}
           isAdmin={isAdmin}
           onDelete={deletePhoto}
-          onEdit={isAdmin && tripName ? setEditingPhoto : undefined}
+          onEdit={isAdmin && tripName ? openPhotoEdit : undefined}
+          onMakeDefault={isAdmin && tripName ? makeDefault : undefined}
+          isCoverPhoto={isCoverPhoto}
           busy={busyPath !== null}
-        />
-      )}
-
-      {editingPhoto && tripName && (
-        <EditPhotoModal
-          photo={editingPhoto}
-          tripName={tripName}
-          onClose={() => setEditingPhoto(null)}
-          onSaved={() => {
-            setEditingPhoto(null);
-            onPhotoChanged?.();
-          }}
         />
       )}
     </>

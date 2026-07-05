@@ -11,6 +11,8 @@ type LightboxProps = {
   isAdmin?: boolean;
   onDelete?: (photo: Photo) => void;
   onEdit?: (photo: Photo) => void;
+  onMakeDefault?: (photo: Photo) => void;
+  isCoverPhoto?: (photo: Photo) => boolean;
   busy?: boolean;
 };
 
@@ -28,11 +30,14 @@ export function Lightbox({
   isAdmin = false,
   onDelete,
   onEdit,
+  onMakeDefault,
+  isCoverPhoto,
   busy = false,
 }: LightboxProps) {
   const photo = photos[currentIndex];
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < photos.length - 1;
+  const isDefault = photo && isCoverPhoto ? isCoverPhoto(photo) : false;
 
   const goPrev = useCallback(() => {
     if (hasPrev) onNavigate(currentIndex - 1);
@@ -70,54 +75,73 @@ export function Lightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-white/10 p-2 text-white/70 backdrop-blur transition-colors hover:bg-white/20 hover:text-white"
+        className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-10 rounded-full border border-white/20 bg-white/10 p-2 text-white/70 backdrop-blur transition-colors hover:bg-white/20 hover:text-white sm:right-4 sm:top-4"
         aria-label="Close"
       >
         ✕
       </button>
 
-      {hasPrev && (
-        <button
-          type="button"
-          onClick={goPrev}
-          className="absolute left-4 z-10 rounded-full border border-white/10 bg-white/5 p-3 text-white/60 backdrop-blur transition hover:bg-white/15 hover:text-white"
-          aria-label="Previous photo"
-        >
-          ←
-        </button>
-      )}
-
-      {hasNext && (
-        <button
-          type="button"
-          onClick={goNext}
-          className="absolute right-4 top-16 z-10 rounded-full border border-white/10 bg-white/5 p-3 text-white/60 backdrop-blur transition hover:bg-white/15 hover:text-white"
-          aria-label="Next photo"
-        >
-          →
-        </button>
+      {(hasPrev || hasNext) && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 flex items-center justify-between px-3 sm:inset-y-0 sm:bottom-auto sm:px-4">
+          {hasPrev ? (
+            <button
+              type="button"
+              onClick={goPrev}
+              className="pointer-events-auto rounded-full border border-white/10 bg-white/10 p-3 text-white/80 backdrop-blur transition hover:bg-white/15 hover:text-white sm:absolute sm:left-4 sm:top-1/2 sm:-translate-y-1/2"
+              aria-label="Previous photo"
+            >
+              ←
+            </button>
+          ) : (
+            <span className="sm:hidden" />
+          )}
+          {hasNext ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="pointer-events-auto rounded-full border border-white/10 bg-white/10 p-3 text-white/80 backdrop-blur transition hover:bg-white/15 hover:text-white sm:absolute sm:right-4 sm:top-1/2 sm:-translate-y-1/2"
+              aria-label="Next photo"
+            >
+              →
+            </button>
+          ) : null}
+        </div>
       )}
 
       <div className="absolute inset-0" onClick={onClose} aria-hidden />
 
-      <div className="relative z-[1] flex max-h-[90vh] max-w-[90vw] flex-col items-center">
+      <div className="relative z-[1] flex max-h-[90dvh] w-full max-w-[min(100vw,90vw)] flex-col items-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14 sm:max-w-[90vw] sm:px-0 sm:pb-0 sm:pt-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photo.downloadUrl}
           alt={photo.name}
-          className="max-h-[80vh] max-w-[90vw] object-contain"
+          className="max-h-[70dvh] w-auto max-w-full object-contain sm:max-h-[80vh]"
         />
 
-        <div className="mt-4 text-center text-white/80">
-          <p className="font-serif text-lg text-white/90">{photo.name}</p>
+        <div className="mt-3 w-full text-center text-white/80 sm:mt-4">
+          <p className="font-serif text-base text-white/90 sm:text-lg">{photo.name}</p>
           {photo.caption && (
-            <p className="mt-1 text-base text-white/70">{photo.caption}</p>
+            <p className="mt-1 text-sm text-white/70 sm:text-base">{photo.caption}</p>
           )}
-          <p className="mt-1 text-sm text-white/50">
+          <p className="mt-1 text-xs text-white/50 sm:text-sm">
             {formatBytes(photo.size)} · {currentIndex + 1} of {photos.length}
+            {isDefault ? " · Default photo" : ""}
           </p>
-          {isAdmin && (onEdit || onDelete) && (
-            <div className="mt-3 flex justify-center gap-2">
+          {isAdmin && (onEdit || onDelete || onMakeDefault) && (
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              {onMakeDefault && !isDefault && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMakeDefault(photo);
+                  }}
+                  disabled={busy}
+                  className="rounded-full border border-amber-400/60 px-4 py-1.5 text-sm text-amber-200 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+                >
+                  {busy ? "Working…" : "Make default"}
+                </button>
+              )}
               {onEdit && (
                 <button
                   type="button"

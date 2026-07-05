@@ -182,16 +182,33 @@ export async function listPhotos(trip = ""): Promise<Photo[]> {
     }));
 }
 
+function resolveCoverUrl(
+  photos: Photo[],
+  coverPhoto?: string,
+): { coverUrl: string | null; coverPhoto?: string } {
+  if (coverPhoto) {
+    const match = photos.find((p) => p.name === coverPhoto);
+    if (match) return { coverUrl: match.downloadUrl, coverPhoto };
+  }
+  const fallback = photos[0]?.downloadUrl ?? null;
+  return {
+    coverUrl: fallback,
+    coverPhoto: fallback ? photos[0]?.name : undefined,
+  };
+}
+
 function buildTrip(
   dir: GHItem,
   photos: Photo[],
   metadata: TripMetadata,
 ): Trip {
+  const cover = resolveCoverUrl(photos, metadata.coverPhoto);
   return {
     name: dir.name,
     path: dir.path,
     photoCount: photos.length,
-    coverUrl: photos[0]?.downloadUrl ?? null,
+    coverUrl: cover.coverUrl,
+    coverPhoto: metadata.coverPhoto ?? cover.coverPhoto,
     title: metadata.title ?? tripLabel(dir.name),
     location: metadata.location,
     startDate: metadata.startDate,
@@ -334,6 +351,31 @@ export async function updateTripMetadata(
     content,
     `Update trip: ${tripName}`,
   );
+}
+
+export async function patchTripMetadata(
+  tripName: string,
+  patch: Partial<TripMetadata>,
+): Promise<TripMetadata> {
+  const existing = await getTripMetadata(tripName);
+  const merged: TripMetadata = {
+    ...existing,
+    ...patch,
+    title: patch.title ?? existing.title ?? tripLabel(tripName),
+  };
+  await updateTripMetadata(tripName, merged);
+  return merged;
+}
+
+export async function setTripCoverPhoto(
+  tripName: string,
+  photoName: string,
+): Promise<void> {
+  const photos = await listPhotos(tripName);
+  if (!photos.some((p) => p.name === photoName)) {
+    throw new Error("Photo not found in this trip");
+  }
+  await patchTripMetadata(tripName, { coverPhoto: photoName });
 }
 
 async function getFileBase64(path: string): Promise<string> {

@@ -53,6 +53,9 @@ export const galleryCopy = {
       location: "Location",
       size: "File size",
       captured: "Captured",
+      details: "Image details",
+      hideDetails: "Hide details",
+      back: "Back",
     },
   },
 } as const;

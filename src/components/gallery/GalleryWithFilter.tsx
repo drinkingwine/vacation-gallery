@@ -160,12 +160,12 @@ export function GalleryWithFilter({
           value={mediaType}
           onValueChange={(value) => setMediaType(value as MediaType)}
         >
-          <TabsList className="h-auto rounded-full border border-zinc-200 bg-white/50 p-1 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50">
+          <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-full border border-zinc-200 bg-white/50 p-1 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50 sm:w-auto">
             {mediaTypeFilters.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-full px-4 py-1.5 text-xs uppercase tracking-[0.3em] data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-white/10"
+                className="shrink-0 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-white/10 sm:px-4 sm:text-xs sm:tracking-[0.3em]"
               >
                 {galleryCopy.filters[tab.key]}
               </TabsTrigger>

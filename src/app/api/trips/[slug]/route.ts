@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteTrip, getTrip, updateTripMetadata } from "@/lib/github";
+import { deleteTrip, getTrip, getTripMetadata, patchTripMetadata } from "@/lib/github";
 import { tripLabel } from "@/lib/trip-meta";
 import type { TripMetadata } from "@/lib/types";
 
@@ -61,7 +61,9 @@ export async function PATCH(
     }
 
     const body = await req.json();
+    const existing = await getTripMetadata(tripName);
     const metadata: TripMetadata = {
+      ...existing,
       title:
         typeof body.title === "string" && body.title.trim()
           ? body.title.trim()
@@ -78,7 +80,7 @@ export async function PATCH(
           : undefined,
     };
 
-    await updateTripMetadata(tripName, metadata);
+    await patchTripMetadata(tripName, metadata);
     return NextResponse.json({ success: true, ...metadata });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

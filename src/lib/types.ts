@@ -4,6 +4,7 @@ export interface TripMetadata {
   startDate?: string;
   endDate?: string;
   description?: string;
+  coverPhoto?: string;
 }
 
 export interface Photo {
@@ -21,6 +22,7 @@ export interface Trip {
   path: string;
   photoCount: number;
   coverUrl: string | null;
+  coverPhoto?: string;
   title: string;
   location?: string;
   startDate?: string;

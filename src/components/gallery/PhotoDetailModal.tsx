@@ -3,19 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Keyboard, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { PhotoFilmstrip } from "@/components/gallery/photo-detail/PhotoFilmstrip";
 import { PhotoInfoSidebar } from "@/components/gallery/photo-detail/PhotoInfoSidebar";
 import { PhotoMediaCanvas } from "@/components/gallery/photo-detail/PhotoMediaCanvas";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
+import { cn } from "@/lib/utils";
+
+function viewerToolClass(active = false) {
+  return cn(
+    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition",
+    active
+      ? "border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+      : "border-zinc-200 bg-white/80 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-white dark:hover:bg-zinc-800",
+  );
+}
 
 type PhotoDetailModalProps = {
   selectedItem: GalleryItem | null;
@@ -28,6 +31,8 @@ type PhotoDetailModalProps = {
   hasNext: boolean;
   isAdmin?: boolean;
   onEdit?: (item: GalleryItem) => void;
+  onMakeDefault?: (item: GalleryItem) => void;
+  isCoverPhoto?: (item: GalleryItem) => boolean;
 };
 
 export function PhotoDetailModal({
@@ -41,6 +46,8 @@ export function PhotoDetailModal({
   hasNext,
   isAdmin = false,
   onEdit,
+  onMakeDefault,
+  isCoverPhoto,
 }: PhotoDetailModalProps) {
   useEffect(() => {
     if (!selectedItem) return;
@@ -67,6 +74,8 @@ export function PhotoDetailModal({
           hasNext={hasNext}
           isAdmin={isAdmin}
           onEdit={onEdit}
+          onMakeDefault={onMakeDefault}
+          isCoverPhoto={isCoverPhoto}
         />
       ) : null}
     </AnimatePresence>
@@ -88,6 +97,8 @@ function PhotoDetailContent({
   hasNext,
   isAdmin = false,
   onEdit,
+  onMakeDefault,
+  isCoverPhoto,
 }: {
   item: GalleryItem;
   items: GalleryItem[];
@@ -99,8 +110,11 @@ function PhotoDetailContent({
   hasNext: boolean;
   isAdmin?: boolean;
   onEdit?: (item: GalleryItem) => void;
+  onMakeDefault?: (item: GalleryItem) => void;
+  isCoverPhoto?: (item: GalleryItem) => boolean;
 }) {
   const [viewMode, setViewMode] = useState<"fit" | "frame">("fit");
+  const [showDetails, setShowDetails] = useState(false);
   const [direction, setDirection] = useState(0);
   const [isDraggingFilmstrip, setIsDraggingFilmstrip] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -187,69 +201,52 @@ function PhotoDetailContent({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex h-screen w-screen overflow-hidden bg-background text-foreground transition-colors duration-300"
+      className={cn(
+        "fixed inset-0 z-[100] flex h-dvh w-screen flex-col overflow-hidden bg-background text-foreground transition-colors duration-300",
+      )}
     >
-      <div className="group relative flex h-full flex-grow flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-start justify-between p-4">
-          <div className="pointer-events-auto flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="rounded-full bg-white/50 backdrop-blur-md hover:bg-white/80 dark:bg-black/50 dark:hover:bg-black/80"
-              aria-label={galleryCopy.grid.modal.closeAria}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          <div className="pointer-events-auto flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full bg-white/50 backdrop-blur-md hover:bg-white/80 dark:bg-black/50 dark:hover:bg-black/80"
-                    aria-label={galleryCopy.grid.modal.keyboardShortcuts}
-                  >
-                    <Keyboard className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-zinc-500 dark:text-zinc-400">
-                        ←/→
-                      </span>
-                      <span>{galleryCopy.grid.modal.shortcuts.prevNext}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-zinc-500 dark:text-zinc-400">
-                        ESC
-                      </span>
-                      <span>{galleryCopy.grid.modal.shortcuts.close}</span>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+      <nav className="flex shrink-0 items-center justify-center gap-2 border-b border-zinc-200 bg-white/95 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 sm:gap-3 sm:px-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className={viewerToolClass()}
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          {galleryCopy.grid.modal.back}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowDetails((prev) => !prev)}
+          className={viewerToolClass(showDetails)}
+          aria-pressed={showDetails}
+        >
+          <Info className="h-3.5 w-3.5" />
+          {showDetails
+            ? galleryCopy.grid.modal.hideDetails
+            : galleryCopy.grid.modal.details}
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setViewMode((prev) => (prev === "fit" ? "frame" : "fit"))
+          }
+          className={viewerToolClass(viewMode === "frame")}
+          aria-pressed={viewMode === "frame"}
+        >
+          {viewMode === "fit"
+            ? galleryCopy.grid.modal.viewFrame
+            : galleryCopy.grid.modal.viewOriginal}
+        </button>
+      </nav>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setViewMode((prev) => (prev === "fit" ? "frame" : "fit"))
-              }
-              className="rounded-full bg-white/50 backdrop-blur-md hover:bg-white/80 dark:bg-black/50 dark:hover:bg-black/80"
-            >
-              {viewMode === "fit"
-                ? galleryCopy.grid.modal.viewFrame
-                : galleryCopy.grid.modal.viewOriginal}
-            </Button>
-          </div>
-        </div>
-
-        <div className="relative flex h-full flex-grow items-center justify-center">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 overflow-hidden",
+          showDetails ? "flex-col md:flex-row" : "flex-col",
+        )}
+      >
+      <div className="group relative flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+        <div className="relative flex min-h-0 flex-1 items-center justify-center">
           {hasPrev ? (
             <button
               type="button"
@@ -257,7 +254,7 @@ function PhotoDetailContent({
                 e.stopPropagation();
                 onPrev();
               }}
-              className="absolute left-4 top-1/2 z-40 -translate-y-1/2 rounded-full bg-white/80 p-3 shadow-sm backdrop-blur transition-all hover:bg-white dark:bg-black/40 dark:hover:bg-black/60 md:left-8"
+              className="absolute left-2 top-1/2 z-40 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-sm backdrop-blur transition-all hover:bg-white dark:bg-black/40 dark:hover:bg-black/60 sm:left-4 sm:p-3 md:left-8"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
@@ -276,7 +273,7 @@ function PhotoDetailContent({
                 e.stopPropagation();
                 onNext();
               }}
-              className="absolute right-4 top-1/2 z-40 -translate-y-1/2 rounded-full bg-white/80 p-3 shadow-sm backdrop-blur transition-all hover:bg-white dark:bg-black/40 dark:hover:bg-black/60 md:right-8"
+              className="absolute right-2 top-1/2 z-40 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-sm backdrop-blur transition-all hover:bg-white dark:bg-black/40 dark:hover:bg-black/60 sm:right-4 sm:p-3 md:right-8"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
@@ -300,11 +297,29 @@ function PhotoDetailContent({
         />
       </div>
 
-      <PhotoInfoSidebar
-        item={item}
-        isAdmin={isAdmin}
-        onEdit={isAdmin && onEdit ? () => onEdit(item) : undefined}
-      />
+      <AnimatePresence>
+        {showDetails ? (
+          <motion.div
+            key="photo-details"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.2 }}
+            className="flex min-h-0 shrink-0 flex-col md:h-full md:w-[min(420px,40vw)]"
+          >
+            <PhotoInfoSidebar
+              item={item}
+              isAdmin={isAdmin}
+              onEdit={isAdmin && onEdit ? () => onEdit(item) : undefined}
+              onMakeDefault={
+                isAdmin && onMakeDefault ? () => onMakeDefault(item) : undefined
+              }
+              isDefaultPhoto={isCoverPhoto ? isCoverPhoto(item) : false}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+      </div>
     </motion.div>
   );
 }

@@ -93,7 +93,7 @@ export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
             <button
               type="button"
               onClick={scrollPrev}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white opacity-0 backdrop-blur transition hover:bg-white/20 hover:text-white group-hover/edge-left:opacity-100"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white opacity-100 backdrop-blur transition hover:bg-white/20 hover:text-white sm:h-12 sm:w-12 md:opacity-0 md:group-hover/edge-left:opacity-100"
               aria-label="Previous slide"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -105,7 +105,7 @@ export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
             <button
               type="button"
               onClick={scrollNext}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white opacity-0 backdrop-blur transition hover:bg-white/20 hover:text-white group-hover/edge-right:opacity-100"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white opacity-100 backdrop-blur transition hover:bg-white/20 hover:text-white sm:h-12 sm:w-12 md:opacity-0 md:group-hover/edge-right:opacity-100"
               aria-label="Next slide"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -117,7 +117,7 @@ export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
       )}
 
       {canNavigate && (
-        <div className="absolute bottom-10 right-10 z-20 flex gap-2">
+        <div className="absolute bottom-6 right-4 z-20 flex gap-2 sm:bottom-10 sm:right-10">
           {heroImages.map((_, index) => (
             <button
               key={index}
@@ -133,7 +133,7 @@ export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
         </div>
       )}
 
-      <div className="relative z-20 flex min-h-[calc(100svh+6rem)] flex-col items-center justify-center px-8 pb-16 pt-24">
+      <div className="relative z-20 flex min-h-[calc(100svh+6rem)] flex-col items-center justify-center px-4 pb-16 pt-24 sm:px-8">
         <Link href={primaryHref} className={heroPrimaryClass}>
           Enter gallery
         </Link>

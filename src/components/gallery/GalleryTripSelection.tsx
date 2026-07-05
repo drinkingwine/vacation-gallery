@@ -73,7 +73,7 @@ export function GalleryTripSelection() {
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
-      <main className="mx-auto w-[88vw] max-w-none flex-1 px-0 pb-16 pt-24">
+      <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <div className="space-y-10">
           <header className="front-fade-up space-y-4">
             <h1

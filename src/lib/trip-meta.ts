@@ -9,6 +9,14 @@ export function tripDisplayTitle(trip: {
   return trip.title ?? tripLabel(trip.name);
 }
 
+export function toDateInputValue(value?: string | null): string {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = new Date(value.includes("T") ? value : `${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
+}
+
 export function formatDateRange(startDate?: string, endDate?: string): string | null {
   if (!startDate) return null;
 

@@ -8,6 +8,8 @@ type PhotoInfoSidebarProps = {
   item: GalleryItem;
   isAdmin?: boolean;
   onEdit?: () => void;
+  onMakeDefault?: () => void;
+  isDefaultPhoto?: boolean;
 };
 
 const formatFileSize = (bytes?: number | null) => {
@@ -31,6 +33,8 @@ export function PhotoInfoSidebar({
   item,
   isAdmin = false,
   onEdit,
+  onMakeDefault,
+  isDefaultPhoto = false,
 }: PhotoInfoSidebarProps) {
   const resolution =
     item.width && item.height ? `${item.width} x ${item.height}` : "-";
@@ -54,13 +58,27 @@ export function PhotoInfoSidebar({
   };
 
   return (
-    <aside className="custom-scrollbar flex h-full w-[420px] shrink-0 flex-col overflow-y-auto border-l border-gray-100 bg-white dark:border-zinc-800 dark:bg-zinc-950/90">
-      <div className="space-y-8 p-6">
+    <aside className="custom-scrollbar flex h-full max-h-[42dvh] w-full flex-col overflow-y-auto border-t border-gray-100 bg-white dark:border-zinc-800 dark:bg-zinc-950/90 md:max-h-none md:border-l md:border-t-0">
+      <div className="space-y-6 p-4 sm:space-y-8 sm:p-6">
         <section className="flex items-start justify-between">
           <h2 className="break-words pr-4 text-lg font-bold leading-tight tracking-tight text-primary dark:text-white">
             {item.title || galleryCopy.grid.modal.untitled}
           </h2>
           <div className="mt-1 flex shrink-0 items-center space-x-2">
+            {isAdmin && onMakeDefault && !isDefaultPhoto ? (
+              <button
+                type="button"
+                className="rounded-full border border-amber-400/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-300"
+                onClick={onMakeDefault}
+              >
+                Make default
+              </button>
+            ) : null}
+            {isDefaultPhoto ? (
+              <span className="rounded-full border border-zinc-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                Default
+              </span>
+            ) : null}
             {isAdmin && onEdit ? (
               <button
                 type="button"

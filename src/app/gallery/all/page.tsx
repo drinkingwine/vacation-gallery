@@ -20,7 +20,7 @@ export default async function GalleryArchivePage({
 
   return (
     <GalleryPageClient>
-      <main className="mx-auto w-[88vw] max-w-none flex-1 px-0 pb-16 pt-24">
+      <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <Suspense fallback={<GallerySkeleton />}>
           <GalleryContent initialKeyword={keyword} />
         </Suspense>

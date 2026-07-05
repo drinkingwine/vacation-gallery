@@ -80,7 +80,7 @@ export default function Home() {
         <HomeHero primaryHref="/gallery" />
 
         {error && (
-          <div className="mx-auto w-[88vw] max-w-none px-0 pt-8">
+          <div className="mx-auto page-container px-0 pt-8">
             <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
               <p className="text-sm font-medium">Failed to load trips</p>
               <p className="mt-1 text-sm opacity-80">{error}</p>
@@ -104,7 +104,7 @@ export default function Home() {
 
         <section
           id="trips"
-          className="front-fade-up mx-auto w-[88vw] max-w-none space-y-8 px-0 py-16 lg:space-y-10"
+          className="front-fade-up page-container mx-auto space-y-8 px-0 py-12 sm:py-16 lg:space-y-10"
         >
           <SectionHeader
             title="Featured trips"
