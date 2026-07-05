@@ -1,0 +1,468 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import type { Trip, UploadFile } from "@/lib/types";
+
+const MAX_FILES = 50;
+const MAX_SIZE_MB = 25;
+const CONCURRENCY = 5;
+const ACCEPTED_TYPES = {
+  "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".heic"],
+};
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+type UploadModalProps = {
+  trips: Trip[];
+  defaultTrip?: string;
+  onClose: () => void;
+  onUploadComplete: () => void;
+};
+
+export function UploadModal({
+  trips,
+  defaultTrip = "",
+  onClose,
+  onUploadComplete,
+}: UploadModalProps) {
+  const [files, setFiles] = useState<UploadFile[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState(defaultTrip);
+  const [tripMode, setTripMode] = useState<"select" | "create">("select");
+  const [newTripName, setNewTripName] = useState("");
+  const [newTripTitle, setNewTripTitle] = useState("");
+  const [newTripLocation, setNewTripLocation] = useState("");
+  const [newTripStart, setNewTripStart] = useState("");
+  const [newTripEnd, setNewTripEnd] = useState("");
+  const [newTripDescription, setNewTripDescription] = useState("");
+  const [creatingTrip, setCreatingTrip] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isUploading) onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, isUploading]);
+
+  useEffect(() => {
+    return () => files.forEach((f) => URL.revokeObjectURL(f.preview));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onDrop = useCallback((accepted: File[]) => {
+    setFiles((prev) => {
+      const remaining = MAX_FILES - prev.length;
+      const batch = accepted.slice(0, remaining).map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        status: "pending" as const,
+      }));
+      return [...prev, ...batch];
+    });
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: ACCEPTED_TYPES,
+    multiple: true,
+    maxFiles: MAX_FILES,
+    maxSize: MAX_SIZE_MB * 1024 * 1024,
+  });
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const clearAll = () => {
+    files.forEach((f) => URL.revokeObjectURL(f.preview));
+    setFiles([]);
+  };
+
+  const handleCreateTrip = async () => {
+    if (!newTripName.trim() || creatingTrip) return;
+    setCreatingTrip(true);
+    try {
+      const res = await fetch("/api/trips/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTripName,
+          title: newTripTitle || undefined,
+          location: newTripLocation || undefined,
+          startDate: newTripStart || undefined,
+          endDate: newTripEnd || undefined,
+          description: newTripDescription || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const created: Trip = {
+          name: data.name,
+          path: data.name,
+          photoCount: 0,
+          coverUrl: null,
+          title: data.title ?? data.name.replace(/-/g, " "),
+          location: data.location,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          description: data.description,
+        };
+        setLocalTrips((prev) => [...prev, created]);
+        setSelectedTrip(data.name);
+        setTripMode("select");
+        setNewTripName("");
+        setNewTripTitle("");
+        setNewTripLocation("");
+        setNewTripStart("");
+        setNewTripEnd("");
+        setNewTripDescription("");
+        onUploadComplete();
+      } else {
+        alert(data.error ?? "Failed to create trip");
+      }
+    } finally {
+      setCreatingTrip(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (isUploading) return;
+
+    const pending = files
+      .map((f, i) => ({ f, i }))
+      .filter(({ f }) => f.status === "pending")
+      .map(({ f, i }) => ({ i, file: f.file }));
+
+    if (pending.length === 0) return;
+
+    setIsUploading(true);
+    let successCount = 0;
+    let pointer = 0;
+
+    const updateStatus = (
+      index: number,
+      status: UploadFile["status"],
+      error?: string,
+    ) => {
+      setFiles((prev) =>
+        prev.map((f, i) => (i === index ? { ...f, status, error } : f)),
+      );
+    };
+
+    const uploadOne = async (index: number, file: File) => {
+      updateStatus(index, "uploading");
+      try {
+        const content = await fileToBase64(file);
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            content,
+            trip: selectedTrip || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          successCount++;
+          updateStatus(index, "done");
+        } else {
+          updateStatus(index, "error", data.error ?? "Upload failed");
+        }
+      } catch {
+        updateStatus(index, "error", "Network error");
+      }
+    };
+
+    const worker = async () => {
+      while (pointer < pending.length) {
+        const item = pending[pointer++];
+        await uploadOne(item.i, item.file);
+      }
+    };
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+
+    setIsUploading(false);
+    if (successCount > 0) onUploadComplete();
+  };
+
+  const total = files.length;
+  const doneCount = files.filter((f) => f.status === "done").length;
+  const pendingCount = files.filter((f) => f.status === "pending").length;
+  const uploadingCount = files.filter((f) => f.status === "uploading").length;
+  const allDone = total > 0 && doneCount === total;
+  const progress = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const canUpload = pendingCount > 0 && !isUploading;
+  const atLimit = total >= MAX_FILES;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={() => !isUploading && onClose()}
+      />
+
+      <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+          <div>
+            <h2 className="font-display text-xl text-stone-900">Upload photos</h2>
+            <p className="mt-0.5 text-xs text-stone-500">
+              Up to {MAX_FILES} photos · {MAX_SIZE_MB}MB each
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isUploading}
+            className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 disabled:opacity-40"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Destination trip
+            </label>
+
+            {tripMode === "select" ? (
+              <div className="flex gap-2">
+                <select
+                  value={selectedTrip}
+                  onChange={(e) => setSelectedTrip(e.target.value)}
+                  disabled={isUploading}
+                  className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-terracotta/40 disabled:opacity-60"
+                >
+                  <option value="">Root (no trip folder)</option>
+                  {localTrips.map((t) => (
+                    <option key={t.path} value={t.path}>
+                      {t.name.replace(/-/g, " ")} ({t.photoCount} photos)
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setTripMode("create")}
+                  disabled={isUploading}
+                  className="whitespace-nowrap rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-60"
+                >
+                  + New trip
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    value={newTripName}
+                    onChange={(e) => setNewTripName(e.target.value)}
+                    placeholder="Folder name (e.g. amalfi-coast-2024)"
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40 sm:col-span-2"
+                  />
+                  <input
+                    type="text"
+                    value={newTripTitle}
+                    onChange={(e) => setNewTripTitle(e.target.value)}
+                    placeholder="Display title (optional)"
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                  />
+                  <input
+                    type="text"
+                    value={newTripLocation}
+                    onChange={(e) => setNewTripLocation(e.target.value)}
+                    placeholder="Location (optional)"
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                  />
+                  <input
+                    type="date"
+                    value={newTripStart}
+                    onChange={(e) => setNewTripStart(e.target.value)}
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                  />
+                  <input
+                    type="date"
+                    value={newTripEnd}
+                    onChange={(e) => setNewTripEnd(e.target.value)}
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40"
+                  />
+                  <textarea
+                    value={newTripDescription}
+                    onChange={(e) => setNewTripDescription(e.target.value)}
+                    placeholder="Description (optional)"
+                    rows={2}
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/40 sm:col-span-2"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCreateTrip}
+                    disabled={!newTripName.trim() || creatingTrip}
+                    className="rounded-xl bg-terracotta px-4 py-2 text-sm font-medium text-white hover:bg-terracotta/90 disabled:opacity-50"
+                  >
+                    {creatingTrip ? "Creating…" : "Create trip"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTripMode("select");
+                      setNewTripName("");
+                      setNewTripTitle("");
+                      setNewTripLocation("");
+                      setNewTripStart("");
+                      setNewTripEnd("");
+                      setNewTripDescription("");
+                    }}
+                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div
+            {...getRootProps()}
+            className={[
+              "cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all",
+              atLimit
+                ? "cursor-not-allowed border-amber-300 bg-amber-50 opacity-60"
+                : isDragActive
+                  ? "border-terracotta bg-terracotta/5"
+                  : "border-stone-300 hover:border-terracotta hover:bg-stone-50",
+            ].join(" ")}
+          >
+            <input {...getInputProps()} disabled={atLimit} />
+            <p className="text-sm font-medium text-stone-700">
+              {isDragActive ? "Drop your photos here" : "Drag & drop photos here"}
+            </p>
+            <p className="mt-1 text-xs text-stone-400">
+              or click to browse · JPG, PNG, WebP, HEIC, and more
+            </p>
+          </div>
+
+          {total > 0 && (
+            <div className="grid max-h-48 grid-cols-6 gap-2 overflow-y-auto">
+              {files.map((f, i) => (
+                <div
+                  key={i}
+                  className="relative aspect-square overflow-hidden rounded-lg bg-stone-100"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={f.preview}
+                    alt={f.file.name}
+                    className="h-full w-full object-cover"
+                  />
+                  {f.status === "done" && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-green-500/40 text-white">
+                      ✓
+                    </div>
+                  )}
+                  {f.status === "uploading" && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs">
+                      …
+                    </div>
+                  )}
+                  {f.status === "pending" && !isUploading && (
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-black/60 px-1.5 text-xs text-white"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3 border-t border-stone-200 px-5 py-4">
+          {doneCount > 0 && total > 0 && (
+            <div className="h-1.5 overflow-hidden rounded-full bg-stone-200">
+              <div
+                className="h-full rounded-full bg-terracotta transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-stone-500">
+              {total === 0 && "No files selected"}
+              {total > 0 && !allDone && `${pendingCount} ready`}
+              {allDone && (
+                <span className="font-medium text-green-600">
+                  All {doneCount} uploaded
+                </span>
+              )}
+            </p>
+
+            <div className="flex gap-2">
+              {total > 0 && !isUploading && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="rounded-xl px-3 py-2 text-sm text-stone-500 hover:bg-stone-100"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isUploading}
+                className="rounded-xl px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-50"
+              >
+                {allDone ? "Done" : "Cancel"}
+              </button>
+              {!allDone && (
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={!canUpload}
+                  className="rounded-xl bg-terracotta px-5 py-2 text-sm font-medium text-white hover:bg-terracotta/90 disabled:opacity-50"
+                >
+                  {isUploading
+                    ? `Uploading ${uploadingCount}…`
+                    : `Upload ${pendingCount || ""}`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
