@@ -202,10 +202,10 @@ function PhotoDetailContent({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={cn(
-        "fixed inset-0 z-[100] flex h-dvh w-screen flex-col overflow-hidden bg-background text-foreground transition-colors duration-300",
+        "photo-viewer-shell fixed inset-0 z-[100] flex h-dvh w-screen flex-col overflow-hidden text-foreground transition-colors duration-300",
       )}
     >
-      <nav className="flex shrink-0 items-center justify-center gap-2 border-b border-zinc-200 bg-white/95 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 sm:gap-3 sm:px-6">
+      <nav className="flex shrink-0 items-center justify-center gap-2 border-b border-rose-200/60 bg-white/75 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-violet-700/50 dark:bg-indigo-950/75 sm:gap-3 sm:px-6">
         <button
           type="button"
           onClick={onClose}
@@ -245,7 +245,7 @@ function PhotoDetailContent({
           showDetails ? "flex-col md:flex-row" : "flex-col",
         )}
       >
-      <div className="group relative flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+      <div className="group photo-viewer-canvas relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
           {hasPrev ? (
             <button
@@ -264,6 +264,10 @@ function PhotoDetailContent({
             item={item}
             direction={direction}
             viewMode={viewMode}
+            onPrev={onPrev}
+            onNext={onNext}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
           />
 
           {hasNext ? (

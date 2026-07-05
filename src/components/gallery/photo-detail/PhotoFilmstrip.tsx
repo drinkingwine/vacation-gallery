@@ -40,10 +40,10 @@ export function PhotoFilmstrip({
   return (
     <div className="relative h-24 px-6 md:px-8">
       {canScrollLeft ? (
-        <div className="pointer-events-none absolute left-0 top-0 z-20 h-full w-10 bg-gradient-to-r from-zinc-50 to-transparent dark:from-zinc-950" />
+        <div className="pointer-events-none absolute left-0 top-0 z-20 h-full w-10 bg-gradient-to-r from-orange-100 to-transparent dark:from-indigo-950" />
       ) : null}
       {canScrollRight ? (
-        <div className="pointer-events-none absolute right-0 top-0 z-20 h-full w-10 bg-gradient-to-l from-zinc-50 to-transparent dark:from-zinc-950" />
+        <div className="pointer-events-none absolute right-0 top-0 z-20 h-full w-10 bg-gradient-to-l from-cyan-100 to-transparent dark:from-teal-950" />
       ) : null}
 
       <div

@@ -123,7 +123,8 @@ export default function TripPage() {
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
-      <main className="main-offset relative z-0 flex-1 pb-16">
+      <div className="trip-page-shell flex flex-1 flex-col">
+        <main className="main-offset relative z-0 flex-1 pb-16">
         <section className="front-fade-up page-container relative mx-auto h-[52vh] min-h-[320px] max-h-[900px] overflow-hidden rounded-2xl bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900 sm:h-[65vh] sm:min-h-[420px] sm:rounded-[32px] md:h-[78vh] md:min-h-[560px]">
           {heroImages.length > 0 ? (
             heroImages.map((src, index) => (
@@ -140,7 +141,7 @@ export default function TripPage() {
               />
             ))
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-zinc-700 to-zinc-900" />
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-violet-500 to-teal-500 dark:from-indigo-800 dark:via-purple-900 dark:to-teal-900" />
           )}
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -244,9 +245,10 @@ export default function TripPage() {
             onPhotoChanged={fetchTrip}
           />
         </section>
-      </main>
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
 
       {showCreateTrip && isAdmin && (
         <CreateTripModal

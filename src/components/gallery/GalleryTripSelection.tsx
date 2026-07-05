@@ -73,7 +73,8 @@ export function GalleryTripSelection() {
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
-      <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
+      <div className="gallery-page-shell flex flex-1 flex-col">
+        <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <div className="space-y-10">
           <header className="front-fade-up space-y-4">
             <h1
@@ -157,9 +158,10 @@ export function GalleryTripSelection() {
             </div>
           )}
         </div>
-      </main>
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
 
       {showCreateTrip && isAdmin && (
         <CreateTripModal

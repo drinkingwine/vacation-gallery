@@ -46,8 +46,10 @@ export function GalleryPageClient({ children }: GalleryPageClientProps) {
         onUpload={isAdmin ? () => setShowUpload(true) : undefined}
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
-      {children}
-      <Footer />
+      <div className="gallery-page-shell flex flex-1 flex-col">
+        {children}
+        <Footer />
+      </div>
 
       {showCreateTrip && isAdmin && (
         <CreateTripModal

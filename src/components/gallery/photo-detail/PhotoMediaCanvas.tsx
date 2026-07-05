@@ -11,15 +11,49 @@ type PhotoMediaCanvasProps = {
   item: GalleryItem;
   direction: number;
   viewMode: "fit" | "frame";
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 };
 
 export function PhotoMediaCanvas({
   item,
   direction,
   viewMode,
+  onPrev,
+  onNext,
+  hasPrev = false,
+  hasNext = false,
 }: PhotoMediaCanvasProps) {
   const isFrame = viewMode === "frame";
-  const swipeHandlers = useSwipeable({ trackTouch: true, trackMouse: false });
+  const canNavigate = hasPrev || hasNext;
+  const swipeHandlers = useSwipeable({
+    trackTouch: true,
+    trackMouse: false,
+    preventScrollOnSwipe: true,
+    onSwipedLeft: () => {
+      if (hasNext) onNext?.();
+    },
+    onSwipedRight: () => {
+      if (hasPrev) onPrev?.();
+    },
+  });
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!canNavigate) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = (event.clientX - rect.left) / rect.width;
+    if (ratio < 0.35 && hasPrev) {
+      onPrev?.();
+      return;
+    }
+    if (hasNext) {
+      onNext?.();
+      return;
+    }
+    if (hasPrev) onPrev?.();
+  };
 
   const safeWidth = item.width || 1920;
   const safeHeight = item.height || 1080;
@@ -34,9 +68,12 @@ export function PhotoMediaCanvas({
   return (
     <div
       {...swipeHandlers}
+      onClick={handleCanvasClick}
       className={cn(
         "relative flex h-full w-full items-center justify-center overflow-hidden transition-colors duration-500",
-        isFrame && "bg-[#f0f0f0] dark:bg-zinc-950",
+        canNavigate && "cursor-pointer",
+        isFrame &&
+          "bg-gradient-to-br from-amber-100 via-rose-100 to-sky-200 dark:from-violet-950 dark:via-indigo-950 dark:to-teal-950",
       )}
     >
       <AnimatePresence initial={false} custom={direction} mode="wait">

@@ -58,7 +58,7 @@ export function PhotoInfoSidebar({
   };
 
   return (
-    <aside className="custom-scrollbar flex h-full max-h-[42dvh] w-full flex-col overflow-y-auto border-t border-gray-100 bg-white dark:border-zinc-800 dark:bg-zinc-950/90 md:max-h-none md:border-l md:border-t-0">
+    <aside className="custom-scrollbar photo-viewer-sidebar flex h-full max-h-[42dvh] w-full flex-col overflow-y-auto border-t border-rose-200/70 md:max-h-none md:border-l md:border-t-0 dark:border-violet-800/70">
       <div className="space-y-6 p-4 sm:space-y-8 sm:p-6">
         <section className="flex items-start justify-between">
           <h2 className="break-words pr-4 text-lg font-bold leading-tight tracking-tight text-primary dark:text-white">
