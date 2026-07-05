@@ -33,6 +33,8 @@ type PhotoDetailModalProps = {
   onEdit?: (item: GalleryItem) => void;
   onMakeDefault?: (item: GalleryItem) => void;
   isCoverPhoto?: (item: GalleryItem) => boolean;
+  onPhotoChanged?: () => void;
+  onItemTagsChange?: (itemId: string, tags: string[]) => void;
 };
 
 export function PhotoDetailModal({
@@ -48,6 +50,8 @@ export function PhotoDetailModal({
   onEdit,
   onMakeDefault,
   isCoverPhoto,
+  onPhotoChanged,
+  onItemTagsChange,
 }: PhotoDetailModalProps) {
   useEffect(() => {
     if (!selectedItem) return;
@@ -76,6 +80,8 @@ export function PhotoDetailModal({
           onEdit={onEdit}
           onMakeDefault={onMakeDefault}
           isCoverPhoto={isCoverPhoto}
+          onPhotoChanged={onPhotoChanged}
+          onItemTagsChange={onItemTagsChange}
         />
       ) : null}
     </AnimatePresence>
@@ -99,6 +105,8 @@ function PhotoDetailContent({
   onEdit,
   onMakeDefault,
   isCoverPhoto,
+  onPhotoChanged,
+  onItemTagsChange,
 }: {
   item: GalleryItem;
   items: GalleryItem[];
@@ -112,6 +120,8 @@ function PhotoDetailContent({
   onEdit?: (item: GalleryItem) => void;
   onMakeDefault?: (item: GalleryItem) => void;
   isCoverPhoto?: (item: GalleryItem) => boolean;
+  onPhotoChanged?: () => void;
+  onItemTagsChange?: (itemId: string, tags: string[]) => void;
 }) {
   const [viewMode, setViewMode] = useState<"fit" | "frame">("fit");
   const [showDetails, setShowDetails] = useState(false);
@@ -319,6 +329,9 @@ function PhotoDetailContent({
                 isAdmin && onMakeDefault ? () => onMakeDefault(item) : undefined
               }
               isDefaultPhoto={isCoverPhoto ? isCoverPhoto(item) : false}
+              onTagsChange={(tags) => {
+                onItemTagsChange?.(String(item.id), tags);
+              }}
             />
           </motion.div>
         ) : null}

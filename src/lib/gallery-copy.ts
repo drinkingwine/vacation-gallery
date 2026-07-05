@@ -56,6 +56,8 @@ export const galleryCopy = {
       details: "Image details",
       hideDetails: "Hide details",
       back: "Back",
+      addFavoriteTag: "Add Favorite Tag",
+      removeFavoriteTag: "Remove Favorite Tag",
     },
   },
 } as const;

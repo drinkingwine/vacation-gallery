@@ -9,6 +9,7 @@ import {
   fetchWithTimeout,
   makeUniqueFilename,
 } from "@/lib/upload-utils";
+import { extractPhotoExif } from "@/lib/photo-exif";
 
 const MAX_FILES = 50;
 const MAX_SIZE_MB = 25;
@@ -196,6 +197,7 @@ export function UploadModal({
       updateFile(i, { status: "uploading", uploadName, error: undefined });
 
       try {
+        const exif = await extractPhotoExif(f.file);
         const prepared = await compressImage(f.file);
         const content = await fileToBase64(prepared);
 
@@ -213,6 +215,13 @@ export function UploadModal({
                   filename: uploadName,
                   content,
                   trip: selectedTrip || undefined,
+                  ...(exif
+                    ? {
+                        latitude: exif.latitude,
+                        longitude: exif.longitude,
+                        dateTaken: exif.dateTaken,
+                      }
+                    : {}),
                 }),
               },
               120_000,

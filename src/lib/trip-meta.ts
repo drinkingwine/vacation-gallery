@@ -53,3 +53,36 @@ export function formatDateRange(startDate?: string, endDate?: string): string | 
 
   return `${start.toLocaleDateString("en-US", full)} – ${end.toLocaleDateString("en-US", full)}`;
 }
+
+function parseTripDate(value?: string): number | null {
+  if (!value) return null;
+  const parsed = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value,
+  );
+  const time = parsed.getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
+export function getTripSortTime(trip: {
+  startDate?: string;
+  endDate?: string;
+}): number | null {
+  return parseTripDate(trip.endDate) ?? parseTripDate(trip.startDate);
+}
+
+export function sortTripsByDateDesc<
+  T extends { startDate?: string; endDate?: string; title: string },
+>(trips: T[]): T[] {
+  return [...trips].sort((a, b) => {
+    const aTime = getTripSortTime(a);
+    const bTime = getTripSortTime(b);
+
+    if (aTime === null && bTime === null) {
+      return a.title.localeCompare(b.title);
+    }
+    if (aTime === null) return 1;
+    if (bTime === null) return -1;
+    if (aTime !== bTime) return bTime - aTime;
+    return a.title.localeCompare(b.title);
+  });
+}

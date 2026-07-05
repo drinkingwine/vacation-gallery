@@ -7,12 +7,25 @@ import { CreateTripModal } from "@/components/CreateTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { TripCard } from "@/components/TripCard";
+import { FavoriteAlbumCard } from "@/components/FavoriteAlbumCard";
 import { UploadModal } from "@/components/UploadModal";
 import { cn } from "@/lib/utils";
+import { sortTripsByDateDesc } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
+
+type FavoritesSummary = {
+  photoCount: number;
+  coverUrl: string | null;
+  coverUrls: string[];
+};
 
 export function GalleryTripSelection() {
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [favorites, setFavorites] = useState<FavoritesSummary>({
+    photoCount: 0,
+    coverUrl: null,
+    coverUrls: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -24,12 +37,23 @@ export function GalleryTripSelection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/trips");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? `HTTP ${res.status}`);
+      const [tripsRes, favoritesRes] = await Promise.all([
+        fetch("/api/trips"),
+        fetch("/api/gallery/favorites"),
+      ]);
+
+      if (!tripsRes.ok) {
+        const data = await tripsRes.json();
+        throw new Error(data.error ?? `HTTP ${tripsRes.status}`);
       }
-      setTrips(await res.json());
+
+      setTrips(sortTripsByDateDesc(await tripsRes.json()));
+
+      if (favoritesRes.ok) {
+        setFavorites(await favoritesRes.json());
+      } else {
+        setFavorites({ photoCount: 0, coverUrl: null, coverUrls: [] });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
     } finally {
@@ -116,7 +140,15 @@ export function GalleryTripSelection() {
               ))}
             </div>
           ) : trips.length === 0 ? (
-            <div className="rounded-2xl border border-zinc-200 bg-white/60 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
+            <div className="space-y-8">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+                <FavoriteAlbumCard
+                  photoCount={favorites.photoCount}
+                  coverUrl={favorites.coverUrl}
+                  coverUrls={favorites.coverUrls}
+                />
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white/60 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
               <p className="text-lg text-zinc-700 dark:text-zinc-200">
                 No trips yet
               </p>
@@ -143,9 +175,15 @@ export function GalleryTripSelection() {
                   </button>
                 </div>
               ) : null}
+              </div>
             </div>
           ) : (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+              <FavoriteAlbumCard
+                photoCount={favorites.photoCount}
+                coverUrl={favorites.coverUrl}
+                coverUrls={favorites.coverUrls}
+              />
               {trips.map((trip) => (
                 <TripCard
                   key={trip.path}

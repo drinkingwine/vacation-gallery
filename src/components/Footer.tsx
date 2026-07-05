@@ -8,6 +8,7 @@ type FooterProps = {
 const footerLinks = [
   { label: "Home", href: "/" },
   { label: "Gallery", href: "/gallery" },
+  { label: "Map", href: "/map" },
 ];
 
 export function Footer({ stats }: FooterProps) {

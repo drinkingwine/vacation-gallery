@@ -82,18 +82,18 @@ export function TripCard({
               </svg>
             </div>
           )}
+          <div className="absolute bottom-3 right-3 z-10 rounded-full border border-orange-400/60 bg-orange-500 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white shadow-sm">
+            {trip.photoCount}
+          </div>
         </div>
 
         <div className="px-2">
-          <h2 className="truncate text-lg font-semibold text-zinc-800 transition-colors group-hover:text-indigo-600 dark:text-zinc-200 dark:group-hover:text-indigo-400">
+          <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-zinc-800 transition-colors group-hover:text-indigo-600 dark:text-zinc-200 dark:group-hover:text-indigo-400">
             {trip.title}
           </h2>
-          <div className="flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
-            <span>{dates ?? "Trip album"}</span>
-            <span className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] uppercase tracking-wider dark:border-zinc-700">
-              {trip.photoCount} photo{trip.photoCount !== 1 ? "s" : ""}
-            </span>
-          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {dates ?? "Trip album"}
+          </p>
           {trip.location && (
             <p className="mt-1 text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-500">
               {trip.location}

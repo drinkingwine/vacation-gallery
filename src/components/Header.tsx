@@ -17,6 +17,7 @@ type HeaderProps = {
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Gallery", href: "/gallery" },
+  { label: "Map", href: "/map" },
 ];
 
 function IconButton({

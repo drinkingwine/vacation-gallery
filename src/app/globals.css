@@ -202,7 +202,8 @@ body.gallery-chrome-hidden .front-floating-nav * {
 
 .photo-viewer-shell,
 .trip-page-shell,
-.gallery-page-shell {
+.gallery-page-shell,
+.map-page-shell {
   background: linear-gradient(
     145deg,
     #ffe4e6 0%,
@@ -213,7 +214,8 @@ body.gallery-chrome-hidden .front-floating-nav * {
 
 .dark .photo-viewer-shell,
 .dark .trip-page-shell,
-.dark .gallery-page-shell {
+.dark .gallery-page-shell,
+.dark .map-page-shell {
   background: linear-gradient(
     145deg,
     #1e1b4b 0%,

@@ -10,6 +10,8 @@ export type GalleryItem = {
   sha: string;
   description?: string | null;
   locationName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   dateShot?: string | null;
   createdAt?: string | null;
   tags?: string[];
@@ -22,7 +24,8 @@ export type GalleryItem = {
 
 export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
   const title = photo.caption?.trim() || photo.name;
-  const tags = [photo.tripTitle, photo.tripLocation].filter(
+  const metaTags = photo.tags ?? [];
+  const autoTags = [photo.tripTitle, photo.tripLocation].filter(
     (value): value is string => Boolean(value),
   );
 
@@ -35,10 +38,12 @@ export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
     path: photo.path,
     sha: photo.sha,
     description: photo.caption ?? null,
-    locationName: photo.tripLocation ?? photo.tripTitle,
-    dateShot: photo.tripStartDate ?? null,
-    createdAt: photo.tripStartDate ?? null,
-    tags: [...new Set(tags)],
+    locationName: photo.location ?? photo.tripLocation ?? null,
+    latitude: photo.latitude ?? null,
+    longitude: photo.longitude ?? null,
+    dateShot: photo.dateTaken ?? photo.tripStartDate ?? null,
+    createdAt: photo.dateTaken ?? photo.tripStartDate ?? null,
+    tags: [...new Set([...metaTags, ...autoTags])],
     size: photo.size,
     tripName: photo.tripName,
   };

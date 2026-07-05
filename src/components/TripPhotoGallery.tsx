@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { buildGalleryItem } from "@/lib/gallery";
 import type { Photo, Trip } from "@/lib/types";
@@ -48,7 +48,7 @@ export function TripPhotoGallery({
   coverUrl = null,
   onPhotoChanged,
 }: TripPhotoGalleryProps) {
-  const items = useMemo(
+  const baseItems = useMemo(
     () =>
       photos.map((photo) =>
         buildGalleryItem({
@@ -62,6 +62,27 @@ export function TripPhotoGallery({
       ),
     [photos, trip?.location, trip?.startDate, trip?.title, tripName],
   );
+  const [itemTagPatches, setItemTagPatches] = useState<Record<string, string[]>>(
+    {},
+  );
+
+  useEffect(() => {
+    setItemTagPatches({});
+  }, [photos]);
+
+  const items = useMemo(
+    () =>
+      baseItems.map((item) =>
+        itemTagPatches[item.id]
+          ? { ...item, tags: itemTagPatches[item.id] }
+          : item,
+      ),
+    [baseItems, itemTagPatches],
+  );
+
+  const handleItemTagsChange = useCallback((itemId: string, tags: string[]) => {
+    setItemTagPatches((prev) => ({ ...prev, [itemId]: tags }));
+  }, []);
 
   const makeDefault = useCallback(
     async (photoName: string) => {
@@ -119,6 +140,8 @@ export function TripPhotoGallery({
       coverPhoto={coverPhoto}
       coverUrl={coverUrl}
       onMakeDefault={isAdmin ? handleMakeDefault : undefined}
+      onPhotoChanged={onPhotoChanged}
+      onItemTagsChange={handleItemTagsChange}
     />
   );
 }

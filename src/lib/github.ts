@@ -1,8 +1,11 @@
-import { tripLabel } from "./trip-meta";
+import { hasFavoriteTag } from "./photo-tags";
+import type { MapPhotoMarker } from "./map";
+import { sortTripsByDateDesc, tripLabel } from "./trip-meta";
 import type {
   CreateTripInput,
   GalleryPhoto,
   Photo,
+  PhotoMetaEntry,
   PhotosMetadata,
   Trip,
   TripMetadata,
@@ -179,6 +182,11 @@ export async function listPhotos(trip = ""): Promise<Photo[]> {
       size: item.size,
       trip: trip || undefined,
       caption: photoMeta[item.name]?.caption,
+      tags: photoMeta[item.name]?.tags,
+      location: photoMeta[item.name]?.location,
+      latitude: photoMeta[item.name]?.latitude,
+      longitude: photoMeta[item.name]?.longitude,
+      dateTaken: photoMeta[item.name]?.dateTaken,
     }));
 }
 
@@ -231,15 +239,11 @@ export async function listTrips(): Promise<Trip[]> {
     }),
   );
 
-  return trips
+  const fulfilled = trips
     .filter((r): r is PromiseFulfilledResult<Trip> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .sort((a, b) => {
-      const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
-      const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
-      if (aDate !== bDate) return bDate - aDate;
-      return a.title.localeCompare(b.title);
-    });
+    .map((r) => r.value);
+
+  return sortTripsByDateDesc(fulfilled);
 }
 
 export async function listAllGalleryPhotos(): Promise<GalleryPhoto[]> {
@@ -262,6 +266,45 @@ export async function listAllGalleryPhotos(): Promise<GalleryPhoto[]> {
   }
 
   return photos;
+}
+
+export async function listFavoriteGalleryPhotos(): Promise<GalleryPhoto[]> {
+  const photos = await listAllGalleryPhotos();
+  return photos.filter((photo) => hasFavoriteTag(photo.tags));
+}
+
+export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
+  const photos = await listAllGalleryPhotos();
+
+  return photos
+    .filter(
+      (photo) =>
+        typeof photo.latitude === "number" &&
+        typeof photo.longitude === "number" &&
+        !Number.isNaN(photo.latitude) &&
+        !Number.isNaN(photo.longitude),
+    )
+    .map((photo) => ({
+      id: photo.path,
+      path: photo.path,
+      latitude: photo.latitude!,
+      longitude: photo.longitude!,
+      title: photo.caption?.trim() || photo.name.replace(/\.[^.]+$/, ""),
+      location: photo.location,
+      thumbnailUrl: photo.downloadUrl,
+      tripName: photo.tripName,
+      tripTitle: photo.tripTitle,
+      dateTaken: photo.dateTaken,
+    }));
+}
+
+export async function getFavoritesAlbumSummary() {
+  const photos = await listFavoriteGalleryPhotos();
+  return {
+    photoCount: photos.length,
+    coverUrl: photos[0]?.downloadUrl ?? null,
+    coverUrls: photos.slice(0, 3).map((photo) => photo.downloadUrl),
+  };
 }
 
 export async function getTrip(tripName: string): Promise<Trip | null> {
@@ -394,6 +437,43 @@ async function getFileBase64(path: string): Promise<string> {
   return data.content.replace(/\n/g, "");
 }
 
+export async function fetchPhotoForDownload(path: string) {
+  const { token, owner, repo, branch } = getConfig();
+  const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
+  const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodedPath}?ref=${branch}`;
+
+  const res = await fetch(url, { headers: ghHeaders(token), cache: "no-store" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GitHub API error ${res.status}: ${text}`);
+  }
+
+  const data = (await res.json()) as GHItem;
+  const filename = data.name || path.split("/").pop() || "photo.jpg";
+
+  if (data.download_url) {
+    const fileRes = await fetch(data.download_url, { cache: "no-store" });
+    if (!fileRes.ok) {
+      throw new Error(`Failed to fetch photo (${fileRes.status})`);
+    }
+    return {
+      data: await fileRes.arrayBuffer(),
+      contentType: fileRes.headers.get("content-type") ?? "application/octet-stream",
+      filename,
+    };
+  }
+
+  if (!data.content) {
+    throw new Error("Photo file has no content");
+  }
+
+  return {
+    data: Buffer.from(data.content.replace(/\n/g, ""), "base64"),
+    contentType: "application/octet-stream",
+    filename,
+  };
+}
+
 export async function renamePhoto(
   tripName: string,
   oldPath: string,
@@ -416,6 +496,59 @@ export async function renamePhoto(
   return newPath;
 }
 
+function normalizePhotoTags(tags?: string[]) {
+  return [...new Set((tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+}
+
+function prunePhotoMetaEntry(entry: PhotoMetaEntry | undefined) {
+  if (!entry) return null;
+  const caption = entry.caption?.trim();
+  const tags = normalizePhotoTags(entry.tags);
+  const location = entry.location?.trim();
+  const latitude =
+    typeof entry.latitude === "number" && !Number.isNaN(entry.latitude)
+      ? entry.latitude
+      : undefined;
+  const longitude =
+    typeof entry.longitude === "number" && !Number.isNaN(entry.longitude)
+      ? entry.longitude
+      : undefined;
+  const dateTaken = entry.dateTaken?.trim();
+
+  if (
+    !caption &&
+    tags.length === 0 &&
+    !location &&
+    latitude === undefined &&
+    longitude === undefined &&
+    !dateTaken
+  ) {
+    return null;
+  }
+
+  return {
+    ...(caption ? { caption } : {}),
+    ...(tags.length ? { tags } : {}),
+    ...(location ? { location } : {}),
+    ...(latitude !== undefined ? { latitude } : {}),
+    ...(longitude !== undefined ? { longitude } : {}),
+    ...(dateTaken ? { dateTaken } : {}),
+  };
+}
+
+export async function upsertPhotoMetadata(
+  tripPath: string,
+  filename: string,
+  patch: Partial<PhotoMetaEntry>,
+): Promise<void> {
+  const meta = await getPhotosMetadata(tripPath);
+  const entry = meta[filename] ?? {};
+  const next = prunePhotoMetaEntry({ ...entry, ...patch });
+  if (next) meta[filename] = next;
+  else delete meta[filename];
+  await savePhotosMetadata(tripPath, meta);
+}
+
 export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
   const filename = input.path.split("/").pop()!;
   let currentName = filename;
@@ -431,11 +564,30 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
   }
 
   if (input.caption !== undefined) {
+    const entry = meta[currentName] ?? {};
     const caption = input.caption.trim();
-    if (caption) {
-      meta[currentName] = { ...meta[currentName], caption };
-    } else {
-      delete meta[currentName];
+    const next = prunePhotoMetaEntry({ ...entry, caption: caption || undefined });
+    if (next) meta[currentName] = next;
+    else delete meta[currentName];
+  }
+
+  if (input.addTag) {
+    const tag = input.addTag.trim().toLowerCase();
+    if (tag) {
+      const entry = meta[currentName] ?? {};
+      const tags = normalizePhotoTags([...(entry.tags ?? []), tag]);
+      meta[currentName] = prunePhotoMetaEntry({ ...entry, tags })!;
+    }
+  }
+
+  if (input.removeTag) {
+    const tag = input.removeTag.trim().toLowerCase();
+    const entry = meta[currentName];
+    if (entry?.tags?.length) {
+      const tags = entry.tags.filter((value) => value.toLowerCase() !== tag);
+      const next = prunePhotoMetaEntry({ ...entry, tags });
+      if (next) meta[currentName] = next;
+      else delete meta[currentName];
     }
   }
 

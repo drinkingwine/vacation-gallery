@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isImage, uploadFile } from "@/lib/github";
+import { isImage, uploadFile, upsertPhotoMetadata } from "@/lib/github";
+import {
+  formatCoordinates,
+  reverseGeocode,
+} from "@/lib/reverse-geocode";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -7,14 +11,31 @@ export const maxDuration = 60;
 const MAX_SIZE_MB = 25;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
+type UploadBody = {
+  filename: string;
+  content: string;
+  trip?: string;
+  latitude?: number;
+  longitude?: number;
+  dateTaken?: string;
+};
+
+function parseLatitude(value: unknown): number | undefined {
+  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
+  if (value < -90 || value > 90) return undefined;
+  return value;
+}
+
+function parseLongitude(value: unknown): number | undefined {
+  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
+  if (value < -180 || value > 180) return undefined;
+  return value;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { filename, content, trip } = body as {
-      filename: string;
-      content: string;
-      trip?: string;
-    };
+    const body = (await req.json()) as UploadBody;
+    const { filename, content, trip } = body;
 
     if (!filename || !content) {
       return NextResponse.json(
@@ -46,6 +67,29 @@ export async function POST(req: NextRequest) {
     const path = trip ? `${trip}/${safeName}` : safeName;
 
     await uploadFile(path, content, `Upload: ${safeName}`);
+
+    const latitude = parseLatitude(body.latitude);
+    const longitude = parseLongitude(body.longitude);
+    const dateTaken =
+      typeof body.dateTaken === "string" && body.dateTaken.trim()
+        ? body.dateTaken.trim()
+        : undefined;
+
+    if (trip && latitude !== undefined && longitude !== undefined) {
+      let location = await reverseGeocode(latitude, longitude);
+      if (!location) {
+        location = formatCoordinates(latitude, longitude);
+      }
+
+      await upsertPhotoMetadata(trip, safeName, {
+        location,
+        latitude,
+        longitude,
+        ...(dateTaken ? { dateTaken } : {}),
+      });
+    } else if (trip && dateTaken) {
+      await upsertPhotoMetadata(trip, safeName, { dateTaken });
+    }
 
     return NextResponse.json({ success: true, path });
   } catch (err) {

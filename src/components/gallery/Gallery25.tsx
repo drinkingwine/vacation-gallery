@@ -41,6 +41,8 @@ type Gallery25Props = {
   coverPhoto?: string | null;
   coverUrl?: string | null;
   onMakeDefault?: (item: GalleryItem) => void;
+  onPhotoChanged?: () => void;
+  onItemTagsChange?: (itemId: string, tags: string[]) => void;
 };
 
 const filters = [
@@ -120,6 +122,8 @@ export function Gallery25({
   coverPhoto = null,
   coverUrl = null,
   onMakeDefault,
+  onPhotoChanged,
+  onItemTagsChange,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const viewportWidth = useViewportWidth();
@@ -347,6 +351,8 @@ export function Gallery25({
         onEdit={handlePhotoEdit}
         onMakeDefault={onMakeDefault}
         isCoverPhoto={isCoverPhoto}
+        onPhotoChanged={onPhotoChanged}
+        onItemTagsChange={onItemTagsChange}
       />
     );
   }
@@ -561,6 +567,8 @@ export function Gallery25({
         onEdit={handlePhotoEdit}
         onMakeDefault={onMakeDefault}
         isCoverPhoto={isCoverPhoto}
+        onPhotoChanged={onPhotoChanged}
+        onItemTagsChange={onItemTagsChange}
       />
     </section>
   );

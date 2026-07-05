@@ -108,12 +108,19 @@ export function GalleryInfinite({
     return () => observer.disconnect();
   }, [hasNext, loadError, loadMore]);
 
+  const handleItemTagsChange = useCallback((itemId: string, tags: string[]) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, tags } : item)),
+    );
+  }, []);
+
   return (
     <>
       <Gallery25
         items={items}
         selectedId={selectedId ?? null}
         onSelectedIdChange={onSelectedIdChange}
+        onItemTagsChange={handleItemTagsChange}
       />
 
       <div className="mt-10 flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
