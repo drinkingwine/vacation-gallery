@@ -26,6 +26,11 @@ export function PhotoMediaCanvas({
   const hasDimensions = !!(item.width && item.height);
   const useShrinkWrap = !isFrame && hasDimensions;
 
+  const mobileMaxHeight = "max-h-[42dvh]";
+  const mobileMaxWidth = "max-w-[82vw]";
+  const desktopMaxHeight = "sm:max-h-[calc(100dvh-10rem)] md:max-h-[75vh]";
+  const desktopMaxWidth = "sm:max-w-full";
+
   return (
     <div
       {...swipeHandlers}
@@ -66,11 +71,11 @@ export function PhotoMediaCanvas({
           exit="exit"
           className={cn(
             "absolute inset-0 flex h-full w-full items-center justify-center",
-            isFrame ? "p-4 md:p-8" : "p-0",
+            isFrame ? "p-3 sm:p-4 md:p-8" : "px-3 py-2 sm:px-4 sm:py-0",
           )}
         >
           {isFrame ? (
-            <div className="flex min-w-[300px] flex-col items-center bg-white px-[6%] pb-[8%] pt-[4%] shadow-[0_10px_50px_-10px_rgba(0,0,0,0.1)] dark:bg-[#1a1a1a]">
+            <div className="flex w-full max-w-[min(88vw,360px)] min-w-0 flex-col items-center bg-white px-[6%] pb-[8%] pt-[4%] shadow-[0_10px_50px_-10px_rgba(0,0,0,0.1)] sm:min-w-[300px] sm:max-w-none dark:bg-[#1a1a1a]">
               <div className="relative shadow-[0_4px_20px_-2px_rgba(0,0,0,0.15)]">
                 <BlurImage
                   src={item.src}
@@ -79,12 +84,17 @@ export function PhotoMediaCanvas({
                   width={safeWidth}
                   height={safeHeight}
                   quality={90}
-                  className="block max-h-[60vh] w-auto object-contain md:max-h-[70vh]"
+                  className={cn(
+                    "block w-auto object-contain",
+                    mobileMaxHeight,
+                    mobileMaxWidth,
+                    "sm:max-h-[55vh] md:max-h-[70vh]",
+                  )}
                   sizes="100vw"
                   priority
                 />
               </div>
-              <div className="mt-8 w-full text-center md:mt-12">
+              <div className="mt-4 w-full text-center sm:mt-8 md:mt-12">
                 <p className="font-serif text-sm font-light tracking-[0.2em] text-slate-800 dark:text-slate-300 md:text-base">
                   {item.title || galleryCopy.grid.modal.untitled}
                 </p>
@@ -97,8 +107,12 @@ export function PhotoMediaCanvas({
           ) : (
             <div
               className={cn(
-                "relative flex",
+                "relative flex items-center justify-center",
                 useShrinkWrap ? "h-auto w-auto" : "h-full w-full",
+                mobileMaxHeight,
+                mobileMaxWidth,
+                desktopMaxHeight,
+                desktopMaxWidth,
               )}
             >
               <BlurImage
@@ -109,9 +123,10 @@ export function PhotoMediaCanvas({
                 width={useShrinkWrap ? item.width || undefined : undefined}
                 height={useShrinkWrap ? item.height || undefined : undefined}
                 className={cn(
+                  "object-contain",
                   useShrinkWrap
-                    ? "block max-h-[75vh] w-auto max-w-full object-contain"
-                    : "object-contain",
+                    ? cn("block h-auto w-auto", mobileMaxHeight, mobileMaxWidth, desktopMaxHeight, desktopMaxWidth)
+                    : cn(mobileMaxHeight, mobileMaxWidth, desktopMaxHeight, desktopMaxWidth),
                 )}
                 sizes="100vw"
                 priority
