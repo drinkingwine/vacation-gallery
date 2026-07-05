@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "raw.githubusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
     ],
     qualities: [75, 85, 90],
   },

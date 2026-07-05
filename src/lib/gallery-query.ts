@@ -32,10 +32,10 @@ export function filterGalleryPhotosByMediaType(
   mediaType: string,
 ) {
   if (mediaType === "photo") {
-    return photos;
+    return photos.filter((p) => p.mediaType !== "video");
   }
   if (mediaType === "video") {
-    return [];
+    return photos.filter((p) => p.mediaType === "video");
   }
   return photos;
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isImage, uploadFile, upsertPhotoMetadata } from "@/lib/github";
+import { upsertPhotoMetadata } from "@/lib/github";
+import { isMedia, sanitizeMediaFilename } from "@/lib/media";
+import { headMedia } from "@/lib/r2";
 import {
   formatCoordinates,
   reverseGeocode,
@@ -8,12 +10,8 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MAX_SIZE_MB = 25;
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-
-type UploadBody = {
-  filename: string;
-  content: string;
+type CompleteBody = {
+  path: string;
   trip?: string;
   latitude?: number;
   longitude?: number;
@@ -34,39 +32,20 @@ function parseLongitude(value: unknown): number | undefined {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as UploadBody;
-    const { filename, content, trip } = body;
+    const body = (await req.json()) as CompleteBody;
+    const { path, trip } = body;
 
-    if (!filename || !content) {
-      return NextResponse.json(
-        { error: "filename and content are required" },
-        { status: 400 },
-      );
+    if (!path || typeof path !== "string") {
+      return NextResponse.json({ error: "path is required" }, { status: 400 });
     }
 
-    if (!isImage(filename)) {
-      return NextResponse.json(
-        { error: "Only image files are supported" },
-        { status: 400 },
-      );
+    const filename = path.split("/").pop() ?? "";
+    const safeName = sanitizeMediaFilename(filename);
+    if (!safeName || !isMedia(safeName)) {
+      return NextResponse.json({ error: "Invalid media path" }, { status: 400 });
     }
 
-    const estimatedBytes = (content.length * 3) / 4;
-    if (estimatedBytes > MAX_SIZE_BYTES) {
-      return NextResponse.json(
-        { error: `File too large. Maximum size is ${MAX_SIZE_MB}MB` },
-        { status: 413 },
-      );
-    }
-
-    const safeName = filename.replace(/[^a-zA-Z0-9.\-_ ]/g, "").trim();
-    if (!safeName) {
-      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
-    }
-
-    const path = trip ? `${trip}/${safeName}` : safeName;
-
-    await uploadFile(path, content, `Upload: ${safeName}`);
+    await headMedia(path);
 
     const latitude = parseLatitude(body.latitude);
     const longitude = parseLongitude(body.longitude);
@@ -75,26 +54,29 @@ export async function POST(req: NextRequest) {
         ? body.dateTaken.trim()
         : undefined;
 
-    if (trip && latitude !== undefined && longitude !== undefined) {
+    const tripPath =
+      trip ?? (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
+
+    if (tripPath && latitude !== undefined && longitude !== undefined) {
       let location = await reverseGeocode(latitude, longitude);
       if (!location) {
         location = formatCoordinates(latitude, longitude);
       }
 
-      await upsertPhotoMetadata(trip, safeName, {
+      await upsertPhotoMetadata(tripPath, safeName, {
         location,
         latitude,
         longitude,
         ...(dateTaken ? { dateTaken } : {}),
       });
-    } else if (trip && dateTaken) {
-      await upsertPhotoMetadata(trip, safeName, { dateTaken });
+    } else if (tripPath && dateTaken) {
+      await upsertPhotoMetadata(tripPath, safeName, { dateTaken });
     }
 
     return NextResponse.json({ success: true, path });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[API /upload]", message);
+    console.error("[API /upload/complete]", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

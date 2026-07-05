@@ -4,34 +4,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { Trip, UploadFile } from "@/lib/types";
 import {
+  MAX_IMAGE_UPLOAD_BYTES,
+  MAX_VIDEO_UPLOAD_BYTES,
+  contentTypeForFilename,
+  isImage,
+  isVideo,
+} from "@/lib/media";
+import {
   compressImage,
   delay,
   fetchWithTimeout,
   makeUniqueFilename,
 } from "@/lib/upload-utils";
 import { extractPhotoExif } from "@/lib/photo-exif";
+import { formatMediaCountFromTrip } from "@/lib/media-count";
 
 const MAX_FILES = 50;
-const MAX_SIZE_MB = 25;
-const GITHUB_RETRY_DELAY_MS = 1500;
+const MAX_IMAGE_MB = Math.round(MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024));
+const MAX_VIDEO_MB = Math.round(MAX_VIDEO_UPLOAD_BYTES / (1024 * 1024));
+const UPLOAD_RETRY_DELAY_MS = 1500;
 const ACCEPTED_TYPES = {
   "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".heic"],
+  "video/*": [".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv"],
 };
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 type UploadModalProps = {
   trips: Trip[];
@@ -105,7 +100,20 @@ export function UploadModal({
     accept: ACCEPTED_TYPES,
     multiple: true,
     maxFiles: MAX_FILES,
-    maxSize: MAX_SIZE_MB * 1024 * 1024,
+    maxSize: MAX_VIDEO_UPLOAD_BYTES,
+    validator: (file) => {
+      const limit = isVideo(file.name)
+        ? MAX_VIDEO_UPLOAD_BYTES
+        : MAX_IMAGE_UPLOAD_BYTES;
+      if (file.size > limit) {
+        const maxMb = Math.round(limit / (1024 * 1024));
+        return {
+          code: "file-too-large",
+          message: `Max ${maxMb}MB for ${isVideo(file.name) ? "videos" : "photos"}`,
+        };
+      }
+      return null;
+    },
   });
 
   const removeFile = (index: number) => {
@@ -197,57 +205,102 @@ export function UploadModal({
       updateFile(i, { status: "uploading", uploadName, error: undefined });
 
       try {
-        const exif = await extractPhotoExif(f.file);
-        const prepared = await compressImage(f.file);
-        const content = await fileToBase64(prepared);
+        const isVideoFile = isVideo(f.file.name);
+        const exif = isImage(f.file.name)
+          ? await extractPhotoExif(f.file)
+          : null;
+        const prepared = isVideoFile ? f.file : await compressImage(f.file);
+        const contentType =
+          prepared.type || contentTypeForFilename(uploadName);
 
-        let res: Response | null = null;
+        let presignRes: Response | null = null;
         for (let attempt = 0; attempt < 3; attempt++) {
           if (abortRef.current) break;
 
           try {
-            res = await fetchWithTimeout(
-              "/api/upload",
+            presignRes = await fetchWithTimeout(
+              "/api/upload/presign",
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   filename: uploadName,
-                  content,
                   trip: selectedTrip || undefined,
-                  ...(exif
-                    ? {
-                        latitude: exif.latitude,
-                        longitude: exif.longitude,
-                        dateTaken: exif.dateTaken,
-                      }
-                    : {}),
+                  contentType,
+                  contentLength: prepared.size,
                 }),
               },
-              120_000,
+              30_000,
             );
           } catch (err) {
             if (attempt === 2) throw err;
-            await delay(GITHUB_RETRY_DELAY_MS * (attempt + 1));
+            await delay(UPLOAD_RETRY_DELAY_MS * (attempt + 1));
             continue;
           }
 
-          if (res.status === 403 || res.status === 429) {
+          if (
+            presignRes.status === 403 ||
+            presignRes.status === 429 ||
+            presignRes.status >= 500
+          ) {
             if (attempt < 2) {
-              await delay(GITHUB_RETRY_DELAY_MS * (attempt + 1));
+              await delay(UPLOAD_RETRY_DELAY_MS * (attempt + 1));
               continue;
             }
           }
           break;
         }
 
-        if (!res) {
+        if (!presignRes) {
           updateFile(i, { status: "error", error: "Upload cancelled" });
           continue;
         }
 
-        const data = await res.json();
-        if (res.ok) {
+        const presignData = await presignRes.json();
+        if (!presignRes.ok) {
+          updateFile(i, {
+            status: "error",
+            error: presignData.error ?? "Failed to prepare upload",
+          });
+          continue;
+        }
+
+        const putRes = await fetch(presignData.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: prepared,
+        });
+
+        if (!putRes.ok) {
+          updateFile(i, {
+            status: "error",
+            error: `Storage upload failed (${putRes.status})`,
+          });
+          continue;
+        }
+
+        const completeRes = await fetchWithTimeout(
+          "/api/upload/complete",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              path: presignData.path,
+              trip: selectedTrip || undefined,
+              ...(exif
+                ? {
+                    latitude: exif.latitude,
+                    longitude: exif.longitude,
+                    dateTaken: exif.dateTaken,
+                  }
+                : {}),
+            }),
+          },
+          60_000,
+        );
+
+        const data = await completeRes.json();
+        if (completeRes.ok) {
           successCount++;
           updateFile(i, { status: "done" });
         } else {
@@ -266,9 +319,8 @@ export function UploadModal({
         updateFile(i, { status: "error", error: message });
       }
 
-      // Brief pause between uploads — GitHub rate-limits rapid commits
       if (!abortRef.current) {
-        await delay(400);
+        await delay(200);
       }
     }
 
@@ -306,9 +358,10 @@ export function UploadModal({
       <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
           <div>
-            <h2 className="font-serif text-xl text-zinc-900">Upload photos</h2>
+            <h2 className="font-serif text-xl text-zinc-900">Upload media</h2>
             <p className="mt-0.5 text-xs text-zinc-500">
-              Up to {MAX_FILES} photos · {MAX_SIZE_MB}MB each
+              Up to {MAX_FILES} files · photos {MAX_IMAGE_MB}MB · videos{" "}
+              {MAX_VIDEO_MB}MB
             </p>
           </div>
           <button
@@ -338,7 +391,7 @@ export function UploadModal({
                   <option value="">Root (no trip folder)</option>
                   {localTrips.map((t) => (
                     <option key={t.path} value={t.path}>
-                      {t.name.replace(/-/g, " ")} ({t.photoCount} photos)
+                      {t.name.replace(/-/g, " ")} ({formatMediaCountFromTrip(t)})
                     </option>
                   ))}
                 </select>
@@ -437,10 +490,10 @@ export function UploadModal({
           >
             <input {...getInputProps()} disabled={atLimit} />
             <p className="text-sm font-medium text-zinc-700">
-              {isDragActive ? "Drop your photos here" : "Drag & drop photos here"}
+              {isDragActive ? "Drop files here" : "Drag & drop photos or videos"}
             </p>
             <p className="mt-1 text-xs text-zinc-400">
-              or click to browse · JPG, PNG, WebP, HEIC, and more
+              or click to browse · JPG, PNG, WebP, HEIC, MP4, MOV, and more
             </p>
           </div>
 
@@ -449,7 +502,7 @@ export function UploadModal({
               {errorCount > 0 && !isUploading && (
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-red-600">
-                    {errorCount} failed — large photos are auto-compressed before upload
+                    {errorCount} failed — large photos are auto-compressed
                   </span>
                   <button
                     type="button"
@@ -468,11 +521,20 @@ export function UploadModal({
                   title={f.error}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={f.preview}
-                    alt={f.file.name}
-                    className="h-full w-full object-cover"
-                  />
+                  {isVideo(f.file.name) ? (
+                    <video
+                      src={f.preview}
+                      muted
+                      playsInline
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={f.preview}
+                      alt={f.file.name}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
                   {f.status === "done" && (
                     <div className="absolute inset-0 flex items-center justify-center bg-green-500/40 text-white">
                       ✓

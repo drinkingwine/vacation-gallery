@@ -1,5 +1,15 @@
 import { hasFavoriteTag } from "./photo-tags";
+import { countMedia } from "./media-count";
+import { getMediaType } from "./media";
+export { isImage } from "./media";
 import type { MapPhotoMarker } from "./map";
+import {
+  deleteMedia,
+  deleteMediaPrefix,
+  fetchMediaForDownload,
+  listMedia,
+  renameMedia,
+} from "./r2";
 import { sortTripsByDateDesc, tripLabel } from "./trip-meta";
 import type {
   CreateTripInput,
@@ -32,25 +42,6 @@ interface GHItem {
   download_url: string | null;
   content?: string;
   encoding?: string;
-}
-
-const IMAGE_EXT = new Set([
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".gif",
-  ".webp",
-  ".svg",
-  ".bmp",
-  ".tiff",
-  ".avif",
-  ".heic",
-]);
-
-export function isImage(filename: string): boolean {
-  const dot = filename.lastIndexOf(".");
-  if (dot === -1) return false;
-  return IMAGE_EXT.has(filename.slice(dot).toLowerCase());
 }
 
 function getConfig(): GHConfig {
@@ -167,27 +158,27 @@ async function savePhotosMetadata(
 }
 
 export async function listPhotos(trip = ""): Promise<Photo[]> {
-  const items = await listContents(trip);
-  const photoMeta = trip ? await getPhotosMetadata(trip) : {};
+  const [media, photoMeta]: [Awaited<ReturnType<typeof listMedia>>, PhotosMetadata] =
+    await Promise.all([
+      listMedia(trip),
+      trip ? getPhotosMetadata(trip) : Promise.resolve({} as PhotosMetadata),
+    ]);
 
-  return items
-    .filter(
-      (item) => item.type === "file" && isImage(item.name) && item.download_url,
-    )
-    .map((item) => ({
-      name: item.name,
-      path: item.path,
-      sha: item.sha,
-      downloadUrl: item.download_url!,
-      size: item.size,
-      trip: trip || undefined,
-      caption: photoMeta[item.name]?.caption,
-      tags: photoMeta[item.name]?.tags,
-      location: photoMeta[item.name]?.location,
-      latitude: photoMeta[item.name]?.latitude,
-      longitude: photoMeta[item.name]?.longitude,
-      dateTaken: photoMeta[item.name]?.dateTaken,
-    }));
+  return media.map((item) => ({
+    name: item.name,
+    path: item.path,
+    sha: item.sha,
+    downloadUrl: item.downloadUrl,
+    size: item.size,
+    mediaType: getMediaType(item.name) ?? "photo",
+    trip: trip || undefined,
+    caption: photoMeta[item.name]?.caption,
+    tags: photoMeta[item.name]?.tags,
+    location: photoMeta[item.name]?.location,
+    latitude: photoMeta[item.name]?.latitude,
+    longitude: photoMeta[item.name]?.longitude,
+    dateTaken: photoMeta[item.name]?.dateTaken,
+  }));
 }
 
 function resolveCoverUrl(
@@ -198,10 +189,12 @@ function resolveCoverUrl(
     const match = photos.find((p) => p.name === coverPhoto);
     if (match) return { coverUrl: match.downloadUrl, coverPhoto };
   }
-  const fallback = photos[0]?.downloadUrl ?? null;
+  const fallbackPhoto =
+    photos.find((p) => p.mediaType !== "video") ?? photos[0];
+  const fallback = fallbackPhoto?.downloadUrl ?? null;
   return {
     coverUrl: fallback,
-    coverPhoto: fallback ? photos[0]?.name : undefined,
+    coverPhoto: fallback ? fallbackPhoto?.name : undefined,
   };
 }
 
@@ -211,10 +204,12 @@ function buildTrip(
   metadata: TripMetadata,
 ): Trip {
   const cover = resolveCoverUrl(photos, metadata.coverPhoto);
+  const { photos: photoCount, videos: videoCount } = countMedia(photos);
   return {
     name: dir.name,
     path: dir.path,
-    photoCount: photos.length,
+    photoCount,
+    videoCount,
     coverUrl: cover.coverUrl,
     coverPhoto: metadata.coverPhoto ?? cover.coverPhoto,
     title: metadata.title ?? tripLabel(dir.name),
@@ -279,6 +274,7 @@ export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
   return photos
     .filter(
       (photo) =>
+        photo.mediaType !== "video" &&
         typeof photo.latitude === "number" &&
         typeof photo.longitude === "number" &&
         !Number.isNaN(photo.latitude) &&
@@ -421,79 +417,17 @@ export async function setTripCoverPhoto(
   await patchTripMetadata(tripName, { coverPhoto: photoName });
 }
 
-async function getFileBase64(path: string): Promise<string> {
-  const { token, owner, repo, branch } = getConfig();
-  const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
-  const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodedPath}?ref=${branch}`;
-
-  const res = await fetch(url, { headers: ghHeaders(token), cache: "no-store" });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GitHub API error ${res.status}: ${text}`);
-  }
-
-  const data = (await res.json()) as GHItem;
-  if (!data.content) throw new Error("File has no content");
-  return data.content.replace(/\n/g, "");
-}
-
 export async function fetchPhotoForDownload(path: string) {
-  const { token, owner, repo, branch } = getConfig();
-  const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
-  const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodedPath}?ref=${branch}`;
-
-  const res = await fetch(url, { headers: ghHeaders(token), cache: "no-store" });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GitHub API error ${res.status}: ${text}`);
-  }
-
-  const data = (await res.json()) as GHItem;
-  const filename = data.name || path.split("/").pop() || "photo.jpg";
-
-  if (data.download_url) {
-    const fileRes = await fetch(data.download_url, { cache: "no-store" });
-    if (!fileRes.ok) {
-      throw new Error(`Failed to fetch photo (${fileRes.status})`);
-    }
-    return {
-      data: await fileRes.arrayBuffer(),
-      contentType: fileRes.headers.get("content-type") ?? "application/octet-stream",
-      filename,
-    };
-  }
-
-  if (!data.content) {
-    throw new Error("Photo file has no content");
-  }
-
-  return {
-    data: Buffer.from(data.content.replace(/\n/g, ""), "base64"),
-    contentType: "application/octet-stream",
-    filename,
-  };
+  return fetchMediaForDownload(path);
 }
 
 export async function renamePhoto(
-  tripName: string,
+  _tripName: string,
   oldPath: string,
-  oldSha: string,
+  _oldSha: string,
   newFilename: string,
 ): Promise<string> {
-  const safeName = newFilename.replace(/[^a-zA-Z0-9.\-_ ]/g, "").trim();
-  if (!safeName || !isImage(safeName)) {
-    throw new Error("Invalid image filename");
-  }
-
-  const content = await getFileBase64(oldPath);
-  const newPath = `${tripName}/${safeName}`;
-
-  if (newPath !== oldPath) {
-    await uploadFile(newPath, content, `Rename: ${safeName}`);
-    await deleteFile(oldPath, oldSha);
-  }
-
-  return newPath;
+  return renameMedia(oldPath, newFilename);
 }
 
 function normalizePhotoTags(tags?: string[]) {
@@ -615,7 +549,24 @@ export async function deleteFile(path: string, sha: string): Promise<void> {
   }
 }
 
+export async function deletePhoto(path: string): Promise<void> {
+  await deleteMedia(path);
+
+  const slash = path.lastIndexOf("/");
+  if (slash === -1) return;
+
+  const trip = path.slice(0, slash);
+  const filename = path.slice(slash + 1);
+  const meta = await getPhotosMetadata(trip);
+  if (meta[filename]) {
+    delete meta[filename];
+    await savePhotosMetadata(trip, meta);
+  }
+}
+
 export async function deleteTrip(tripName: string): Promise<void> {
+  await deleteMediaPrefix(tripName);
+
   const items = await listContents(tripName);
   const files = items.filter((item) => item.type === "file");
 

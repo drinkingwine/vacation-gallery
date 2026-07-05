@@ -123,7 +123,6 @@ function PhotoDetailContent({
   onPhotoChanged?: () => void;
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
 }) {
-  const [viewMode, setViewMode] = useState<"fit" | "frame">("fit");
   const [showDetails, setShowDetails] = useState(false);
   const [direction, setDirection] = useState(0);
   const [isDraggingFilmstrip, setIsDraggingFilmstrip] = useState(false);
@@ -235,18 +234,6 @@ function PhotoDetailContent({
             ? galleryCopy.grid.modal.hideDetails
             : galleryCopy.grid.modal.details}
         </button>
-        <button
-          type="button"
-          onClick={() =>
-            setViewMode((prev) => (prev === "fit" ? "frame" : "fit"))
-          }
-          className={viewerToolClass(viewMode === "frame")}
-          aria-pressed={viewMode === "frame"}
-        >
-          {viewMode === "fit"
-            ? galleryCopy.grid.modal.viewFrame
-            : galleryCopy.grid.modal.viewOriginal}
-        </button>
       </nav>
 
       <div
@@ -273,7 +260,6 @@ function PhotoDetailContent({
           <PhotoMediaCanvas
             item={item}
             direction={direction}
-            viewMode={viewMode}
             onPrev={onPrev}
             onNext={onNext}
             hasPrev={hasPrev}

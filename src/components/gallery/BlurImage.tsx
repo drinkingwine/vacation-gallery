@@ -21,11 +21,12 @@ export function BlurImage({
   sizes,
   ...props
 }: BlurImageProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const shouldBypassOptimization =
     typeof src === "string" && !src.startsWith("/");
+
+  const [isLoaded, setIsLoaded] = useState(shouldBypassOptimization);
 
   const hasExplicitSize = typeof width === "number" && typeof height === "number";
   const useFill = fill === true || !hasExplicitSize;

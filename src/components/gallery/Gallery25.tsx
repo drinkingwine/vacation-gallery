@@ -187,7 +187,7 @@ export function Gallery25({
   const visibleItems = useMemo(() => {
     if (filter === "timeline") return timelineItems;
     if (filter === "all") return items;
-    if (filter === "video") return [];
+    if (filter === "video") return items.filter((item) => item.type === "video");
     return items.filter((item) => item.type === filter);
   }, [filter, items, timelineItems]);
 
@@ -500,27 +500,44 @@ export function Gallery25({
                             aspectRatio: getAspectRatioValue(item, ratioMap),
                           }}
                         >
-                          <BlurImage
-                            fill
-                            sizes={gridSizes}
-                            quality={85}
-                            priority={itemIndex < 4 && columnIndex < 2}
-                            className="object-cover transition duration-300 group-hover:scale-105"
-                            src={item.src}
-                            alt={item.title}
-                            blurHash={item.blurHash}
-                            onLoadingComplete={(image) => {
-                              const ratioKey = getRatioKey(item.id);
-                              if (ratioMap[ratioKey]) return;
-                              if (!image.naturalWidth || !image.naturalHeight)
-                                return;
-                              setRatioMap((prev) => ({
-                                ...prev,
-                                [ratioKey]:
-                                  image.naturalWidth / image.naturalHeight,
-                              }));
-                            }}
-                          />
+                          {item.type === "video" ? (
+                            <>
+                              <video
+                                src={item.src}
+                                muted
+                                playsInline
+                                preload="metadata"
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                              />
+                              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white">
+                                  Video
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <BlurImage
+                              fill
+                              sizes={gridSizes}
+                              quality={85}
+                              priority={itemIndex < 4 && columnIndex < 2}
+                              className="object-cover transition duration-300 group-hover:scale-105"
+                              src={item.src}
+                              alt={item.title}
+                              blurHash={item.blurHash}
+                              onLoadingComplete={(image) => {
+                                const ratioKey = getRatioKey(item.id);
+                                if (ratioMap[ratioKey]) return;
+                                if (!image.naturalWidth || !image.naturalHeight)
+                                  return;
+                                setRatioMap((prev) => ({
+                                  ...prev,
+                                  [ratioKey]:
+                                    image.naturalWidth / image.naturalHeight,
+                                }));
+                              }}
+                            />
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
                           <div className="absolute inset-x-0 bottom-0 px-4 pb-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
                             <p className="truncate text-sm font-medium text-white">

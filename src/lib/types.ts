@@ -13,6 +13,7 @@ export interface Photo {
   sha: string;
   downloadUrl: string;
   size: number;
+  mediaType?: "photo" | "video";
   trip?: string;
   caption?: string;
   tags?: string[];
@@ -26,6 +27,7 @@ export interface Trip {
   name: string;
   path: string;
   photoCount: number;
+  videoCount?: number;
   coverUrl: string | null;
   coverPhoto?: string;
   title: string;

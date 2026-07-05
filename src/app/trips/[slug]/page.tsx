@@ -11,6 +11,7 @@ import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { UploadModal } from "@/components/UploadModal";
 import { tripEditPath } from "@/lib/edit-paths";
 import { formatDateRange } from "@/lib/trip-meta";
+import { formatMediaCount } from "@/lib/media-count";
 import { cn } from "@/lib/utils";
 import type { Photo, Trip } from "@/lib/types";
 
@@ -72,8 +73,9 @@ export default function TripPage() {
   }, [fetchTrip, fetchTrips]);
 
   const heroImages = useMemo(() => {
-    const urls = photos.map((p) => p.downloadUrl);
-    if (trip?.coverUrl) {
+    const imagePhotos = photos.filter((p) => p.mediaType !== "video");
+    const urls = imagePhotos.map((p) => p.downloadUrl);
+    if (trip?.coverUrl && imagePhotos.some((p) => p.downloadUrl === trip.coverUrl)) {
       const rest = urls.filter((url) => url !== trip.coverUrl);
       return [trip.coverUrl, ...rest].slice(0, 8);
     }
@@ -173,7 +175,7 @@ export default function TripPage() {
                   </span>
                 )}
                 <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
-                  {photos.length} photo{photos.length !== 1 ? "s" : ""}
+                  {formatMediaCount(photos)}
                 </span>
               </div>
               <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">

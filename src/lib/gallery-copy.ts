@@ -35,8 +35,6 @@ export const galleryCopy = {
     },
     modal: {
       closeAria: "Close",
-      viewFrame: "Frame View",
-      viewOriginal: "Original View",
       keyboardShortcuts: "Keyboard Shortcuts",
       shortcuts: {
         prevNext: "Previous/Next",

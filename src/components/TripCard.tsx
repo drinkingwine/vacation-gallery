@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatDateRange } from "@/lib/trip-meta";
+import { totalMediaCount } from "@/lib/media-count";
 import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 
@@ -83,7 +84,7 @@ export function TripCard({
             </div>
           )}
           <div className="absolute bottom-3 right-3 z-10 rounded-full border border-orange-400/60 bg-orange-500 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white shadow-sm">
-            {trip.photoCount}
+            {totalMediaCount(trip)}
           </div>
         </div>
 

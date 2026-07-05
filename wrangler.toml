@@ -1,0 +1,5 @@
+# Used by `npm run setup:r2` (wrangler r2 commands).
+# Auth: run `npx wrangler login` once, or set CLOUDFLARE_API_TOKEN.
+
+name = "vacation-photos"
+compatibility_date = "2024-01-01"

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const { data, contentType, filename } = await fetchPhotoForDownload(path);
     const safeFilename = filename.replace(/[^\w.\-() ]+/g, "_");
 
-    return new NextResponse(data, {
+    return new NextResponse(Buffer.from(data), {
       headers: {
         "Content-Type": contentType,
         "Content-Disposition": `attachment; filename="${safeFilename}"`,

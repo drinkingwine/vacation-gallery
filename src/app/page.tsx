@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { UploadModal } from "@/components/UploadModal";
 import { CreateTripModal } from "@/components/CreateTripModal";
 import type { Trip } from "@/lib/types";
+import { totalMediaCount } from "@/lib/media-count";
 
 export default function Home() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -42,12 +43,12 @@ export default function Home() {
     fetchTrips();
   }, [fetchTrips]);
 
-  const totalPhotos = trips.reduce((sum, t) => sum + t.photoCount, 0);
+  const totalMedia = trips.reduce((sum, t) => sum + totalMediaCount(t), 0);
 
   const handleDeleteTrip = async (trip: Trip) => {
     if (
       !confirm(
-        `Delete trip "${trip.title}" and all ${trip.photoCount} photos? This cannot be undone.`,
+        `Delete trip "${trip.title}" and all ${totalMediaCount(trip)} items? This cannot be undone.`,
       )
     ) {
       return;
@@ -76,7 +77,7 @@ export default function Home() {
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-hidden">
         <HomeHero primaryHref="/gallery" />
 
         {error && (
@@ -104,7 +105,7 @@ export default function Home() {
 
         <section
           id="trips"
-          className="front-fade-up page-container mx-auto space-y-8 px-0 py-12 sm:py-16 lg:space-y-10"
+          className="front-fade-up page-container mx-auto space-y-8 px-4 py-10 sm:px-0 sm:py-16 lg:space-y-10"
         >
           <SectionHeader
             title="Featured trips"
@@ -169,7 +170,7 @@ export default function Home() {
         stats={
           loading
             ? "Loading…"
-            : `${totalPhotos} photos across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`
+            : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`
         }
       />
 

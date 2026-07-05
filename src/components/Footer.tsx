@@ -13,7 +13,7 @@ const footerLinks = [
 
 export function Footer({ stats }: FooterProps) {
   return (
-    <footer className="front-footer relative z-10 mt-8 border-t border-border/80 px-6 py-6 text-sm text-muted-foreground">
+    <footer className="front-footer relative z-10 mt-8 border-t border-border/80 px-4 py-6 text-sm text-muted-foreground sm:px-6">
       <div className="page-container mx-auto flex w-full flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <p className="font-serif text-base text-foreground">

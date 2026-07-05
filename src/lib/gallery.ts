@@ -2,7 +2,7 @@ import type { GalleryPhoto } from "@/lib/types";
 
 export type GalleryItem = {
   id: string;
-  type: "photo";
+  type: "photo" | "video";
   src: string;
   title: string;
   filename: string;
@@ -31,7 +31,7 @@ export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
 
   return {
     id: photo.id,
-    type: "photo",
+    type: photo.mediaType === "video" ? "video" : "photo",
     src: photo.downloadUrl,
     title,
     filename: photo.name,

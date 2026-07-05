@@ -1,16 +1,15 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
 import { BlurImage } from "@/components/gallery/BlurImage";
-import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
 import { cn } from "@/lib/utils";
 
 type PhotoMediaCanvasProps = {
   item: GalleryItem;
   direction: number;
-  viewMode: "fit" | "frame";
   onPrev?: () => void;
   onNext?: () => void;
   hasPrev?: boolean;
@@ -20,14 +19,15 @@ type PhotoMediaCanvasProps = {
 export function PhotoMediaCanvas({
   item,
   direction,
-  viewMode,
   onPrev,
   onNext,
   hasPrev = false,
   hasNext = false,
 }: PhotoMediaCanvasProps) {
-  const isFrame = viewMode === "frame";
+  const videoRef = useRef<HTMLVideoElement>(null);
   const canNavigate = hasPrev || hasNext;
+  const isVideo = item.type === "video";
+
   const swipeHandlers = useSwipeable({
     trackTouch: true,
     trackMouse: false,
@@ -40,7 +40,20 @@ export function PhotoMediaCanvas({
     },
   });
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideo) return;
+
+    video.load();
+    void video.play().catch(() => {});
+
+    return () => {
+      video.pause();
+    };
+  }, [isVideo, item.id, item.src]);
+
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("video")) return;
     if (!canNavigate) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const ratio = (event.clientX - rect.left) / rect.width;
@@ -55,10 +68,8 @@ export function PhotoMediaCanvas({
     if (hasPrev) onPrev?.();
   };
 
-  const safeWidth = item.width || 1920;
-  const safeHeight = item.height || 1080;
   const hasDimensions = !!(item.width && item.height);
-  const useShrinkWrap = !isFrame && hasDimensions;
+  const useShrinkWrap = hasDimensions && !isVideo;
 
   const mobileMaxHeight = "max-h-[42dvh]";
   const mobileMaxWidth = "max-w-[82vw]";
@@ -71,9 +82,7 @@ export function PhotoMediaCanvas({
       onClick={handleCanvasClick}
       className={cn(
         "relative flex h-full w-full items-center justify-center overflow-hidden transition-colors duration-500",
-        canNavigate && "cursor-pointer",
-        isFrame &&
-          "bg-gradient-to-br from-amber-100 via-rose-100 to-sky-200 dark:from-violet-950 dark:via-indigo-950 dark:to-teal-950",
+        canNavigate && !isVideo && "cursor-pointer",
       )}
     >
       <AnimatePresence initial={false} custom={direction} mode="wait">
@@ -106,41 +115,20 @@ export function PhotoMediaCanvas({
           initial="enter"
           animate="center"
           exit="exit"
-          className={cn(
-            "absolute inset-0 flex h-full w-full items-center justify-center",
-            isFrame ? "p-3 sm:p-4 md:p-8" : "px-3 py-2 sm:px-4 sm:py-0",
-          )}
+          className="absolute inset-0 flex h-full w-full items-center justify-center px-3 py-2 sm:px-4 sm:py-0"
         >
-          {isFrame ? (
-            <div className="flex w-full max-w-[min(88vw,360px)] min-w-0 flex-col items-center bg-white px-[6%] pb-[8%] pt-[4%] shadow-[0_10px_50px_-10px_rgba(0,0,0,0.1)] sm:min-w-[300px] sm:max-w-none dark:bg-[#1a1a1a]">
-              <div className="relative shadow-[0_4px_20px_-2px_rgba(0,0,0,0.15)]">
-                <BlurImage
-                  src={item.src}
-                  alt={item.title}
-                  blurHash={item.blurHash}
-                  width={safeWidth}
-                  height={safeHeight}
-                  quality={90}
-                  className={cn(
-                    "block w-auto object-contain",
-                    mobileMaxHeight,
-                    mobileMaxWidth,
-                    "sm:max-h-[55vh] md:max-h-[70vh]",
-                  )}
-                  sizes="100vw"
-                  priority
-                />
-              </div>
-              <div className="mt-4 w-full text-center sm:mt-8 md:mt-12">
-                <p className="font-serif text-sm font-light tracking-[0.2em] text-slate-800 dark:text-slate-300 md:text-base">
-                  {item.title || galleryCopy.grid.modal.untitled}
-                </p>
-                <p className="mt-2 font-serif text-[10px] italic tracking-widest text-slate-800/60 dark:text-slate-300/60 md:text-[11px]">
-                  {galleryCopy.grid.modal.authorPrefix}{" "}
-                  {item.tripName ?? galleryCopy.grid.modal.authorFallback}
-                </p>
-              </div>
-            </div>
+          {isVideo ? (
+            <video
+              ref={videoRef}
+              src={item.src}
+              controls
+              playsInline
+              preload="auto"
+              className={cn(
+                "max-h-[42dvh] w-auto max-w-[82vw] object-contain sm:max-h-[calc(100dvh-10rem)] sm:max-w-full md:max-h-[75vh]",
+              )}
+              onClick={(event) => event.stopPropagation()}
+            />
           ) : (
             <div
               className={cn(
@@ -162,8 +150,19 @@ export function PhotoMediaCanvas({
                 className={cn(
                   "object-contain",
                   useShrinkWrap
-                    ? cn("block h-auto w-auto", mobileMaxHeight, mobileMaxWidth, desktopMaxHeight, desktopMaxWidth)
-                    : cn(mobileMaxHeight, mobileMaxWidth, desktopMaxHeight, desktopMaxWidth),
+                    ? cn(
+                        "block h-auto w-auto",
+                        mobileMaxHeight,
+                        mobileMaxWidth,
+                        desktopMaxHeight,
+                        desktopMaxWidth,
+                      )
+                    : cn(
+                        mobileMaxHeight,
+                        mobileMaxWidth,
+                        desktopMaxHeight,
+                        desktopMaxWidth,
+                      ),
                 )}
                 sizes="100vw"
                 priority

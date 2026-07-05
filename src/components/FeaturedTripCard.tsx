@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { formatDateRange } from "@/lib/trip-meta";
+import { formatMediaCountFromTrip } from "@/lib/media-count";
 import type { Trip } from "@/lib/types";
 
 type FeaturedTripCardProps = {
@@ -54,7 +55,7 @@ export function FeaturedTripCard({
               ) : null}
             </div>
             <div className="relative z-10 text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-white/50">
-              {trip.photoCount} photo{trip.photoCount !== 1 ? "s" : ""}
+              {formatMediaCountFromTrip(trip)}
             </div>
           </div>
         </SpotlightCard>

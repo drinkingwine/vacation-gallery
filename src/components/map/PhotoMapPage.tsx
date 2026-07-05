@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   APIProvider,
+  AdvancedMarker,
   Map,
-  Marker,
+  Pin,
   useMap,
 } from "@vis.gl/react-google-maps";
 import { Footer } from "@/components/Footer";
@@ -16,6 +17,8 @@ import type { MapLocationMarker } from "@/lib/map";
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
 const DEFAULT_ZOOM = 4;
 const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+const mapsMapId =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() || "DEMO_MAP_ID";
 
 type PhotoMapProps = {
   locations: MapLocationMarker[];
@@ -62,6 +65,7 @@ function PhotoMap({ locations }: PhotoMapProps) {
       <Map
         defaultCenter={DEFAULT_CENTER}
         defaultZoom={DEFAULT_ZOOM}
+        mapId={mapsMapId}
         gestureHandling="greedy"
         disableDefaultUI={false}
         onClick={handleMapClick}
@@ -71,24 +75,24 @@ function PhotoMap({ locations }: PhotoMapProps) {
       >
         <FitMapBounds locations={locations} />
         {locations.map((location) => (
-          <Marker
+          <AdvancedMarker
             key={location.id}
             position={{ lat: location.latitude, lng: location.longitude }}
             title={location.location ?? `${location.photoCount} photos`}
-            label={
-              location.photoCount > 1
-                ? {
-                    text: String(location.photoCount),
-                    color: "#ffffff",
-                    fontWeight: "700",
-                  }
-                : undefined
-            }
             onClick={(event) => {
-              event.domEvent.stopPropagation();
+              event.stopPropagation();
               handleMarkerClick(location);
             }}
-          />
+          >
+            <Pin
+              background="#EA580C"
+              borderColor="#C2410C"
+              glyphColor="#FFFFFF"
+              {...(location.photoCount > 1
+                ? { glyphText: String(location.photoCount) }
+                : {})}
+            />
+          </AdvancedMarker>
         ))}
       </Map>
       {selected ? (

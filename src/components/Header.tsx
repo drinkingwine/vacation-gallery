@@ -94,8 +94,8 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
           : "border-b border-zinc-200/70 bg-background/95 backdrop-blur-xl dark:border-zinc-800/80",
       )}
     >
-      <div className="page-container mx-auto flex flex-col gap-3 pb-5 sm:pb-6">
-        <div className="flex w-full items-center justify-between gap-3">
+      <div className="page-container mx-auto flex flex-col gap-2 pb-3 sm:gap-3 sm:pb-6">
+        <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
           {backHref ? (
             <Link
               href={backHref}
@@ -118,7 +118,7 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
             <Link href="/" className="pointer-events-auto min-w-0 flex-1 text-left">
               <span
                 className={cn(
-                  "font-serif block text-xs font-semibold leading-snug tracking-[0.04em] sm:text-base sm:leading-tight sm:tracking-[0.06em] md:text-xl lg:text-2xl",
+                  "font-serif block text-[11px] font-semibold leading-snug tracking-[0.04em] sm:text-base sm:leading-tight sm:tracking-[0.06em] md:text-xl lg:text-2xl",
                   onHome ? "text-white/80" : "text-zinc-800/90 dark:text-white/85",
                 )}
               >
@@ -264,7 +264,7 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
 
         <nav
           className={cn(
-            "pointer-events-auto flex w-full items-center justify-start gap-4 border-t pt-2 text-[10px] uppercase tracking-[0.2em] sm:hidden",
+            "pointer-events-auto flex w-full items-center justify-between gap-2 border-t pt-2 text-[10px] uppercase tracking-[0.18em] sm:hidden",
             onHome ? "border-white/10 text-white/60" : "border-zinc-200/80 text-zinc-600/80 dark:border-zinc-800 dark:text-white/60",
           )}
         >
