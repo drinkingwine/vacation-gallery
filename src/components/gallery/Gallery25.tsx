@@ -54,10 +54,18 @@ type FilterValue = (typeof filters)[number]["value"];
 const clampColumnCount = (value: number, max = 10) =>
   Math.min(max, Math.max(2, value));
 
+const getResponsiveColumnCount = (width: number) => {
+  if (width >= 1536) return 8;
+  if (width >= 1280) return 6;
+  if (width >= 1024) return 5;
+  if (width >= 640) return 4;
+  return 3;
+};
+
 const getColumnSliderMax = (width: number) => {
-  if (width > 0 && width < 640) return 4;
-  if (width < 1024) return 6;
-  return 10;
+  if (width >= 1024) return getResponsiveColumnCount(width);
+  if (width >= 640) return 4;
+  return 4;
 };
 
 const readStoredNumber = (key: string, fallback: number) => {
@@ -187,8 +195,12 @@ export function Gallery25({
   }, [filter, items, timelineItems]);
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
+  const usesResponsiveColumns = viewportWidth >= 1024;
+  const targetColumnCount = usesResponsiveColumns
+    ? getResponsiveColumnCount(viewportWidth)
+    : columnCount;
   const displayColumnCount = Math.min(
-    columnCount,
+    targetColumnCount,
     columnSliderMax,
     Math.max(1, visibleItems.length),
   );
@@ -393,28 +405,41 @@ export function Gallery25({
               <span className="text-xs sm:text-sm">
                 {galleryCopy.grid.summary(visibleItems.length, items.length)}
               </span>
-              <label className="flex min-w-[10rem] flex-1 items-center gap-2 text-xs text-muted-foreground sm:min-w-0 sm:flex-none">
+              <label
+                className={cn(
+                  "flex min-w-[10rem] flex-1 items-center gap-2 text-xs text-muted-foreground sm:min-w-0 sm:flex-none",
+                  usesResponsiveColumns && "flex-none",
+                )}
+              >
                 <span className="shrink-0">{galleryCopy.grid.columns.label}</span>
-                <input
-                  type="range"
-                  min={2}
-                  max={columnSliderMax}
-                  step={1}
-                  value={Math.min(columnCount, columnSliderMax)}
-                  onChange={(event) =>
-                    setColumnCount(
-                      clampColumnCount(
-                        Number(event.target.value),
-                        columnSliderMax,
-                      ),
-                    )
-                  }
-                  className="h-1 min-w-0 flex-1 cursor-pointer accent-primary sm:w-32 sm:flex-none"
-                  aria-label={galleryCopy.grid.columns.aria}
-                />
-                <span className="shrink-0 tabular-nums">
-                  {galleryCopy.grid.columns.count(displayColumnCount)}
-                </span>
+                {usesResponsiveColumns ? (
+                  <span className="shrink-0 tabular-nums">
+                    {galleryCopy.grid.columns.count(displayColumnCount)}
+                  </span>
+                ) : (
+                  <>
+                    <input
+                      type="range"
+                      min={2}
+                      max={columnSliderMax}
+                      step={1}
+                      value={Math.min(columnCount, columnSliderMax)}
+                      onChange={(event) =>
+                        setColumnCount(
+                          clampColumnCount(
+                            Number(event.target.value),
+                            columnSliderMax,
+                          ),
+                        )
+                      }
+                      className="h-1 min-w-0 flex-1 cursor-pointer accent-primary sm:w-32 sm:flex-none"
+                      aria-label={galleryCopy.grid.columns.aria}
+                    />
+                    <span className="shrink-0 tabular-nums">
+                      {galleryCopy.grid.columns.count(displayColumnCount)}
+                    </span>
+                  </>
+                )}
               </label>
               <button
                 type="button"
