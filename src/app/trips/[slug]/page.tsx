@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { CreateTripModal } from "@/components/CreateTripModal";
 import { EditTripModal } from "@/components/EditTripModal";
 import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Header";
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { UploadModal } from "@/components/UploadModal";
 import { formatDateRange } from "@/lib/trip-meta";
@@ -22,6 +23,7 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
   const [showEditTrip, setShowEditTrip] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
@@ -115,17 +117,13 @@ export default function TripPage() {
 
   return (
     <>
-      <main className="flex-1 pb-16 pt-8">
-        <section className="front-fade-up relative mx-auto -mt-2 h-[78vh] min-h-[560px] max-h-[900px] w-[88vw] max-w-none overflow-hidden rounded-[32px] bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900">
-          <div className="absolute left-6 top-6 z-20">
-            <Link
-              href="/"
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white"
-            >
-              ← All trips
-            </Link>
-          </div>
+      <Header
+        onUpload={isAdmin ? () => setShowUpload(true) : undefined}
+        onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
+      />
 
+      <main className="flex-1 pb-16 pt-24">
+        <section className="front-fade-up relative mx-auto h-[78vh] min-h-[560px] max-h-[900px] w-[88vw] max-w-none overflow-hidden rounded-[32px] bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900">
           {heroImages.length > 0 ? (
             heroImages.map((src, index) => (
               <div
@@ -252,6 +250,16 @@ export default function TripPage() {
           trip={trip}
           onClose={() => setShowEditTrip(false)}
           onSaved={fetchTrip}
+        />
+      )}
+
+      {showCreateTrip && isAdmin && (
+        <CreateTripModal
+          onClose={() => setShowCreateTrip(false)}
+          onCreated={() => {
+            fetchTrips();
+            fetchTrip();
+          }}
         />
       )}
 

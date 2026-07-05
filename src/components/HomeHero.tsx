@@ -22,13 +22,9 @@ const HERO_IMAGES_MOBILE = [
 
 type HomeHeroProps = {
   primaryHref?: string;
-  secondaryHref?: string;
 };
 
-export function HomeHero({
-  primaryHref = "/gallery",
-  secondaryHref = "/#trips",
-}: HomeHeroProps) {
+export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(0);
 
@@ -71,8 +67,6 @@ export function HomeHero({
 
   const heroPrimaryClass =
     "inline-flex h-11 items-center rounded-full border border-white/20 bg-white/10 px-8 text-sm font-medium text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20";
-  const heroSecondaryClass =
-    "inline-flex h-11 items-center rounded-full border border-white/20 px-8 text-sm font-medium text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/10";
 
   return (
     <section className="front-fade-up group relative -mt-24 min-h-[calc(100svh+6rem)] w-screen -ml-[calc(50vw-50%)] overflow-hidden bg-zinc-950">
@@ -139,29 +133,10 @@ export function HomeHero({
         </div>
       )}
 
-      <div className="relative z-20 flex min-h-[calc(100svh+6rem)] flex-col items-start justify-start px-8 pb-16 pt-32 md:px-16 md:pt-36">
-        <div className="max-w-2xl space-y-6 text-left">
-          <p className="text-xs uppercase tracking-[0.4em] text-white/60">
-            Vacation / Vision
-          </p>
-          <h1 className="font-serif text-4xl font-semibold leading-tight text-white/85 md:text-6xl lg:text-7xl">
-            VACATION
-            <br />
-            VISION
-          </h1>
-          <p className="max-w-xl text-sm text-white/60 md:text-base">
-            Fuse immersive light with minimalist layout, turning every frame into
-            a collectible memory of travel.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link href={primaryHref} className={heroPrimaryClass}>
-              Enter gallery
-            </Link>
-            <Link href={secondaryHref} className={heroSecondaryClass}>
-              Browse portfolio
-            </Link>
-          </div>
-        </div>
+      <div className="relative z-20 flex min-h-[calc(100svh+6rem)] flex-col items-center justify-center px-8 pb-16 pt-24">
+        <Link href={primaryHref} className={heroPrimaryClass}>
+          Enter gallery
+        </Link>
       </div>
     </section>
   );

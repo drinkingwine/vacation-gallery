@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { galleryCopy } from "@/lib/gallery-copy";
 
@@ -18,6 +19,12 @@ export function GalleryHeader() {
       <p className="max-w-2xl text-sm text-zinc-600/80 dark:text-white/60">
         {galleryCopy.description}
       </p>
+      <Link
+        href="/gallery"
+        className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
+      >
+        ← Choose a trip
+      </Link>
     </header>
   );
 }

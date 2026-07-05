@@ -34,7 +34,7 @@ export default function RootLayout({
       className={`${lora.variable} ${openSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="relative flex min-h-full flex-col bg-zinc-50 font-medium text-zinc-900 dark:bg-zinc-950 dark:text-white">
+      <body className="relative flex min-h-full flex-col font-medium text-foreground">
         <AuthProvider>
           <div className="relative z-10 flex min-h-full flex-1 flex-col">
             {children}

@@ -26,6 +26,8 @@ type PhotoDetailModalProps = {
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  isAdmin?: boolean;
+  onEdit?: (item: GalleryItem) => void;
 };
 
 export function PhotoDetailModal({
@@ -37,6 +39,8 @@ export function PhotoDetailModal({
   onNext,
   hasPrev,
   hasNext,
+  isAdmin = false,
+  onEdit,
 }: PhotoDetailModalProps) {
   useEffect(() => {
     if (!selectedItem) return;
@@ -61,6 +65,8 @@ export function PhotoDetailModal({
           onNext={onNext}
           hasPrev={hasPrev}
           hasNext={hasNext}
+          isAdmin={isAdmin}
+          onEdit={onEdit}
         />
       ) : null}
     </AnimatePresence>
@@ -80,6 +86,8 @@ function PhotoDetailContent({
   onNext,
   hasPrev,
   hasNext,
+  isAdmin = false,
+  onEdit,
 }: {
   item: GalleryItem;
   items: GalleryItem[];
@@ -89,6 +97,8 @@ function PhotoDetailContent({
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  isAdmin?: boolean;
+  onEdit?: (item: GalleryItem) => void;
 }) {
   const [viewMode, setViewMode] = useState<"fit" | "frame">("fit");
   const [direction, setDirection] = useState(0);
@@ -290,7 +300,11 @@ function PhotoDetailContent({
         />
       </div>
 
-      <PhotoInfoSidebar item={item} />
+      <PhotoInfoSidebar
+        item={item}
+        isAdmin={isAdmin}
+        onEdit={isAdmin && onEdit ? () => onEdit(item) : undefined}
+      />
     </motion.div>
   );
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import { Calendar, Download, MapPin, Share2 } from "lucide-react";
+import { Calendar, Download, MapPin, Pencil, Share2 } from "lucide-react";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
 
 type PhotoInfoSidebarProps = {
   item: GalleryItem;
+  isAdmin?: boolean;
+  onEdit?: () => void;
 };
 
 const formatFileSize = (bytes?: number | null) => {
@@ -25,7 +27,11 @@ const formatDate = (date?: string | null) => {
   return new Date(date).toLocaleString(undefined, { hour12: false });
 };
 
-export function PhotoInfoSidebar({ item }: PhotoInfoSidebarProps) {
+export function PhotoInfoSidebar({
+  item,
+  isAdmin = false,
+  onEdit,
+}: PhotoInfoSidebarProps) {
   const resolution =
     item.width && item.height ? `${item.width} x ${item.height}` : "-";
 
@@ -55,6 +61,16 @@ export function PhotoInfoSidebar({ item }: PhotoInfoSidebarProps) {
             {item.title || galleryCopy.grid.modal.untitled}
           </h2>
           <div className="mt-1 flex shrink-0 items-center space-x-2">
+            {isAdmin && onEdit ? (
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center text-gray-500 transition-colors hover:text-indigo-500 dark:hover:text-indigo-300"
+                title="Edit photo"
+                onClick={onEdit}
+              >
+                <Pencil className="h-5 w-5" />
+              </button>
+            ) : null}
             <button
               type="button"
               className="flex h-8 w-8 items-center justify-center text-gray-500 transition-colors hover:text-indigo-500 dark:hover:text-indigo-300"

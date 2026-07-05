@@ -1,17 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { FeaturedTripCard } from "@/components/FeaturedTripCard";
+import { CreateTripModal } from "@/components/CreateTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { HomeHero } from "@/components/HomeHero";
-import { SectionHeader } from "@/components/SectionHeader";
+import { TripCard } from "@/components/TripCard";
 import { UploadModal } from "@/components/UploadModal";
-import { CreateTripModal } from "@/components/CreateTripModal";
+import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 
-export default function Home() {
+export function GalleryTripSelection() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +29,7 @@ export default function Home() {
         const data = await res.json();
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      const data: Trip[] = await res.json();
-      setTrips(data);
+      setTrips(await res.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
     } finally {
@@ -41,8 +40,6 @@ export default function Home() {
   useEffect(() => {
     fetchTrips();
   }, [fetchTrips]);
-
-  const totalPhotos = trips.reduce((sum, t) => sum + t.photoCount, 0);
 
   const handleDeleteTrip = async (trip: Trip) => {
     if (
@@ -76,83 +73,80 @@ export default function Home() {
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
-      <main className="flex-1">
-        <HomeHero primaryHref="/gallery" />
-
-        {error && (
-          <div className="mx-auto w-[88vw] max-w-none px-0 pt-8">
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
-              <p className="text-sm font-medium">Failed to load trips</p>
-              <p className="mt-1 text-sm opacity-80">{error}</p>
-              {error.includes("GITHUB") && (
-                <p className="mt-2 text-xs opacity-70">
-                  Set <code className="rounded bg-red-100 px-1">GITHUB_TOKEN</code> and{" "}
-                  <code className="rounded bg-red-100 px-1">GITHUB_REPO</code> in{" "}
-                  <code className="rounded bg-red-100 px-1">.env.local</code>. See README.
-                </p>
+      <main className="mx-auto w-[88vw] max-w-none flex-1 px-0 pb-16 pt-24">
+        <div className="space-y-10">
+          <header className="front-fade-up space-y-4">
+            <h1
+              className={cn(
+                "font-serif",
+                "text-4xl font-semibold text-zinc-800/90 dark:text-white/85 md:text-5xl",
               )}
+            >
+              Gallery
+            </h1>
+            <Link
+              href="/gallery/all"
+              className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
+            >
+              Browse all photos →
+            </Link>
+          </header>
+
+          {error ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              <p>{error}</p>
               <button
                 type="button"
                 onClick={fetchTrips}
-                className="mt-2 text-sm underline"
+                className="mt-2 underline"
               >
                 Retry
               </button>
             </div>
-          </div>
-        )}
-
-        <section
-          id="trips"
-          className="front-fade-up mx-auto w-[88vw] max-w-none space-y-8 px-0 py-16 lg:space-y-10"
-        >
-          <SectionHeader
-            title="Featured trips"
-            description="Signature albums blending place, light, and moment into a unified travel narrative."
-            actionLabel="View gallery"
-            actionHref="/gallery"
-          />
+          ) : null}
 
           {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => (
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="min-h-[280px] animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
+                  className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800"
                 />
               ))}
             </div>
           ) : trips.length === 0 ? (
-            <div className="flex flex-col items-center py-20 text-zinc-400">
-              <p className="text-lg text-zinc-600 dark:text-zinc-300">No trips yet</p>
-              <p className="mt-2 text-sm text-zinc-500">
-                {isAdmin
-                  ? "Upload photos and create your first trip folder."
-                  : "Sign in as admin to upload photos."}
+            <div className="rounded-2xl border border-zinc-200 bg-white/60 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
+              <p className="text-lg text-zinc-700 dark:text-zinc-200">
+                No trips yet
               </p>
-              {isAdmin && (
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                {isAdmin
+                  ? "Create a trip folder, then upload photos."
+                  : "Sign in as admin to add trips and photos."}
+              </p>
+              {isAdmin ? (
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <button
                     type="button"
                     onClick={() => setShowCreateTrip(true)}
-                    className="rounded-full border border-zinc-300 px-6 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
                   >
                     New trip
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowUpload(true)}
-                    className="rounded-full border border-zinc-900 bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                    className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
                   >
                     Upload photos
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {trips.map((trip) => (
-                <FeaturedTripCard
+                <TripCard
                   key={trip.path}
                   trip={trip}
                   isAdmin={isAdmin}
@@ -162,16 +156,10 @@ export default function Home() {
               ))}
             </div>
           )}
-        </section>
+        </div>
       </main>
 
-      <Footer
-        stats={
-          loading
-            ? "Loading…"
-            : `${totalPhotos} photos across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`
-        }
-      />
+      <Footer />
 
       {showCreateTrip && isAdmin && (
         <CreateTripModal
@@ -184,9 +172,7 @@ export default function Home() {
         <UploadModal
           trips={trips}
           onClose={() => setShowUpload(false)}
-          onUploadComplete={() => {
-            fetchTrips();
-          }}
+          onUploadComplete={fetchTrips}
         />
       )}
     </>

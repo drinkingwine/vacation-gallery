@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
 import { GalleryHeader } from "@/components/gallery/GalleryHeader";
+import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
 import { cn } from "@/lib/utils";
@@ -104,6 +106,7 @@ export function Gallery25({
   selectedId: controlledSelectedId,
   onSelectedIdChange,
 }: Gallery25Props) {
+  const { isAdmin } = useAuth();
   const [uncontrolledSelectedId, setUncontrolledSelectedId] =
     useState<GalleryId | null>(null);
   const [isFullBleed, setIsFullBleed] = useState(false);
@@ -297,6 +300,8 @@ export function Gallery25({
         onNext={() => handleNavigate("next")}
         hasPrev={canNavigate}
         hasNext={canNavigate}
+        isAdmin={isAdmin}
+        onEdit={requestGalleryPhotoEdit}
       />
     );
   }
@@ -482,6 +487,8 @@ export function Gallery25({
         onNext={() => handleNavigate("next")}
         hasPrev={canNavigate}
         hasNext={canNavigate}
+        isAdmin={isAdmin}
+        onEdit={requestGalleryPhotoEdit}
       />
     </section>
   );

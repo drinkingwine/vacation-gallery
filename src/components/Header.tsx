@@ -11,6 +11,7 @@ type HeaderProps = {
   backHref?: string;
   backLabel?: string;
   onUpload?: () => void;
+  onCreateTrip?: () => void;
 };
 
 const navItems = [
@@ -37,15 +38,14 @@ function IconButton({
   );
 }
 
-export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
+export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderProps) {
   const pathname = usePathname();
   const onHome = pathname === "/";
-  const onTripDetail = pathname.startsWith("/trips/");
   const { isAdmin, role, logout, loading, authenticated } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (pathname === "/login" || onTripDetail) return null;
+  if (pathname === "/login") return null;
 
   const glassIcon = onHome
     ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
@@ -95,11 +95,11 @@ export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
           <Link href="/" className="pointer-events-auto flex items-center gap-3">
             <span
               className={cn(
-                "font-serif text-base font-semibold tracking-[0.35em] md:text-lg",
+                "font-serif text-base font-semibold leading-tight tracking-[0.06em] sm:text-lg md:text-xl lg:text-2xl",
                 onHome ? "text-white/80" : "text-zinc-800/90 dark:text-white/85",
               )}
             >
-              VACATIONS
+              Ralph &amp; Robin&apos;s Adventures
             </span>
           </Link>
         )}
@@ -175,6 +175,18 @@ export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
                         {isAdmin ? "Admin" : "Guest"}
                       </p>
                     </div>
+                    {isAdmin && onCreateTrip && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onCreateTrip();
+                          setAccountOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-white/10 dark:hover:bg-white/10"
+                      >
+                        New trip
+                      </button>
+                    )}
                     {isAdmin && onUpload && (
                       <button
                         type="button"

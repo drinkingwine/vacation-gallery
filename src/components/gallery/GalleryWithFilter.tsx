@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/use-debounce";
 import { GalleryInfinite } from "@/components/gallery/GalleryInfinite";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
 
@@ -132,6 +133,14 @@ export function GalleryWithFilter({
     if (lastFilterKeyRef.current === filterKey) return;
     lastFilterKeyRef.current = filterKey;
     void applyFilter(mediaType, sortOrder, normalizedKeyword);
+  }, [applyFilter, mediaType, normalizedKeyword, sortOrder]);
+
+  useEffect(() => {
+    const refresh = () => {
+      void applyFilter(mediaType, sortOrder, normalizedKeyword);
+    };
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [applyFilter, mediaType, normalizedKeyword, sortOrder]);
 
   useEffect(() => {

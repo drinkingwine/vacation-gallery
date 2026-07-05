@@ -5,6 +5,9 @@ export type GalleryItem = {
   type: "photo";
   src: string;
   title: string;
+  filename: string;
+  path: string;
+  sha: string;
   description?: string | null;
   locationName?: string | null;
   dateShot?: string | null;
@@ -28,6 +31,9 @@ export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
     type: "photo",
     src: photo.downloadUrl,
     title,
+    filename: photo.name,
+    path: photo.path,
+    sha: photo.sha,
     description: photo.caption ?? null,
     locationName: photo.tripLocation ?? photo.tripTitle,
     dateShot: photo.tripStartDate ?? null,
