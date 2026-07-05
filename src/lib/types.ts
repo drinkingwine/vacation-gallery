@@ -31,10 +31,12 @@ export type SortField = "name" | "size";
 export type SortOrder = "asc" | "desc";
 
 export interface UploadFile {
+  id: string;
   file: File;
   preview: string;
   status: "pending" | "uploading" | "done" | "error";
   error?: string;
+  uploadName?: string;
 }
 
 export interface CreateTripInput {

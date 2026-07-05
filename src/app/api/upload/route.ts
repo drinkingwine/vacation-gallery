@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isImage, uploadFile } from "@/lib/github";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const MAX_SIZE_MB = 25;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;

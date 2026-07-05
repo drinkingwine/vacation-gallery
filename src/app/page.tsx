@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { Header } from "@/components/Header";
 import { TripCard } from "@/components/TripCard";
 import { UploadModal } from "@/components/UploadModal";
@@ -11,6 +12,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const { isAdmin } = useAuth();
 
   const fetchTrips = useCallback(async () => {
     setLoading(true);
@@ -38,7 +40,7 @@ export default function Home() {
 
   return (
     <>
-      <Header onUpload={() => setShowUpload(true)} />
+      <Header onUpload={isAdmin ? () => setShowUpload(true) : undefined} />
 
       <main className="flex-1">
         <section className="border-b border-stone-200/80 bg-white/50 px-6 py-16 text-center">
@@ -92,15 +94,19 @@ export default function Home() {
             <div className="flex flex-col items-center py-20 text-stone-400">
               <p className="text-lg text-stone-600">No trips yet</p>
               <p className="mt-2 text-sm">
-                Upload photos and create your first trip folder.
+                {isAdmin
+                  ? "Upload photos and create your first trip folder."
+                  : "Sign in as admin to upload photos."}
               </p>
-              <button
-                type="button"
-                onClick={() => setShowUpload(true)}
-                className="mt-6 rounded-full bg-terracotta px-6 py-2.5 text-sm font-medium text-white hover:bg-terracotta/90"
-              >
-                Upload photos
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowUpload(true)}
+                  className="mt-6 rounded-full bg-terracotta px-6 py-2.5 text-sm font-medium text-white hover:bg-terracotta/90"
+                >
+                  Upload photos
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -118,7 +124,7 @@ export default function Home() {
           : `${totalPhotos} photos across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`}
       </footer>
 
-      {showUpload && (
+      {showUpload && isAdmin && (
         <UploadModal
           trips={trips}
           onClose={() => setShowUpload(false)}

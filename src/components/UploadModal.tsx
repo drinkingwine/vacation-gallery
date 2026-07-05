@@ -1,12 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { Trip, UploadFile } from "@/lib/types";
+import {
+  compressImage,
+  delay,
+  fetchWithTimeout,
+  makeUniqueFilename,
+} from "@/lib/upload-utils";
 
 const MAX_FILES = 50;
 const MAX_SIZE_MB = 25;
-const CONCURRENCY = 5;
+const GITHUB_RETRY_DELAY_MS = 1500;
 const ACCEPTED_TYPES = {
   "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".heic"],
 };
@@ -51,6 +57,14 @@ export function UploadModal({
   const [creatingTrip, setCreatingTrip] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
+  const abortRef = useRef(false);
+
+  useEffect(() => {
+    abortRef.current = false;
+    return () => {
+      abortRef.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -76,6 +90,7 @@ export function UploadModal({
     setFiles((prev) => {
       const remaining = MAX_FILES - prev.length;
       const batch = accepted.slice(0, remaining).map((file) => ({
+        id: crypto.randomUUID(),
         file,
         preview: URL.createObjectURL(file),
         status: "pending" as const,
@@ -156,65 +171,115 @@ export function UploadModal({
 
     const pending = files
       .map((f, i) => ({ f, i }))
-      .filter(({ f }) => f.status === "pending")
-      .map(({ f, i }) => ({ i, file: f.file }));
+      .filter(({ f }) => f.status === "pending");
 
     if (pending.length === 0) return;
 
     setIsUploading(true);
+    abortRef.current = false;
     let successCount = 0;
-    let pointer = 0;
+    const usedNames = new Set<string>();
 
-    const updateStatus = (
+    const updateFile = (
       index: number,
-      status: UploadFile["status"],
-      error?: string,
+      patch: Partial<UploadFile>,
     ) => {
       setFiles((prev) =>
-        prev.map((f, i) => (i === index ? { ...f, status, error } : f)),
+        prev.map((f, i) => (i === index ? { ...f, ...patch } : f)),
       );
     };
 
-    const uploadOne = async (index: number, file: File) => {
-      updateStatus(index, "uploading");
+    for (const { f, i } of pending) {
+      if (abortRef.current) break;
+
+      const uploadName = makeUniqueFilename(f.file.name, usedNames);
+      updateFile(i, { status: "uploading", uploadName, error: undefined });
+
       try {
-        const content = await fileToBase64(file);
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            content,
-            trip: selectedTrip || undefined,
-          }),
-        });
+        const prepared = await compressImage(f.file);
+        const content = await fileToBase64(prepared);
+
+        let res: Response | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (abortRef.current) break;
+
+          try {
+            res = await fetchWithTimeout(
+              "/api/upload",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  filename: uploadName,
+                  content,
+                  trip: selectedTrip || undefined,
+                }),
+              },
+              120_000,
+            );
+          } catch (err) {
+            if (attempt === 2) throw err;
+            await delay(GITHUB_RETRY_DELAY_MS * (attempt + 1));
+            continue;
+          }
+
+          if (res.status === 403 || res.status === 429) {
+            if (attempt < 2) {
+              await delay(GITHUB_RETRY_DELAY_MS * (attempt + 1));
+              continue;
+            }
+          }
+          break;
+        }
+
+        if (!res) {
+          updateFile(i, { status: "error", error: "Upload cancelled" });
+          continue;
+        }
+
         const data = await res.json();
         if (res.ok) {
           successCount++;
-          updateStatus(index, "done");
+          updateFile(i, { status: "done" });
         } else {
-          updateStatus(index, "error", data.error ?? "Upload failed");
+          updateFile(i, {
+            status: "error",
+            error: data.error ?? "Upload failed",
+          });
         }
-      } catch {
-        updateStatus(index, "error", "Network error");
+      } catch (err) {
+        const message =
+          err instanceof Error && err.name === "AbortError"
+            ? "Upload timed out"
+            : err instanceof Error
+              ? err.message
+              : "Network error";
+        updateFile(i, { status: "error", error: message });
       }
-    };
 
-    const worker = async () => {
-      while (pointer < pending.length) {
-        const item = pending[pointer++];
-        await uploadOne(item.i, item.file);
+      // Brief pause between uploads — GitHub rate-limits rapid commits
+      if (!abortRef.current) {
+        await delay(400);
       }
-    };
-
-    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+    }
 
     setIsUploading(false);
     if (successCount > 0) onUploadComplete();
   };
 
+  const retryFailed = () => {
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.status === "error"
+          ? { ...f, status: "pending" as const, error: undefined }
+          : f,
+      ),
+    );
+  };
+
   const total = files.length;
   const doneCount = files.filter((f) => f.status === "done").length;
+  const errorCount = files.filter((f) => f.status === "error").length;
   const pendingCount = files.filter((f) => f.status === "pending").length;
   const uploadingCount = files.filter((f) => f.status === "uploading").length;
   const allDone = total > 0 && doneCount === total;
@@ -371,11 +436,27 @@ export function UploadModal({
           </div>
 
           {total > 0 && (
-            <div className="grid max-h-48 grid-cols-6 gap-2 overflow-y-auto">
+            <div>
+              {errorCount > 0 && !isUploading && (
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-red-600">
+                    {errorCount} failed — large photos are auto-compressed before upload
+                  </span>
+                  <button
+                    type="button"
+                    onClick={retryFailed}
+                    className="text-terracotta underline"
+                  >
+                    Retry failed
+                  </button>
+                </div>
+              )}
+              <div className="grid max-h-48 grid-cols-6 gap-2 overflow-y-auto">
               {files.map((f, i) => (
                 <div
-                  key={i}
+                  key={f.id}
                   className="relative aspect-square overflow-hidden rounded-lg bg-stone-100"
+                  title={f.error}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -393,6 +474,11 @@ export function UploadModal({
                       …
                     </div>
                   )}
+                  {f.status === "error" && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-500/50 p-1 text-center text-[10px] text-white">
+                      Failed
+                    </div>
+                  )}
                   {f.status === "pending" && !isUploading && (
                     <button
                       type="button"
@@ -404,6 +490,7 @@ export function UploadModal({
                   )}
                 </div>
               ))}
+              </div>
             </div>
           )}
         </div>

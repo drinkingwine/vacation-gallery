@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 import { Header } from "@/components/Header";
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { UploadModal } from "@/components/UploadModal";
@@ -18,6 +19,7 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const { isAdmin } = useAuth();
 
   const fetchTrip = useCallback(async () => {
     setLoading(true);
@@ -68,7 +70,7 @@ export default function TripPage() {
       <Header
         backHref="/"
         backLabel="All trips"
-        onUpload={() => setShowUpload(true)}
+        onUpload={isAdmin ? () => setShowUpload(true) : undefined}
       />
 
       <main className="flex-1">
@@ -130,7 +132,7 @@ export default function TripPage() {
         </section>
       </main>
 
-      {showUpload && (
+      {showUpload && isAdmin && (
         <UploadModal
           trips={trips}
           defaultTrip={tripName}

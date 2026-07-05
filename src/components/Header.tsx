@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 type HeaderProps = {
   backHref?: string;
@@ -12,6 +13,9 @@ type HeaderProps = {
 export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
   const pathname = usePathname();
   const onHome = pathname === "/";
+  const { isAdmin, role, logout, loading } = useAuth();
+
+  if (pathname === "/login") return null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-cream/90 backdrop-blur-md">
@@ -40,8 +44,13 @@ export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
           Vacation Photos
         </Link>
 
-        <div className="flex w-28 items-center justify-end gap-2">
-          {onUpload && (
+        <div className="flex w-36 items-center justify-end gap-2">
+          {!loading && role && (
+            <span className="hidden text-xs text-stone-500 sm:inline">
+              {isAdmin ? "Admin" : "Guest"}
+            </span>
+          )}
+          {isAdmin && onUpload && (
             <button
               type="button"
               onClick={onUpload}
@@ -51,6 +60,15 @@ export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
                 <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
               </svg>
               {onHome ? "Upload" : ""}
+            </button>
+          )}
+          {!loading && role && (
+            <button
+              type="button"
+              onClick={logout}
+              className="rounded-full px-3 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
+            >
+              Log out
             </button>
           )}
         </div>
