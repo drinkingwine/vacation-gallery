@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
-  isAdminRoute,
   parseSessionToken,
+  requiresAdmin,
   SESSION_COOKIE,
 } from "@/lib/auth";
 
@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAdminRoute(pathname) && session.role !== "admin") {
+  if (requiresAdmin(pathname, request.method) && session.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -254,3 +254,33 @@ export async function createTrip(input: CreateTripInput): Promise<void> {
     `Create trip: ${input.name}`,
   );
 }
+
+export async function deleteFile(path: string, sha: string): Promise<void> {
+  const { token, owner, repo, branch } = getConfig();
+  const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
+  const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodedPath}`;
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: ghHeaders(token),
+    body: JSON.stringify({
+      message: `Delete: ${path}`,
+      sha,
+      branch,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Delete failed (${res.status}): ${text}`);
+  }
+}
+
+export async function deleteTrip(tripName: string): Promise<void> {
+  const items = await listContents(tripName);
+  const files = items.filter((item) => item.type === "file");
+
+  for (const file of files) {
+    await deleteFile(file.path, file.sha);
+  }
+}

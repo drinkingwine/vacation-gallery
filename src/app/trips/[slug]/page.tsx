@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Header } from "@/components/Header";
 import { PhotoGrid } from "@/components/PhotoGrid";
@@ -19,7 +19,9 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [deletingTrip, setDeletingTrip] = useState(false);
   const { isAdmin } = useAuth();
+  const router = useRouter();
 
   const fetchTrip = useCallback(async () => {
     setLoading(true);
@@ -65,6 +67,31 @@ export default function TripPage() {
   const coverUrl = trip?.coverUrl ?? photos[0]?.downloadUrl;
   const dates = trip ? formatDateRange(trip.startDate, trip.endDate) : null;
 
+  const handleDeleteTrip = async () => {
+    if (
+      !confirm(
+        `Delete trip "${trip?.title ?? tripName}" and all its photos? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingTrip(true);
+    try {
+      const res = await fetch(
+        `/api/trips/${encodeURIComponent(tripName)}`,
+        { method: "DELETE" },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+      setDeletingTrip(false);
+    }
+  };
+
   return (
     <>
       <Header
@@ -105,6 +132,19 @@ export default function TripPage() {
         </section>
 
         <section className="mx-auto max-w-6xl px-6 py-10">
+          {isAdmin && (
+            <div className="mb-6 flex justify-end">
+              <button
+                type="button"
+                onClick={handleDeleteTrip}
+                disabled={deletingTrip}
+                className="rounded-xl border border-red-200 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+              >
+                {deletingTrip ? "Deleting trip…" : "Delete trip"}
+              </button>
+            </div>
+          )}
+
           {trip?.description && (
             <p className="mb-8 max-w-2xl text-lg leading-relaxed text-stone-600">
               {trip.description}
@@ -128,6 +168,8 @@ export default function TripPage() {
             photos={photos}
             loading={loading}
             emptyMessage={`No photos in "${trip?.title ?? tripName}" yet. Upload some!`}
+            isAdmin={isAdmin}
+            onPhotoDeleted={fetchTrip}
           />
         </section>
       </main>

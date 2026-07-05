@@ -12,6 +12,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
 
   const fetchTrips = useCallback(async () => {
@@ -37,6 +38,31 @@ export default function Home() {
   }, [fetchTrips]);
 
   const totalPhotos = trips.reduce((sum, t) => sum + t.photoCount, 0);
+
+  const handleDeleteTrip = async (trip: Trip) => {
+    if (
+      !confirm(
+        `Delete trip "${trip.title}" and all ${trip.photoCount} photos? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingTrip(trip.name);
+    try {
+      const res = await fetch(
+        `/api/trips/${encodeURIComponent(trip.name)}`,
+        { method: "DELETE" },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+      fetchTrips();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingTrip(null);
+    }
+  };
 
   return (
     <>
@@ -111,7 +137,13 @@ export default function Home() {
           ) : (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {trips.map((trip) => (
-                <TripCard key={trip.path} trip={trip} />
+                <TripCard
+                  key={trip.path}
+                  trip={trip}
+                  isAdmin={isAdmin}
+                  onDelete={handleDeleteTrip}
+                  deleting={deletingTrip === trip.name}
+                />
               ))}
             </div>
           )}

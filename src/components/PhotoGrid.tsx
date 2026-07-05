@@ -9,13 +9,22 @@ type PhotoGridProps = {
   photos: Photo[];
   loading?: boolean;
   emptyMessage?: string;
+  isAdmin?: boolean;
+  onPhotoDeleted?: () => void;
 };
 
-export function PhotoGrid({ photos, loading, emptyMessage }: PhotoGridProps) {
+export function PhotoGrid({
+  photos,
+  loading,
+  emptyMessage,
+  isAdmin = false,
+  onPhotoDeleted,
+}: PhotoGridProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [search, setSearch] = useState("");
+  const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let result = [...photos];
@@ -34,6 +43,44 @@ export function PhotoGrid({ photos, loading, emptyMessage }: PhotoGridProps) {
 
     return result;
   }, [photos, sortField, sortOrder, search]);
+
+  const deletePhoto = async (photo: Photo) => {
+    if (
+      !confirm(`Delete "${photo.name}"? This cannot be undone.`) ||
+      deletingPath
+    ) {
+      return;
+    }
+
+    setDeletingPath(photo.path);
+    try {
+      const res = await fetch("/api/photos/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: photo.path, sha: photo.sha }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+
+      if (lightboxIndex !== null) {
+        const deletedIdx = filtered.findIndex((p) => p.path === photo.path);
+        if (deletedIdx === lightboxIndex) {
+          if (filtered.length <= 1) setLightboxIndex(null);
+          else if (deletedIdx >= filtered.length - 1) {
+            setLightboxIndex(Math.max(0, deletedIdx - 1));
+          }
+        } else if (deletedIdx < lightboxIndex) {
+          setLightboxIndex(lightboxIndex - 1);
+        }
+      }
+
+      onPhotoDeleted?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingPath(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -68,23 +115,36 @@ export function PhotoGrid({ photos, loading, emptyMessage }: PhotoGridProps) {
       ) : (
         <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
           {filtered.map((photo, idx) => (
-            <button
+            <div
               key={photo.sha + photo.path}
-              type="button"
-              onClick={() => setLightboxIndex(idx)}
-              className="group mb-4 block w-full break-inside-avoid overflow-hidden rounded-xl bg-stone-100 ring-1 ring-stone-200/60 transition-all hover:ring-stone-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-terracotta"
+              className="group relative mb-4 break-inside-avoid"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.downloadUrl}
-                alt={photo.name}
-                loading="lazy"
-                className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-              />
-              <div className="absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition-opacity group-hover:opacity-100">
-                <p className="text-left text-sm text-white">{photo.name}</p>
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(idx)}
+                className="block w-full overflow-hidden rounded-xl bg-stone-100 ring-1 ring-stone-200/60 transition-all hover:ring-stone-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-terracotta"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.downloadUrl}
+                  alt={photo.name}
+                  loading="lazy"
+                  className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+              </button>
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => deletePhoto(photo)}
+                  disabled={deletingPath === photo.path}
+                  className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100 disabled:opacity-50"
+                  title="Delete photo"
+                >
+                  {deletingPath === photo.path ? "…" : "Delete"}
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -95,6 +155,9 @@ export function PhotoGrid({ photos, loading, emptyMessage }: PhotoGridProps) {
           currentIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
+          isAdmin={isAdmin}
+          onDelete={deletePhoto}
+          deleting={deletingPath !== null}
         />
       )}
     </>

@@ -105,9 +105,10 @@ export function verifyAdminCredentials(
   return userOk && passOk;
 }
 
-export function isAdminRoute(pathname: string): boolean {
-  return (
-    pathname.startsWith("/api/upload") ||
-    pathname.startsWith("/api/trips/create")
-  );
+export function requiresAdmin(pathname: string, method: string): boolean {
+  if (pathname.startsWith("/api/upload")) return true;
+  if (pathname.startsWith("/api/trips/create")) return true;
+  if (pathname.startsWith("/api/photos/delete")) return true;
+  if (method === "DELETE" && /^\/api\/trips\/[^/]+$/.test(pathname)) return true;
+  return false;
 }

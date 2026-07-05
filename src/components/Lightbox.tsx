@@ -8,6 +8,9 @@ type LightboxProps = {
   currentIndex: number;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  isAdmin?: boolean;
+  onDelete?: (photo: Photo) => void;
+  deleting?: boolean;
 };
 
 function formatBytes(bytes: number): string {
@@ -21,6 +24,9 @@ export function Lightbox({
   currentIndex,
   onClose,
   onNavigate,
+  isAdmin = false,
+  onDelete,
+  deleting = false,
 }: LightboxProps) {
   const photo = photos[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -83,7 +89,7 @@ export function Lightbox({
         <button
           type="button"
           onClick={goNext}
-          className="absolute right-4 z-10 rounded-full p-3 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          className="absolute right-4 top-16 z-10 rounded-full p-3 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           aria-label="Next photo"
         >
           →
@@ -105,6 +111,19 @@ export function Lightbox({
           <p className="mt-1 text-sm text-white/50">
             {formatBytes(photo.size)} · {currentIndex + 1} of {photos.length}
           </p>
+          {isAdmin && onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(photo);
+              }}
+              disabled={deleting}
+              className="mt-3 rounded-full border border-red-400/60 px-4 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+            >
+              {deleting ? "Deleting…" : "Delete photo"}
+            </button>
+          )}
         </div>
       </div>
     </div>
