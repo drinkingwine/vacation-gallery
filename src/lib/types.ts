@@ -21,6 +21,8 @@ export interface Photo {
   latitude?: number;
   longitude?: number;
   dateTaken?: string;
+  sourceTrip?: string;
+  sourcePath?: string;
 }
 
 export interface Trip {
@@ -67,6 +69,8 @@ export type PhotoMetaEntry = {
   latitude?: number;
   longitude?: number;
   dateTaken?: string;
+  sourceTrip?: string;
+  sourcePath?: string;
 };
 
 export type PhotosMetadata = Record<string, PhotoMetaEntry>;
@@ -79,6 +83,7 @@ export type UpdatePhotoInput = {
   newName?: string;
   addTag?: string;
   removeTag?: string;
+  tags?: string[];
 };
 
 export type GalleryPhoto = Photo & {

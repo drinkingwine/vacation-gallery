@@ -1,4 +1,5 @@
-import type { GalleryPhoto } from "@/lib/types";
+import type { GalleryPhoto, Photo, Trip } from "@/lib/types";
+import { FAVORITE_TAG } from "@/lib/photo-tags";
 
 export type GalleryItem = {
   id: string;
@@ -20,6 +21,8 @@ export type GalleryItem = {
   height?: number | null;
   blurHash?: string | null;
   tripName?: string;
+  sourceTrip?: string;
+  sourcePath?: string;
 };
 
 export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
@@ -46,9 +49,71 @@ export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
     tags: [...new Set([...metaTags, ...autoTags])],
     size: photo.size,
     tripName: photo.tripName,
+    sourceTrip: photo.sourceTrip,
+    sourcePath: photo.sourcePath,
   };
 }
 
 export function buildGalleryItems(photos: GalleryPhoto[]): GalleryItem[] {
   return photos.map(buildGalleryItem);
+}
+
+export function getItemDisplayTags(item: GalleryItem, max = 4) {
+  const auto = new Set(
+    [item.tripName, item.locationName]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.toLowerCase()),
+  );
+
+  return (item.tags ?? [])
+    .filter((tag) => !auto.has(tag.toLowerCase()))
+    .slice(0, max);
+}
+
+export function findPhotoByName(photos: Photo[], photoName: string) {
+  const decoded = decodeURIComponent(photoName);
+  return (
+    photos.find((photo) => photo.name === photoName) ??
+    photos.find((photo) => photo.name === decoded) ??
+    photos.find((photo) => photo.name.toLowerCase() === photoName.toLowerCase()) ??
+    photos.find((photo) => photo.name.toLowerCase() === decoded.toLowerCase())
+  );
+}
+
+export function getEditablePhotoTags(
+  photo: Photo,
+  trip?: Pick<Trip, "name" | "title" | "location" | "startDate"> | null,
+) {
+  if (!trip) {
+    return (photo.tags ?? []).filter(
+      (tag) => tag.toLowerCase() !== FAVORITE_TAG,
+    );
+  }
+
+  const item = buildGalleryItem({
+    ...photo,
+    id: photo.path,
+    tripName: trip.name,
+    tripTitle: trip.title,
+    tripLocation: trip.location,
+    tripStartDate: trip.startDate,
+  });
+
+  return getItemDisplayTags(item, 100).filter(
+    (tag) => tag.toLowerCase() !== FAVORITE_TAG,
+  );
+}
+
+export function stripAutoPhotoTags(
+  tags: string[],
+  photo: Pick<Photo, "location">,
+  trip?: Pick<Trip, "name" | "title" | "location"> | null,
+) {
+  const auto = new Set(
+    [trip?.name, trip?.title, trip?.location, photo.location]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.toLowerCase()),
+  );
+
+  return tags.filter((tag) => !auto.has(tag.toLowerCase()));
 }

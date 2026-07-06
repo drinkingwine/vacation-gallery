@@ -1,4 +1,4 @@
-import { hasFavoriteTag } from "./photo-tags";
+import { FAVORITES_TRIP_NAME } from "./favorites-trip";
 import { countMedia } from "./media-count";
 import { getMediaType } from "./media";
 export { isImage } from "./media";
@@ -10,7 +10,7 @@ import {
   listMedia,
   renameMedia,
 } from "./r2";
-import { sortTripsByDateDesc, tripLabel } from "./trip-meta";
+import { sortTripsByDateDesc, sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
 import type {
   CreateTripInput,
   GalleryPhoto,
@@ -133,6 +133,19 @@ export async function getPhotosMetadata(tripPath: string): Promise<PhotosMetadat
   }
 }
 
+export function lookupPhotoMeta(
+  photoMeta: PhotosMetadata,
+  filename: string,
+): PhotoMetaEntry | undefined {
+  if (photoMeta[filename]) return photoMeta[filename];
+
+  const lower = filename.toLowerCase();
+  const key = Object.keys(photoMeta).find(
+    (candidate) => candidate.toLowerCase() === lower,
+  );
+  return key ? photoMeta[key] : undefined;
+}
+
 async function savePhotosMetadata(
   tripPath: string,
   metadata: PhotosMetadata,
@@ -164,21 +177,26 @@ export async function listPhotos(trip = ""): Promise<Photo[]> {
       trip ? getPhotosMetadata(trip) : Promise.resolve({} as PhotosMetadata),
     ]);
 
-  return media.map((item) => ({
-    name: item.name,
-    path: item.path,
-    sha: item.sha,
-    downloadUrl: item.downloadUrl,
-    size: item.size,
-    mediaType: getMediaType(item.name) ?? "photo",
-    trip: trip || undefined,
-    caption: photoMeta[item.name]?.caption,
-    tags: photoMeta[item.name]?.tags,
-    location: photoMeta[item.name]?.location,
-    latitude: photoMeta[item.name]?.latitude,
-    longitude: photoMeta[item.name]?.longitude,
-    dateTaken: photoMeta[item.name]?.dateTaken,
-  }));
+  return media.map((item) => {
+    const meta = lookupPhotoMeta(photoMeta, item.name);
+    return {
+      name: item.name,
+      path: item.path,
+      sha: item.sha,
+      downloadUrl: item.downloadUrl,
+      size: item.size,
+      mediaType: getMediaType(item.name) ?? "photo",
+      trip: trip || undefined,
+      caption: meta?.caption,
+      tags: meta?.tags,
+      location: meta?.location,
+      latitude: meta?.latitude,
+      longitude: meta?.longitude,
+      dateTaken: meta?.dateTaken,
+      sourceTrip: meta?.sourceTrip,
+      sourcePath: meta?.sourcePath,
+    };
+  });
 }
 
 function resolveCoverUrl(
@@ -240,7 +258,7 @@ export async function listTrips(): Promise<Trip[]> {
     }),
   );
 
-  return sortTripsByDateDesc(trips);
+  return sortTripsWithFavoritesFirst(trips);
 }
 
 export async function listAllGalleryPhotos(): Promise<GalleryPhoto[]> {
@@ -266,8 +284,34 @@ export async function listAllGalleryPhotos(): Promise<GalleryPhoto[]> {
 }
 
 export async function listFavoriteGalleryPhotos(): Promise<GalleryPhoto[]> {
-  const photos = await listAllGalleryPhotos();
-  return photos.filter((photo) => hasFavoriteTag(photo.tags));
+  const trip = await getTrip(FAVORITES_TRIP_NAME);
+  if (!trip) return [];
+
+  const photos = await listPhotos(FAVORITES_TRIP_NAME);
+  return photos.map((photo) => ({
+    ...photo,
+    id: photo.path,
+    tripName: trip.name,
+    tripTitle: trip.title,
+    tripLocation: trip.location,
+    tripStartDate: trip.startDate,
+  }));
+}
+
+export async function getFavoritesAlbumSummary() {
+  const trip = await getTrip(FAVORITES_TRIP_NAME);
+  if (!trip) {
+    return { photoCount: 0, videoCount: 0, coverUrl: null, coverUrls: [] };
+  }
+
+  const photos = await listPhotos(FAVORITES_TRIP_NAME);
+  const imagePhotos = photos.filter((photo) => photo.mediaType !== "video");
+  return {
+    photoCount: trip.photoCount,
+    videoCount: trip.videoCount ?? 0,
+    coverUrl: trip.coverUrl,
+    coverUrls: imagePhotos.slice(0, 3).map((photo) => photo.downloadUrl),
+  };
 }
 
 export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
@@ -294,15 +338,6 @@ export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
       tripTitle: photo.tripTitle,
       dateTaken: photo.dateTaken,
     }));
-}
-
-export async function getFavoritesAlbumSummary() {
-  const photos = await listFavoriteGalleryPhotos();
-  return {
-    photoCount: photos.length,
-    coverUrl: photos[0]?.downloadUrl ?? null,
-    coverUrls: photos.slice(0, 3).map((photo) => photo.downloadUrl),
-  };
 }
 
 export async function getTrip(tripName: string): Promise<Trip | null> {
@@ -450,6 +485,8 @@ function prunePhotoMetaEntry(entry: PhotoMetaEntry | undefined) {
       ? entry.longitude
       : undefined;
   const dateTaken = entry.dateTaken?.trim();
+  const sourceTrip = entry.sourceTrip?.trim();
+  const sourcePath = entry.sourcePath?.trim();
 
   if (
     !caption &&
@@ -457,7 +494,8 @@ function prunePhotoMetaEntry(entry: PhotoMetaEntry | undefined) {
     !location &&
     latitude === undefined &&
     longitude === undefined &&
-    !dateTaken
+    !dateTaken &&
+    !sourcePath
   ) {
     return null;
   }
@@ -469,6 +507,8 @@ function prunePhotoMetaEntry(entry: PhotoMetaEntry | undefined) {
     ...(latitude !== undefined ? { latitude } : {}),
     ...(longitude !== undefined ? { longitude } : {}),
     ...(dateTaken ? { dateTaken } : {}),
+    ...(sourceTrip ? { sourceTrip } : {}),
+    ...(sourcePath ? { sourcePath } : {}),
   };
 }
 
@@ -525,6 +565,17 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
       if (next) meta[currentName] = next;
       else delete meta[currentName];
     }
+  }
+
+  if (input.tags !== undefined) {
+    const entry = meta[currentName] ?? {};
+    const tags = normalizePhotoTags(input.tags);
+    const next = prunePhotoMetaEntry({
+      ...entry,
+      tags: tags.length ? tags : undefined,
+    });
+    if (next) meta[currentName] = next;
+    else delete meta[currentName];
   }
 
   await savePhotosMetadata(input.trip, meta);

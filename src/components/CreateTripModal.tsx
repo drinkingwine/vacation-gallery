@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Trip } from "@/lib/types";
+import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 
 type CreateTripModalProps = {
   onClose: () => void;
@@ -36,6 +37,10 @@ export function CreateTripModal({ onClose, onCreated }: CreateTripModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || creating) return;
+    if (name.trim() === FAVORITES_TRIP_NAME) {
+      setError(`"${FAVORITES_TRIP_NAME}" is a reserved trip name`);
+      return;
+    }
 
     setCreating(true);
     setError(null);

@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { Star } from "lucide-react";
+import {
+  DeleteIconButton,
+  EditIconButton,
+  MakeDefaultIconButton,
+} from "@/components/gallery/PhotoOverlayIcons";
 import type { Photo } from "@/lib/types";
 
 type LightboxProps = {
@@ -123,50 +129,45 @@ export function Lightbox({
           {photo.caption && (
             <p className="mt-1 text-sm text-white/70 sm:text-base">{photo.caption}</p>
           )}
-          <p className="mt-1 text-xs text-white/50 sm:text-sm">
-            {formatBytes(photo.size)} · {currentIndex + 1} of {photos.length}
-            {isDefault ? " · Default photo" : ""}
+          <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-white/50 sm:text-sm">
+            <span>
+              {formatBytes(photo.size)} · {currentIndex + 1} of {photos.length}
+            </span>
+            {isDefault ? (
+              <Star
+                className="h-3.5 w-3.5 fill-amber-300 text-amber-300"
+                aria-label="Default photo"
+              />
+            ) : null}
           </p>
           {isAdmin && (onEdit || onDelete || onMakeDefault) && (
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               {onMakeDefault && !isDefault && (
-                <button
-                  type="button"
+                <MakeDefaultIconButton
                   onClick={(e) => {
                     e.stopPropagation();
                     onMakeDefault(photo);
                   }}
-                  disabled={busy}
-                  className="rounded-full border border-amber-400/60 px-4 py-1.5 text-sm text-amber-200 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
-                >
-                  {busy ? "Working…" : "Make default"}
-                </button>
+                  busy={busy}
+                />
               )}
               {onEdit && (
-                <button
-                  type="button"
+                <EditIconButton
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(photo);
                   }}
                   disabled={busy}
-                  className="rounded-full border border-white/30 px-4 py-1.5 text-sm text-white transition-colors hover:bg-white/10 disabled:opacity-50"
-                >
-                  Edit
-                </button>
+                />
               )}
               {onDelete && (
-                <button
-                  type="button"
+                <DeleteIconButton
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(photo);
                   }}
-                  disabled={busy}
-                  className="rounded-full border border-red-400/60 px-4 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-                >
-                  {busy ? "Working…" : "Delete"}
-                </button>
+                  busy={busy}
+                />
               )}
             </div>
           )}

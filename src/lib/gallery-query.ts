@@ -1,4 +1,5 @@
 import type { GalleryPhoto, GallerySortOrder } from "@/lib/types";
+import { hasPhotoTag } from "@/lib/photo-tags";
 
 export function sortGalleryPhotos(
   photos: GalleryPhoto[],
@@ -38,6 +39,18 @@ export function filterGalleryPhotosByMediaType(
     return photos.filter((p) => p.mediaType === "video");
   }
   return photos;
+}
+
+export function filterGalleryPhotosByTag(photos: GalleryPhoto[], tag: string) {
+  const normalized = tag.trim().toLowerCase();
+  if (!normalized) return photos;
+  return photos.filter((photo) => hasPhotoTag(photo.tags ?? [], normalized));
+}
+
+export function filterGalleryPhotosByTrip(photos: GalleryPhoto[], tripName: string) {
+  const normalized = tripName.trim();
+  if (!normalized) return photos;
+  return photos.filter((photo) => photo.tripName === normalized);
 }
 
 export function paginateGalleryPhotos<T>(

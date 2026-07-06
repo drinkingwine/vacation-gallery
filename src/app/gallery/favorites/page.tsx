@@ -1,12 +1,6 @@
-import { buildGalleryItems } from "@/lib/gallery";
-import { listFavoriteGalleryPhotos } from "@/lib/github";
-import { FavoritesGalleryPage } from "@/components/gallery/FavoritesGalleryPage";
+import { redirect } from "next/navigation";
+import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 
-export const dynamic = "force-dynamic";
-
-export default async function FavoritesAlbumPage() {
-  const photos = await listFavoriteGalleryPhotos();
-  const items = buildGalleryItems(photos);
-
-  return <FavoritesGalleryPage items={items} />;
+export default function FavoritesAlbumPage() {
+  redirect(`/trips/${encodeURIComponent(FAVORITES_TRIP_NAME)}`);
 }

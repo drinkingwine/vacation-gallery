@@ -13,6 +13,20 @@ export const galleryCopy = {
   searchAria: "Search gallery content",
   clearSearch: "Clear search",
   noResults: "No matching content. Try a shorter keyword.",
+  people: {
+    eyebrow: "Gallery / People",
+    title: "People Gallery",
+    description: "Browse photos by person, sorted A–Z.",
+    empty: "No tagged people yet. Add person tags when editing a photo.",
+    noPhotos: (name: string) => `No photos tagged with ${name} yet.`,
+  },
+  places: {
+    eyebrow: "Gallery / Places",
+    title: "Places Gallery",
+    description: "Browse photos by trip, sorted A–Z.",
+    empty: "No trips with photos yet.",
+    noPhotos: (name: string) => `No photos in ${name} yet.`,
+  },
   filters: {
     all: "All",
     photo: "Photo",

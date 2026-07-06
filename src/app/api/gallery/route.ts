@@ -3,10 +3,13 @@ import { buildGalleryItems } from "@/lib/gallery";
 import {
   filterGalleryPhotos,
   filterGalleryPhotosByMediaType,
+  filterGalleryPhotosByTag,
+  filterGalleryPhotosByTrip,
   paginateGalleryPhotos,
   sortGalleryPhotos,
 } from "@/lib/gallery-query";
 import { listAllGalleryPhotos } from "@/lib/github";
+import { galleryPhotosForPeople } from "@/lib/people-gallery";
 import type { GallerySortOrder } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +23,25 @@ export async function GET(req: NextRequest) {
       Math.max(1, Number.parseInt(params.get("pageSize") ?? "24", 10) || 24),
     );
     const keyword = params.get("q") ?? "";
+    const tag = params.get("tag") ?? "";
+    const trip = params.get("trip") ?? "";
     const mediaType = params.get("mediaType") ?? "all";
     const sortOrder: GallerySortOrder =
       params.get("sortOrder") === "oldest" ? "oldest" : "newest";
 
+    const sourcePhotos = tag
+      ? galleryPhotosForPeople(await listAllGalleryPhotos())
+      : await listAllGalleryPhotos();
+
     const all = sortGalleryPhotos(
       filterGalleryPhotos(
-        filterGalleryPhotosByMediaType(await listAllGalleryPhotos(), mediaType),
+        filterGalleryPhotosByTrip(
+          filterGalleryPhotosByTag(
+            filterGalleryPhotosByMediaType(sourcePhotos, mediaType),
+            tag,
+          ),
+          trip,
+        ),
         keyword,
       ),
       sortOrder,

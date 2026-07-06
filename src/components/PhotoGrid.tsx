@@ -4,6 +4,12 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FilterBar } from "@/components/FilterBar";
 import { Lightbox } from "@/components/Lightbox";
+import {
+  DefaultPhotoBadge,
+  MakeDefaultIconButton,
+  PhotoCardEditDeleteBar,
+  PhotoCardToolbar,
+} from "@/components/gallery/PhotoOverlayIcons";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { photoEditPath } from "@/lib/edit-paths";
 import type { Photo, SortField, SortOrder } from "@/lib/types";
@@ -165,12 +171,15 @@ export function PhotoGrid({
             const isDefault = isCoverPhoto(photo);
 
             return (
-            <div key={photo.sha + photo.path} className="relative">
-              <SpotlightCard className="aspect-[4/5] cursor-pointer border-zinc-200 bg-zinc-100 shadow-lg shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-2xl dark:shadow-black/50">
+            <div
+              key={photo.sha + photo.path}
+              className="overflow-hidden rounded-2xl border border-zinc-200 bg-card shadow-lg shadow-zinc-200/50 dark:border-zinc-800 dark:shadow-2xl dark:shadow-black/50"
+            >
+              <SpotlightCard className="relative aspect-[4/5] cursor-pointer border-0 bg-transparent shadow-none">
                 <button
                   type="button"
                   onClick={() => setLightboxIndex(idx)}
-                  className="relative block h-full w-full overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                  className="relative block h-full w-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-400"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -189,57 +198,40 @@ export function PhotoGrid({
                     </h3>
                   </div>
                 </button>
+                {isDefault ? (
+                  <div className="pointer-events-none absolute left-2 top-2 z-20">
+                    <DefaultPhotoBadge variant="overlay" />
+                  </div>
+                ) : isAdmin ? (
+                  <div className="absolute left-2 top-2 z-20">
+                    <MakeDefaultIconButton
+                      variant="overlay"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void makeDefault(photo);
+                      }}
+                      busy={busyPath === photo.path}
+                    />
+                  </div>
+                ) : null}
               </SpotlightCard>
 
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3">
-                {isDefault ? (
-                  <span className="shrink-0 rounded-full border border-white/30 bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-white backdrop-blur">
-                    Default
-                  </span>
-                ) : (
-                  <span className="shrink-0" />
-                )}
-
-                {isAdmin && (
-                  <div className="pointer-events-auto flex shrink-0 flex-nowrap items-center gap-1">
-                    {!isDefault && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void makeDefault(photo);
-                        }}
-                        disabled={busyPath === photo.path}
-                        className="shrink-0 rounded-full border border-white/20 bg-black/60 px-2 py-1 text-xs text-white backdrop-blur hover:bg-amber-600 disabled:opacity-50"
-                      >
-                        {busyPath === photo.path ? "…" : "Make default"}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openPhotoEdit(photo);
-                      }}
-                      disabled={busyPath === photo.path}
-                      className="shrink-0 rounded-full border border-white/20 bg-black/60 px-2 py-1 text-xs text-white backdrop-blur hover:bg-indigo-600 disabled:opacity-50"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void deletePhoto(photo);
-                      }}
-                      disabled={busyPath === photo.path}
-                      className="shrink-0 rounded-full border border-white/20 bg-black/60 px-2 py-1 text-xs text-white backdrop-blur hover:bg-red-600 disabled:opacity-50"
-                    >
-                      {busyPath === photo.path ? "…" : "Delete"}
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isAdmin ? (
+                <PhotoCardToolbar centered>
+                  <PhotoCardEditDeleteBar
+                    onEdit={(e) => {
+                      e.stopPropagation();
+                      openPhotoEdit(photo);
+                    }}
+                    onDelete={(e) => {
+                      e.stopPropagation();
+                      void deletePhoto(photo);
+                    }}
+                    editDisabled={busyPath === photo.path}
+                    deleteBusy={busyPath === photo.path}
+                  />
+                </PhotoCardToolbar>
+              ) : null}
             </div>
           );
           })}

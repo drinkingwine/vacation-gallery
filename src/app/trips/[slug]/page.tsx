@@ -10,6 +10,7 @@ import { Header } from "@/components/Header";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { UploadModal } from "@/components/UploadModal";
 import { tripEditPath } from "@/lib/edit-paths";
+import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
 import { formatMediaCount } from "@/lib/media-count";
 import { cn } from "@/lib/utils";
@@ -93,7 +94,12 @@ export default function TripPage() {
     return () => window.clearInterval(timer);
   }, [heroImages.length]);
 
+  const isFavorites = isFavoritesTrip(tripName);
+  const uploadTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
+
   const handleDeleteTrip = async () => {
+    if (isFavorites) return;
+
     if (
       !confirm(
         `Delete trip "${trip?.title ?? tripName}" and all its photos? This cannot be undone.`,
@@ -121,7 +127,7 @@ export default function TripPage() {
   return (
     <>
       <Header
-        onUpload={isAdmin ? () => setShowUpload(true) : undefined}
+        onUpload={isAdmin && !isFavorites ? () => setShowUpload(true) : undefined}
         onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
@@ -198,27 +204,31 @@ export default function TripPage() {
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           {isAdmin && (
             <div className="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowUpload(true)}
-                className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-              >
-                Upload
-              </button>
+              {!isFavorites ? (
+                <button
+                  type="button"
+                  onClick={() => setShowUpload(true)}
+                  className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+                >
+                  Upload
+                </button>
+              ) : null}
               <Link
                 href={tripEditPath(tripName)}
                 className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
               >
                 Edit trip
               </Link>
-              <button
-                type="button"
-                onClick={handleDeleteTrip}
-                disabled={deletingTrip}
-                className="rounded-full border border-red-200 px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-              >
-                {deletingTrip ? "Deleting…" : "Delete trip"}
-              </button>
+              {!isFavorites ? (
+                <button
+                  type="button"
+                  onClick={handleDeleteTrip}
+                  disabled={deletingTrip}
+                  className="rounded-full border border-red-200 px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                >
+                  {deletingTrip ? "Deleting…" : "Delete trip"}
+                </button>
+              ) : null}
             </div>
           )}
 
@@ -262,9 +272,9 @@ export default function TripPage() {
         />
       )}
 
-      {showUpload && isAdmin && (
+      {showUpload && isAdmin && !isFavorites && (
         <UploadModal
-          trips={trips}
+          trips={uploadTrips}
           defaultTrip={tripName}
           onClose={() => setShowUpload(false)}
           onUploadComplete={fetchTrip}

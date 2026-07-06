@@ -34,6 +34,8 @@ type GalleryInfiniteProps = {
   mediaType?: string;
   sortOrder?: string;
   keyword?: string;
+  tag?: string;
+  trip?: string;
   selectedId?: string | null;
   onSelectedIdChange?: (id: string | number | null) => void;
 };
@@ -46,6 +48,8 @@ export function GalleryInfinite({
   mediaType = "all",
   sortOrder = "newest",
   keyword = "",
+  tag = "",
+  trip = "",
   selectedId,
   onSelectedIdChange,
 }: GalleryInfiniteProps) {
@@ -61,7 +65,7 @@ export function GalleryInfinite({
     setPage(initialPage);
     setHasNext(initialHasNext);
     setLoadError(false);
-  }, [initialItems, initialPage, initialHasNext, mediaType, sortOrder, keyword]);
+  }, [initialItems, initialPage, initialHasNext, mediaType, sortOrder, keyword, tag, trip]);
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasNext) return;
@@ -76,6 +80,8 @@ export function GalleryInfinite({
       sortOrder,
     });
     if (keyword) params.set("q", keyword);
+    if (tag) params.set("tag", tag);
+    if (trip) params.set("trip", trip);
 
     try {
       const response = await fetch(`/api/gallery?${params.toString()}`, {
@@ -91,7 +97,7 @@ export function GalleryInfinite({
     } finally {
       setIsLoading(false);
     }
-  }, [hasNext, isLoading, keyword, mediaType, page, pageSize, sortOrder]);
+  }, [hasNext, isLoading, keyword, mediaType, page, pageSize, sortOrder, tag, trip]);
 
   useEffect(() => {
     if (!hasNext || loadError) return;
@@ -114,6 +120,10 @@ export function GalleryInfinite({
     );
   }, []);
 
+  const handleItemRemoved = useCallback((itemId: string) => {
+    setItems((prev) => prev.filter((item) => String(item.id) !== itemId));
+  }, []);
+
   return (
     <>
       <Gallery25
@@ -121,6 +131,7 @@ export function GalleryInfinite({
         selectedId={selectedId ?? null}
         onSelectedIdChange={onSelectedIdChange}
         onItemTagsChange={handleItemTagsChange}
+        onItemRemoved={handleItemRemoved}
       />
 
       <div className="mt-10 flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">

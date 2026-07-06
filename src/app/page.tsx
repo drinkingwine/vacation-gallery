@@ -11,6 +11,7 @@ import { UploadModal } from "@/components/UploadModal";
 import { CreateTripModal } from "@/components/CreateTripModal";
 import type { Trip } from "@/lib/types";
 import { totalMediaCount } from "@/lib/media-count";
+import { isFavoritesTrip } from "@/lib/favorites-trip";
 
 export default function Home() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -46,6 +47,8 @@ export default function Home() {
   const totalMedia = trips.reduce((sum, t) => sum + totalMediaCount(t), 0);
 
   const handleDeleteTrip = async (trip: Trip) => {
+    if (isFavoritesTrip(trip.name)) return;
+
     if (
       !confirm(
         `Delete trip "${trip.title}" and all ${totalMediaCount(trip)} items? This cannot be undone.`,
@@ -156,7 +159,7 @@ export default function Home() {
                 <FeaturedTripCard
                   key={trip.path}
                   trip={trip}
-                  isAdmin={isAdmin}
+                  isAdmin={isAdmin && !isFavoritesTrip(trip.name)}
                   onDelete={handleDeleteTrip}
                   deleting={deletingTrip === trip.name}
                 />
@@ -183,7 +186,7 @@ export default function Home() {
 
       {showUpload && isAdmin && (
         <UploadModal
-          trips={trips}
+          trips={trips.filter((trip) => !isFavoritesTrip(trip.name))}
           onClose={() => setShowUpload(false)}
           onUploadComplete={() => {
             fetchTrips();

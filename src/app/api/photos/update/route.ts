@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { path, sha, trip, caption, newName, addTag, removeTag } = body as {
+    const { path, sha, trip, caption, newName, addTag, removeTag, tags } = body as {
       path?: string;
       sha?: string;
       trip?: string;
@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest) {
       newName?: string;
       addTag?: string;
       removeTag?: string;
+      tags?: string[];
     };
 
     if (!path || !sha || !trip) {
@@ -31,6 +32,9 @@ export async function PATCH(req: NextRequest) {
       newName: typeof newName === "string" ? newName : undefined,
       addTag: typeof addTag === "string" ? addTag : undefined,
       removeTag: typeof removeTag === "string" ? removeTag : undefined,
+      tags: Array.isArray(tags)
+        ? tags.filter((tag): tag is string => typeof tag === "string")
+        : undefined,
     });
 
     return NextResponse.json({ success: true });

@@ -7,25 +7,13 @@ import { CreateTripModal } from "@/components/CreateTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { TripCard } from "@/components/TripCard";
-import { FavoriteAlbumCard } from "@/components/FavoriteAlbumCard";
 import { UploadModal } from "@/components/UploadModal";
+import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { cn } from "@/lib/utils";
-import { sortTripsByDateDesc } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
-
-type FavoritesSummary = {
-  photoCount: number;
-  coverUrl: string | null;
-  coverUrls: string[];
-};
 
 export function GalleryTripSelection() {
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [favorites, setFavorites] = useState<FavoritesSummary>({
-    photoCount: 0,
-    coverUrl: null,
-    coverUrls: [],
-  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -37,23 +25,13 @@ export function GalleryTripSelection() {
     setLoading(true);
     setError(null);
     try {
-      const [tripsRes, favoritesRes] = await Promise.all([
-        fetch("/api/trips"),
-        fetch("/api/gallery/favorites"),
-      ]);
-
-      if (!tripsRes.ok) {
-        const data = await tripsRes.json();
-        throw new Error(data.error ?? `HTTP ${tripsRes.status}`);
+      const res = await fetch("/api/trips");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? `HTTP ${res.status}`);
       }
 
-      setTrips(sortTripsByDateDesc(await tripsRes.json()));
-
-      if (favoritesRes.ok) {
-        setFavorites(await favoritesRes.json());
-      } else {
-        setFavorites({ photoCount: 0, coverUrl: null, coverUrls: [] });
-      }
+      setTrips(await res.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
     } finally {
@@ -66,6 +44,8 @@ export function GalleryTripSelection() {
   }, [fetchTrips]);
 
   const handleDeleteTrip = async (trip: Trip) => {
+    if (isFavoritesTrip(trip.name)) return;
+
     if (
       !confirm(
         `Delete trip "${trip.title}" and all ${trip.photoCount} photos? This cannot be undone.`,
@@ -90,6 +70,8 @@ export function GalleryTripSelection() {
     }
   };
 
+  const uploadTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
+
   return (
     <>
       <Header
@@ -109,12 +91,26 @@ export function GalleryTripSelection() {
             >
               Gallery
             </h1>
-            <Link
-              href="/gallery/all"
-              className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
-            >
-              Browse all photos →
-            </Link>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <Link
+                href="/gallery/all"
+                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
+              >
+                Browse all photos →
+              </Link>
+              <Link
+                href="/gallery/people"
+                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
+              >
+                People gallery →
+              </Link>
+              <Link
+                href="/gallery/places"
+                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
+              >
+                Places gallery →
+              </Link>
+            </div>
           </header>
 
           {error ? (
@@ -140,15 +136,7 @@ export function GalleryTripSelection() {
               ))}
             </div>
           ) : trips.length === 0 ? (
-            <div className="space-y-8">
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-                <FavoriteAlbumCard
-                  photoCount={favorites.photoCount}
-                  coverUrl={favorites.coverUrl}
-                  coverUrls={favorites.coverUrls}
-                />
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-white/60 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
+            <div className="rounded-2xl border border-zinc-200 bg-white/60 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
               <p className="text-lg text-zinc-700 dark:text-zinc-200">
                 No trips yet
               </p>
@@ -175,20 +163,14 @@ export function GalleryTripSelection() {
                   </button>
                 </div>
               ) : null}
-              </div>
             </div>
           ) : (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-              <FavoriteAlbumCard
-                photoCount={favorites.photoCount}
-                coverUrl={favorites.coverUrl}
-                coverUrls={favorites.coverUrls}
-              />
               {trips.map((trip) => (
                 <TripCard
                   key={trip.path}
                   trip={trip}
-                  isAdmin={isAdmin}
+                  isAdmin={isAdmin && !isFavoritesTrip(trip.name)}
                   onDelete={handleDeleteTrip}
                   deleting={deletingTrip === trip.name}
                 />
@@ -210,7 +192,7 @@ export function GalleryTripSelection() {
 
       {showUpload && isAdmin && (
         <UploadModal
-          trips={trips}
+          trips={uploadTrips}
           onClose={() => setShowUpload(false)}
           onUploadComplete={fetchTrips}
         />

@@ -17,6 +17,8 @@ type HeaderProps = {
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Gallery", href: "/gallery" },
+  { label: "People", href: "/gallery/people" },
+  { label: "Places", href: "/gallery/places" },
   { label: "Map", href: "/map" },
 ];
 
@@ -44,6 +46,11 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
   const onHome = pathname === "/";
   const { isAdmin, role, logout, loading, authenticated } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+  const [backupNotice, setBackupNotice] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountRef = useRef<HTMLDivElement | null>(null);
 
@@ -81,11 +88,52 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [accountOpen]);
 
+  useEffect(() => {
+    if (!backupNotice) return;
+    const timer = window.setTimeout(() => setBackupNotice(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [backupNotice]);
+
   if (pathname === "/login") return null;
 
   const loginHref = `/login?from=${encodeURIComponent(pathname)}`;
 
+  const handleBackup = async () => {
+    if (
+      !confirm(
+        "Copy all objects from vacation-photos to vacation-photos-backup? This may take a while.",
+      )
+    ) {
+      return;
+    }
+
+    setBackingUp(true);
+    try {
+      const res = await fetch("/api/backup", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Backup failed");
+      }
+
+      const failedNote =
+        data.failed > 0 ? ` ${data.failed} failed — check server logs.` : "";
+      setBackupNotice({
+        type: data.failed > 0 ? "error" : "success",
+        message: `Backup complete: ${data.copied} object${data.copied !== 1 ? "s" : ""} copied to ${data.backupBucket}.${failedNote}`,
+      });
+      setAccountOpen(false);
+    } catch (err) {
+      setBackupNotice({
+        type: "error",
+        message: err instanceof Error ? err.message : "Backup failed",
+      });
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
   return (
+    <>
     <header
       className={cn(
         "front-floating-nav safe-top pointer-events-none fixed inset-x-0 top-0 z-50 transition duration-200 ease-out",
@@ -232,6 +280,16 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
                           Upload photos
                         </button>
                       )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => void handleBackup()}
+                          disabled={backingUp}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-white/10 disabled:opacity-50 dark:hover:bg-white/10"
+                        >
+                          {backingUp ? "Backing up…" : "Backup to R2"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={logout}
@@ -295,5 +353,31 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
         </nav>
       </div>
     </header>
+
+    {backupNotice ? (
+      <div
+        role="alert"
+        aria-live="polite"
+        className={cn(
+          "pointer-events-auto fixed bottom-6 left-1/2 z-[100] w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-md",
+          backupNotice.type === "success"
+            ? "border-emerald-300/60 bg-emerald-50/95 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-950/90 dark:text-emerald-100"
+            : "border-red-300/60 bg-red-50/95 text-red-900 dark:border-red-500/40 dark:bg-red-950/90 dark:text-red-100",
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-medium leading-snug">{backupNotice.message}</p>
+          <button
+            type="button"
+            onClick={() => setBackupNotice(null)}
+            className="shrink-0 text-xs uppercase tracking-[0.15em] opacity-70 transition hover:opacity-100"
+            aria-label="Dismiss"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }

@@ -9,8 +9,16 @@ import { GalleryHeader } from "@/components/gallery/GalleryHeader";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
 import { getResponsiveColumnCount } from "@/lib/responsive";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
+import {
+  DefaultPhotoBadge,
+  PhotoCardEditDeleteBar,
+  PhotoCardToolbar,
+  PhotoTagBadges,
+  VideoTypeBadge,
+} from "@/components/gallery/PhotoOverlayIcons";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
+import { getItemDisplayTags } from "@/lib/gallery";
 import { cn } from "@/lib/utils";
 
 const PhotoDetailModal = dynamic(
@@ -42,6 +50,7 @@ type Gallery25Props = {
   coverUrl?: string | null;
   onMakeDefault?: (item: GalleryItem) => void;
   onPhotoChanged?: () => void;
+  onItemRemoved?: (itemId: string) => void;
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
 };
 
@@ -123,10 +132,12 @@ export function Gallery25({
   coverUrl = null,
   onMakeDefault,
   onPhotoChanged,
+  onItemRemoved,
   onItemTagsChange,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const viewportWidth = useViewportWidth();
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
 
   const handlePhotoEdit = useCallback((item: GalleryItem) => {
     const returnTo =
@@ -164,6 +175,37 @@ export function Gallery25({
       onSelectedIdChange?.(id);
     },
     [controlledSelectedId, onSelectedIdChange],
+  );
+
+  const handleDeleteItem = useCallback(
+    async (item: GalleryItem) => {
+      if (
+        !confirm(`Delete "${item.filename}"? This cannot be undone.`) ||
+        busyItemId
+      ) {
+        return;
+      }
+
+      setBusyItemId(String(item.id));
+      try {
+        const res = await fetch("/api/photos/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: item.path }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Delete failed");
+
+        if (selectedId === item.id) setSelectedId(null);
+        onItemRemoved?.(String(item.id));
+        onPhotoChanged?.();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Delete failed");
+      } finally {
+        setBusyItemId(null);
+      }
+    },
+    [busyItemId, onItemRemoved, onPhotoChanged, selectedId, setSelectedId],
   );
 
   const gridRef = useRef<HTMLDivElement | null>(null);
@@ -472,7 +514,12 @@ export function Gallery25({
             return (
               <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-4">
                 {columnItems.map((item, itemIndex) => {
-                  const itemTags = (item.tags ?? []).slice(0, 3);
+                  const isDefault = isCoverPhoto(item);
+                  const isBusy = busyItemId === String(item.id);
+                  const isVideo = item.type === "video";
+                  const displayTags = getItemDisplayTags(item);
+                  const showAdminToolbar = isAdmin;
+                  const showCardFooter = showAdminToolbar || displayTags.length > 0;
 
                   return (
                     <motion.article
@@ -492,29 +539,22 @@ export function Gallery25({
                             setSelectedId(item.id);
                           }
                         }}
-                        className="block w-full cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        className="block w-full cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
                       >
                         <div
-                          className="relative w-full"
+                          className="relative w-full overflow-hidden"
                           style={{
                             aspectRatio: getAspectRatioValue(item, ratioMap),
                           }}
                         >
-                          {item.type === "video" ? (
-                            <>
-                              <video
-                                src={item.src}
-                                muted
-                                playsInline
-                                preload="metadata"
-                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                              />
-                              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white">
-                                  Video
-                                </span>
-                              </div>
-                            </>
+                          {isVideo ? (
+                            <video
+                              src={item.src}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            />
                           ) : (
                             <BlurImage
                               fill
@@ -538,31 +578,42 @@ export function Gallery25({
                               }}
                             />
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
-                          <div className="absolute inset-x-0 bottom-0 px-4 pb-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-                            <p className="truncate text-sm font-medium text-white">
-                              {item.title}
-                            </p>
-                            {item.width && item.height ? (
-                              <p className="text-xs text-white/60">
-                                {item.width}×{item.height}
-                              </p>
-                            ) : null}
-                            {itemTags.length > 0 ? (
-                              <div className="mt-1 flex flex-wrap gap-1.5">
-                                {itemTags.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="rounded-full border border-white/30 bg-black/35 px-2 py-0.5 text-[10px] text-white/85 backdrop-blur-sm"
-                                  >
-                                    #{tag}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
+                          {isDefault ? (
+                            <div className="pointer-events-none absolute left-2 top-2 z-10">
+                              <DefaultPhotoBadge variant="overlay" />
+                            </div>
+                          ) : null}
+                          {isVideo ? (
+                            <div className="pointer-events-none absolute right-2 top-2 z-10">
+                              <VideoTypeBadge variant="overlay" />
+                            </div>
+                          ) : null}
                         </div>
                       </div>
+                      {showCardFooter ? (
+                        <>
+                          {showAdminToolbar ? (
+                            <PhotoCardToolbar centered>
+                              <PhotoCardEditDeleteBar
+                                onEdit={(e) => {
+                                  e.stopPropagation();
+                                  handlePhotoEdit(item);
+                                }}
+                                onDelete={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteItem(item);
+                                }}
+                                editDisabled={isBusy}
+                                deleteBusy={isBusy}
+                              />
+                            </PhotoCardToolbar>
+                          ) : null}
+                          <PhotoTagBadges
+                            tags={displayTags}
+                            dividedFromToolbar={showAdminToolbar}
+                          />
+                        </>
+                      ) : null}
                     </motion.article>
                   );
                 })}

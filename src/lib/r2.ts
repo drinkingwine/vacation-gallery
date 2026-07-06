@@ -29,6 +29,7 @@ interface R2Config {
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
+  backupBucket: string;
   publicUrl: string;
 }
 
@@ -39,6 +40,8 @@ function getConfig(): R2Config {
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   const bucket = process.env.R2_BUCKET_NAME;
+  const backupBucket =
+    process.env.R2_BACKUP_BUCKET_NAME?.trim() || "vacation-photos-backup";
   const publicUrl = process.env.R2_PUBLIC_URL;
 
   if (!accountId) throw new Error("R2_ACCOUNT_ID environment variable is not set");
@@ -54,6 +57,7 @@ function getConfig(): R2Config {
     accessKeyId,
     secretAccessKey,
     bucket,
+    backupBucket,
     publicUrl: publicUrl.replace(/['"]/g, "").replace(/\.+$/, "").replace(/\/+$/, ""),
   };
 }
@@ -178,16 +182,95 @@ export async function deleteMediaPrefix(prefix: string): Promise<void> {
   } while (continuationToken);
 }
 
-export async function copyMedia(sourceKey: string, destKey: string): Promise<void> {
-  const { bucket } = getConfig();
-  const encodedSource = `${bucket}/${sourceKey
+function encodeCopySource(bucket: string, key: string): string {
+  return `${bucket}/${key
     .split("/")
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
+}
+
+export async function listAllObjectKeys(prefix = ""): Promise<string[]> {
+  const { bucket } = getConfig();
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await getClient().send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    for (const item of response.Contents ?? []) {
+      if (!item.Key || item.Key.endsWith("/")) continue;
+      keys.push(item.Key);
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+
+  return keys;
+}
+
+export async function copyObjectBetweenBuckets(
+  sourceBucket: string,
+  destBucket: string,
+  key: string,
+): Promise<void> {
+  const filename = key.split("/").pop() ?? key;
+  await getClient().send(
+    new CopyObjectCommand({
+      Bucket: destBucket,
+      CopySource: encodeCopySource(sourceBucket, key),
+      Key: key,
+      ContentType: contentTypeForFilename(filename),
+    }),
+  );
+}
+
+export type BackupResult = {
+  sourceBucket: string;
+  backupBucket: string;
+  copied: number;
+  failed: number;
+  errors: string[];
+};
+
+export async function backupBucketToBackup(): Promise<BackupResult> {
+  const { bucket, backupBucket } = getConfig();
+  const keys = await listAllObjectKeys();
+  const errors: string[] = [];
+  let copied = 0;
+
+  for (const key of keys) {
+    try {
+      await copyObjectBetweenBuckets(bucket, backupBucket, key);
+      copied++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push(`${key}: ${message}`);
+    }
+  }
+
+  return {
+    sourceBucket: bucket,
+    backupBucket,
+    copied,
+    failed: errors.length,
+    errors,
+  };
+}
+
+export async function copyMedia(sourceKey: string, destKey: string): Promise<void> {
+  const { bucket } = getConfig();
   await getClient().send(
     new CopyObjectCommand({
       Bucket: bucket,
-      CopySource: encodedSource,
+      CopySource: encodeCopySource(bucket, sourceKey),
       Key: destKey,
       ContentType: contentTypeForFilename(destKey.split("/").pop() ?? destKey),
     }),

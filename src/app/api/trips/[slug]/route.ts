@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteTrip, getTrip, getTripMetadata, patchTripMetadata } from "@/lib/github";
+import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { tripLabel } from "@/lib/trip-meta";
 import type { TripMetadata } from "@/lib/types";
 
@@ -32,6 +33,13 @@ export async function DELETE(
   try {
     const { slug } = await params;
     const tripName = decodeURIComponent(slug);
+    if (tripName === FAVORITES_TRIP_NAME) {
+      return NextResponse.json(
+        { error: `"${FAVORITES_TRIP_NAME}" cannot be deleted` },
+        { status: 400 },
+      );
+    }
+
     const trip = await getTrip(tripName);
 
     if (!trip) {

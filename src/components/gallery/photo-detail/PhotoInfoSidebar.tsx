@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, Download, MapPin, Pencil, Share2, Star } from "lucide-react";
+import { Calendar, Download, Pencil, Share2, Star } from "lucide-react";
+import { DefaultPhotoBadge, MakeDefaultIconButton } from "@/components/gallery/PhotoOverlayIcons";
+import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
 import {
@@ -9,6 +11,7 @@ import {
   formatTagLabel,
   hasFavoriteTag,
 } from "@/lib/photo-tags";
+import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { cn } from "@/lib/utils";
 
 type PhotoInfoSidebarProps = {
@@ -18,23 +21,6 @@ type PhotoInfoSidebarProps = {
   onMakeDefault?: () => void;
   isDefaultPhoto?: boolean;
   onTagsChange?: (tags: string[]) => void;
-};
-
-const formatFileSize = (bytes?: number | null) => {
-  if (typeof bytes !== "number") return null;
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let i = 0;
-  while (size >= 1024 && i < units.length - 1) {
-    size /= 1024;
-    i++;
-  }
-  return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-};
-
-const formatDate = (date?: string | null) => {
-  if (!date) return null;
-  return new Date(date).toLocaleString(undefined, { hour12: false });
 };
 
 export function PhotoInfoSidebar({
@@ -53,9 +39,8 @@ export function PhotoInfoSidebar({
     setTags(item.tags ?? []);
   }, [item.id, item.tags]);
 
-  const isFavorite = hasFavoriteTag(tags);
-  const resolution =
-    item.width && item.height ? `${item.width} x ${item.height}` : "-";
+  const isFavorite =
+    hasFavoriteTag(tags) || (item.tripName ? isFavoritesTrip(item.tripName) : false);
 
   const handleShare = async () => {
     if (typeof window === "undefined") return;
@@ -112,21 +97,18 @@ export function PhotoInfoSidebar({
 
     setSavingFavorite(true);
     try {
-      const res = await fetch("/api/photos/update", {
-        method: "PATCH",
+      const res = await fetch("/api/photos/favorite", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           trip: item.tripName,
           path: item.path,
-          sha: item.sha,
-          ...(isFavorite
-            ? { removeTag: FAVORITE_TAG }
-            : { addTag: FAVORITE_TAG }),
+          favorite: !isFavorite,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to update favorite tag");
+        throw new Error(data.error ?? "Failed to update favorite");
       }
 
       const nextTags = isFavorite
@@ -135,7 +117,7 @@ export function PhotoInfoSidebar({
       setTags(nextTags);
       onTagsChange?.(nextTags);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update favorite tag");
+      alert(err instanceof Error ? err.message : "Failed to update favorite");
     } finally {
       setSavingFavorite(false);
     }
@@ -179,44 +161,16 @@ export function PhotoInfoSidebar({
           </div>
         </section>
 
-        <section className="space-y-3">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
-            Details
-          </h3>
-          <div className="space-y-2.5">
-            {item.tripName ? (
-              <Row label={galleryCopy.grid.modal.trip} value={item.tripName} />
-            ) : null}
-            {item.locationName ? (
-              <Row
-                label={galleryCopy.grid.modal.location}
-                value={
-                  item.latitude != null && item.longitude != null ? (
-                    <a
-                      href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=15/${item.latitude}/${item.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-right underline decoration-zinc-300 underline-offset-2 transition-colors hover:text-indigo-600 dark:decoration-zinc-600 dark:hover:text-indigo-300"
-                    >
-                      {item.locationName}
-                    </a>
-                  ) : (
-                    item.locationName
-                  )
-                }
-              />
-            ) : null}
-            <Row label="Resolution" value={resolution} />
-            <Row
-              label={galleryCopy.grid.modal.size}
-              value={formatFileSize(item.size) ?? "-"}
-            />
-            <Row
-              label={galleryCopy.grid.modal.captured}
-              value={formatDate(item.dateShot) ?? "-"}
-            />
-          </div>
-        </section>
+        <PhotoDetailsSection
+          tripName={item.tripName}
+          locationName={item.locationName}
+          latitude={item.latitude}
+          longitude={item.longitude}
+          width={item.width}
+          height={item.height}
+          size={item.size}
+          dateShot={item.dateShot}
+        />
 
         <section className="space-y-3">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
@@ -247,18 +201,13 @@ export function PhotoInfoSidebar({
           {isAdmin ? (
             <div className="flex flex-col items-start gap-2">
               {onMakeDefault && !isDefaultPhoto ? (
-                <button
-                  type="button"
-                  className="rounded-full border border-amber-400/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-300"
+                <MakeDefaultIconButton
+                  variant="toolbar"
                   onClick={onMakeDefault}
-                >
-                  Make default
-                </button>
+                />
               ) : null}
               {isDefaultPhoto ? (
-                <span className="rounded-full border border-zinc-200 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                  Default
-                </span>
+                <DefaultPhotoBadge variant="toolbar" />
               ) : null}
               <button
                 type="button"
@@ -296,24 +245,5 @@ export function PhotoInfoSidebar({
         ) : null}
       </div>
     </aside>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-4 text-[12px]">
-      <div className="flex items-center space-x-2 text-gray-400">
-        {label === galleryCopy.grid.modal.captured ? (
-          <Calendar className="h-3.5 w-3.5" />
-        ) : null}
-        {label === galleryCopy.grid.modal.location ? (
-          <MapPin className="h-3.5 w-3.5" />
-        ) : null}
-        <span>{label}</span>
-      </div>
-      <span className="max-w-[55%] text-right font-semibold text-gray-900 dark:text-gray-100">
-        {value}
-      </span>
-    </div>
   );
 }

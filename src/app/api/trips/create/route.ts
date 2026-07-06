@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { createTrip } from "@/lib/github";
 import type { CreateTripInput } from "@/lib/types";
 
@@ -18,6 +19,13 @@ export async function POST(req: NextRequest) {
 
     if (!name) {
       return NextResponse.json({ error: "Trip name is required" }, { status: 400 });
+    }
+
+    if (name === FAVORITES_TRIP_NAME) {
+      return NextResponse.json(
+        { error: `"${FAVORITES_TRIP_NAME}" is a reserved trip name` },
+        { status: 400 },
+      );
     }
 
     const input: CreateTripInput = {
