@@ -8,8 +8,6 @@ import {
   Pin,
   useMap,
 } from "@vis.gl/react-google-maps";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { LocationViewPanel } from "@/components/map/LocationViewPanel";
 import { cn } from "@/lib/utils";
 import type { MapLocationMarker } from "@/lib/map";
@@ -147,10 +145,7 @@ export function PhotoMapPage() {
   }, []);
 
   return (
-    <>
-      <Header />
-
-      <div className="map-page-shell flex min-h-full flex-1 flex-col">
+    <div className="map-page-shell flex min-h-full flex-1 flex-col">
         <main className="page-container main-offset mx-auto flex w-full flex-1 flex-col gap-4 px-0 pb-6">
           <header className="front-fade-up space-y-2">
             <h1
@@ -209,9 +204,6 @@ export function PhotoMapPage() {
             </div>
           )}
         </main>
-
-        <Footer />
       </div>
-    </>
   );
 }

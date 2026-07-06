@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { PersonCard } from "@/components/gallery/PersonCard";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { PersonSummary } from "@/lib/people-gallery";
@@ -18,7 +15,7 @@ export function GalleryPeopleSelection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/gallery/people");
+      const res = await fetch("/api/people");
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -37,10 +34,7 @@ export function GalleryPeopleSelection() {
   }, [fetchPeople]);
 
   return (
-    <>
-      <Header />
-
-      <div className="gallery-page-shell flex flex-1 flex-col">
+    <div className="gallery-page-shell flex flex-1 flex-col">
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
           <div className="space-y-10">
             <header className="front-fade-up space-y-4">
@@ -58,12 +52,6 @@ export function GalleryPeopleSelection() {
               <p className="max-w-2xl text-sm text-zinc-600/80 dark:text-white/60">
                 {galleryCopy.people.description}
               </p>
-              <Link
-                href="/gallery"
-                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
-              >
-                ← Back to trips
-              </Link>
             </header>
 
             {error ? (
@@ -94,16 +82,17 @@ export function GalleryPeopleSelection() {
               </div>
             ) : (
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                {people.map((person) => (
-                  <PersonCard key={person.tag} person={person} />
+                {people.map((person, index) => (
+                  <PersonCard
+                    key={person.tag}
+                    person={person}
+                    priority={index === 0}
+                  />
                 ))}
               </div>
             )}
           </div>
         </main>
-
-        <Footer />
       </div>
-    </>
   );
 }

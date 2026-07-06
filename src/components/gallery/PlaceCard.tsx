@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 
 type PlaceCardProps = {
   place: PlaceSummary;
+  priority?: boolean;
 };
 
-export function PlaceCard({ place }: PlaceCardProps) {
+export function PlaceCard({ place, priority = false }: PlaceCardProps) {
   const cover = place.coverUrl;
 
   return (
@@ -23,6 +24,7 @@ export function PlaceCard({ place }: PlaceCardProps) {
                 alt={place.title}
                 fill
                 unoptimized
+                priority={priority}
                 sizes="(max-width: 768px) 100vw, 20vw"
                 className="object-cover transition duration-500 group-hover:scale-105"
               />

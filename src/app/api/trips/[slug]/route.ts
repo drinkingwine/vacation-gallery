@@ -77,14 +77,16 @@ export async function PATCH(
           ? body.title.trim()
           : tripLabel(tripName),
       location:
-        typeof body.location === "string" ? body.location.trim() : undefined,
+        typeof body.location === "string" ? body.location.trim() || undefined : undefined,
+      latitude: typeof body.latitude === "number" ? body.latitude : undefined,
+      longitude: typeof body.longitude === "number" ? body.longitude : undefined,
       startDate:
-        typeof body.startDate === "string" ? body.startDate.trim() : undefined,
+        typeof body.startDate === "string" ? body.startDate.trim() || undefined : undefined,
       endDate:
-        typeof body.endDate === "string" ? body.endDate.trim() : undefined,
+        typeof body.endDate === "string" ? body.endDate.trim() || undefined : undefined,
       description:
         typeof body.description === "string"
-          ? body.description.trim()
+          ? body.description.trim() || undefined
           : undefined,
     };
 

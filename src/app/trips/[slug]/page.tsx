@@ -4,16 +4,15 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { useUploadModal } from "@/components/AppShell";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
-import { UploadModal } from "@/components/UploadModal";
 import { GalleryAlbumHero } from "@/components/gallery/GalleryAlbumHero";
 import { pickHeroImages } from "@/lib/hero-images";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
 import { formatMediaCount } from "@/lib/media-count";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { Photo, Trip } from "@/lib/types";
 
 export default function TripPage() {
@@ -22,12 +21,11 @@ export default function TripPage() {
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
   const { isAdmin } = useAuth();
+  const { openUpload } = useUploadModal();
   const router = useRouter();
 
   const fetchTrip = useCallback(async () => {
@@ -57,19 +55,15 @@ export default function TripPage() {
     }
   }, [tripName]);
 
-  const fetchTrips = useCallback(async () => {
-    try {
-      const res = await fetch("/api/trips");
-      if (res.ok) setTrips(await res.json());
-    } catch {
-      // non-critical
-    }
-  }, []);
-
   useEffect(() => {
     fetchTrip();
-    fetchTrips();
-  }, [fetchTrip, fetchTrips]);
+  }, [fetchTrip]);
+
+  useEffect(() => {
+    const refresh = () => fetchTrip();
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
+  }, [fetchTrip]);
 
   const heroImages = useMemo(
     () =>
@@ -84,7 +78,6 @@ export default function TripPage() {
   const dates = trip ? formatDateRange(trip.startDate, trip.endDate) : null;
 
   const isFavorites = isFavoritesTrip(tripName);
-  const uploadTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
 
   const handleDeleteTrip = async () => {
     if (isFavorites) return;
@@ -114,12 +107,7 @@ export default function TripPage() {
   };
 
   return (
-    <>
-      <Header
-        onUpload={isAdmin && !isFavorites ? () => setShowUpload(true) : undefined}
-      />
-
-      <div className="trip-page-shell flex flex-1 flex-col">
+    <div className="trip-page-shell flex flex-1 flex-col">
         <main className="main-offset relative z-0 flex-1 pb-16">
         <div className="page-container mx-auto">
           <GalleryAlbumHero
@@ -140,7 +128,7 @@ export default function TripPage() {
               {!isFavorites ? (
                 <button
                   type="button"
-                  onClick={() => setShowUpload(true)}
+                  onClick={() => openUpload(tripName)}
                   className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
                 >
                   Upload
@@ -191,18 +179,6 @@ export default function TripPage() {
           />
         </section>
         </main>
-
-        <Footer />
       </div>
-
-      {showUpload && isAdmin && !isFavorites && (
-        <UploadModal
-          trips={uploadTrips}
-          defaultTrip={tripName}
-          onClose={() => setShowUpload(false)}
-          onUploadComplete={fetchTrip}
-        />
-      )}
-    </>
   );
 }

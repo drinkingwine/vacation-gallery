@@ -6,8 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { useNavbarConfig } from "@/components/navbar-config";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { PresetTagSectionList } from "@/components/gallery/PresetTagSectionList";
 import { formFieldClass } from "@/lib/form-styles";
@@ -37,6 +36,8 @@ export default function EditPhotoPageClient() {
   const returnTo = searchParams.get("from");
   const tripHref = `/trips/${encodeURIComponent(tripName)}`;
   const cancelHref = returnTo ?? tripHref;
+
+  useNavbarConfig({ backHref: cancelHref, backLabel: "Back" });
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [photo, setPhoto] = useState<Photo | null>(null);
@@ -188,10 +189,7 @@ export default function EditPhotoPageClient() {
   }
 
   return (
-    <>
-      <Header backHref={cancelHref} backLabel="Back" />
-
-      <div className="trip-page-shell flex flex-1 flex-col">
+    <div className="trip-page-shell flex flex-1 flex-col">
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <div className="mx-auto max-w-4xl space-y-6">
           <header className="space-y-1">
@@ -398,9 +396,6 @@ export default function EditPhotoPageClient() {
           )}
         </div>
         </main>
-
-        <Footer />
       </div>
-    </>
   );
 }

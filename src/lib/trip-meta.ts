@@ -17,57 +17,57 @@ export function toDateInputValue(value?: string | null): string {
   return parsed.toISOString().slice(0, 10);
 }
 
-export function formatDateRange(startDate?: string, endDate?: string): string | null {
-  if (!startDate) return null;
-
-  const start = new Date(startDate + "T12:00:00");
-  if (!endDate) {
-    return start.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  const end = new Date(endDate + "T12:00:00");
-  const sameYear = start.getFullYear() === end.getFullYear();
-  const sameMonth = sameYear && start.getMonth() === end.getMonth();
-
-  const monthDay: Intl.DateTimeFormatOptions = {
-    month: "long",
-    day: "numeric",
-  };
-  const full: Intl.DateTimeFormatOptions = {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  };
-
-  if (sameMonth) {
-    return `${start.toLocaleDateString("en-US", { month: "long", day: "numeric" })}–${end.getDate()}, ${end.getFullYear()}`;
-  }
-
-  if (sameYear) {
-    return `${start.toLocaleDateString("en-US", monthDay)} – ${end.toLocaleDateString("en-US", full)}`;
-  }
-
-  return `${start.toLocaleDateString("en-US", full)} – ${end.toLocaleDateString("en-US", full)}`;
-}
-
-function parseTripDate(value?: string): number | null {
-  if (!value) return null;
+function parseTripDateValue(value: string): Date | null {
   const parsed = new Date(
     /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value,
   );
-  const time = parsed.getTime();
-  return Number.isNaN(time) ? null : time;
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function formatTripDate(value?: string | null): string | null {
+  if (!value) return null;
+  const parsed = parseTripDateValue(value);
+  if (!parsed) return null;
+
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const year = parsed.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+function tripDurationDays(startDate: string, endDate: string): number | null {
+  const start = parseTripDateValue(startDate);
+  const end = parseTripDateValue(endDate);
+  if (!start || !end) return null;
+
+  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  const diff = Math.round((endUtc - startUtc) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return null;
+
+  return diff + 1;
+}
+
+export function formatDateRange(startDate?: string, endDate?: string): string | null {
+  if (!startDate) return null;
+
+  const start = formatTripDate(startDate);
+  if (!start) return null;
+  if (!endDate) return start;
+
+  const days = tripDurationDays(startDate, endDate);
+  if (!days) return start;
+
+  return `${start} · ${days} day${days === 1 ? "" : "s"}`;
 }
 
 export function getTripSortTime(trip: {
   startDate?: string;
   endDate?: string;
 }): number | null {
-  return parseTripDate(trip.endDate) ?? parseTripDate(trip.startDate);
+  const end = trip.endDate ? parseTripDateValue(trip.endDate)?.getTime() : null;
+  const start = trip.startDate ? parseTripDateValue(trip.startDate)?.getTime() : null;
+  return end ?? start ?? null;
 }
 
 export function sortTripsByDateDesc<

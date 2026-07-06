@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ people });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[API /gallery/people]", message);
+    console.error("[API /people]", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

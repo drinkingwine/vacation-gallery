@@ -1,30 +1,32 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { GalleryPageClient } from "@/components/gallery/GalleryPageClient";
-import { GalleryPersonContent } from "@/components/gallery/GalleryPersonContent";
+import { GalleryPlaceContent } from "@/components/gallery/GalleryPlaceContent";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
-import { PRESET_PHOTO_TAGS } from "@/lib/photo-tags";
+import { listTrips } from "@/lib/github";
+import { findPlaceSummary } from "@/lib/places-gallery";
 
 export const dynamic = "force-dynamic";
 
-type GalleryPersonPageProps = {
-  params: Promise<{ tag: string }>;
+type PlacePageProps = {
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{
     q?: string;
     media?: string;
   }>;
 };
 
-export default async function GalleryPersonPage({
+export default async function PlacePage({
   params,
   searchParams,
-}: GalleryPersonPageProps) {
-  const { tag: rawTag } = await params;
-  const tag = decodeURIComponent(rawTag).trim().toLowerCase();
+}: PlacePageProps) {
+  const { slug: rawSlug } = await params;
+  const placeSlug = decodeURIComponent(rawSlug).trim().toLowerCase();
   const query = await searchParams;
   const keyword = typeof query.q === "string" ? query.q : "";
+  const place = findPlaceSummary(await listTrips(), placeSlug);
 
-  if (!PRESET_PHOTO_TAGS.includes(tag as (typeof PRESET_PHOTO_TAGS)[number])) {
+  if (!place) {
     notFound();
   }
 
@@ -32,7 +34,7 @@ export default async function GalleryPersonPage({
     <GalleryPageClient>
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <Suspense fallback={<GallerySkeleton />}>
-          <GalleryPersonContent tag={tag} initialKeyword={keyword} />
+          <GalleryPlaceContent placeSlug={placeSlug} initialKeyword={keyword} />
         </Suspense>
       </main>
     </GalleryPageClient>

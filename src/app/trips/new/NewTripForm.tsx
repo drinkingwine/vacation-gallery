@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
 import { useAuth } from "@/components/AuthProvider";
+import { useNavbarConfig } from "@/components/navbar-config";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { formFieldClass } from "@/lib/form-styles";
 
@@ -26,6 +25,8 @@ export function NewTripForm() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewLocation, setPreviewLocation] = useState<GeoLocatorResult | null>(null);
+
+  useNavbarConfig({ backHref: "/", backLabel: "Back" });
 
   useEffect(() => {
     if (authLoading) return;
@@ -89,8 +90,6 @@ export function NewTripForm() {
 
   return (
     <>
-      <Header backHref="/" backLabel="Back" />
-
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <div className="mx-auto max-w-4xl space-y-6">
           <header className="space-y-1">
@@ -238,8 +237,6 @@ export function NewTripForm() {
           </form>
         </div>
       </main>
-
-      <Footer />
     </>
   );
 }

@@ -3,23 +3,23 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { useUploadModal } from "@/components/AppShell";
 import { FeaturedTripCard } from "@/components/FeaturedTripCard";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { HomeHero } from "@/components/HomeHero";
 import { SectionHeader } from "@/components/SectionHeader";
-import { UploadModal } from "@/components/UploadModal";
+import { useFooterConfig } from "@/components/footer-config";
 import type { Trip } from "@/lib/types";
 import { totalMediaCount } from "@/lib/media-count";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 
 export default function Home() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
+  const { openUpload } = useUploadModal();
 
   const fetchTrips = useCallback(async () => {
     setLoading(true);
@@ -43,7 +43,19 @@ export default function Home() {
     fetchTrips();
   }, [fetchTrips]);
 
+  useEffect(() => {
+    const refresh = () => fetchTrips();
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
+  }, [fetchTrips]);
+
   const totalMedia = trips.reduce((sum, t) => sum + totalMediaCount(t), 0);
+
+  useFooterConfig({
+    stats: loading
+      ? "Loading…"
+      : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`,
+  });
 
   const handleDeleteTrip = async (trip: Trip) => {
     if (isFavoritesTrip(trip.name)) return;
@@ -74,10 +86,6 @@ export default function Home() {
 
   return (
     <>
-      <Header
-        onUpload={isAdmin ? () => setShowUpload(true) : undefined}
-      />
-
       <main className="flex-1 overflow-x-hidden">
         <HomeHero primaryHref="/gallery" />
 
@@ -142,7 +150,7 @@ export default function Home() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setShowUpload(true)}
+                    onClick={() => openUpload()}
                     className="rounded-full border border-zinc-900 bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                   >
                     Upload photos
@@ -166,23 +174,6 @@ export default function Home() {
         </section>
       </main>
 
-      <Footer
-        stats={
-          loading
-            ? "Loading…"
-            : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`
-        }
-      />
-
-      {showUpload && isAdmin && (
-        <UploadModal
-          trips={trips.filter((trip) => !isFavoritesTrip(trip.name))}
-          onClose={() => setShowUpload(false)}
-          onUploadComplete={() => {
-            fetchTrips();
-          }}
-        />
-      )}
     </>
   );
 }

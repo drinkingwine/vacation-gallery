@@ -12,6 +12,7 @@ type TripCardProps = {
   isAdmin?: boolean;
   onDelete?: (trip: Trip) => void;
   deleting?: boolean;
+  priority?: boolean;
 };
 
 const stackTransforms = [
@@ -31,6 +32,7 @@ export function TripCard({
   isAdmin = false,
   onDelete,
   deleting = false,
+  priority = false,
 }: TripCardProps) {
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const cover = trip.coverUrl;
@@ -64,6 +66,7 @@ export function TripCard({
                   alt={trip.title}
                   fill
                   unoptimized
+                  priority={priority && index === 0}
                   sizes="(max-width: 768px) 100vw, 33vw"
                   className="object-cover"
                 />
@@ -92,7 +95,7 @@ export function TripCard({
           <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-zinc-800 transition-colors group-hover:text-indigo-600 dark:text-zinc-200 dark:group-hover:text-indigo-400">
             {trip.title}
           </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {dates ?? "Trip album"}
           </p>
           {trip.location && (

@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 
 type PersonCardProps = {
   person: PersonSummary;
+  priority?: boolean;
 };
 
-export function PersonCard({ person }: PersonCardProps) {
+export function PersonCard({ person, priority = false }: PersonCardProps) {
   const cover = person.coverUrl;
 
   return (
@@ -24,6 +25,7 @@ export function PersonCard({ person }: PersonCardProps) {
                 alt={person.label}
                 fill
                 unoptimized
+                priority={priority}
                 sizes="(max-width: 768px) 100vw, 20vw"
                 className="object-cover transition duration-500 group-hover:scale-105"
               />

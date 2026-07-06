@@ -25,6 +25,7 @@
   --radius: 0.5rem;
   --page-glow-1: 220 45% 92%;
   --page-glow-2: 30 40% 94%;
+  --nav-border: 280 30% 75%;
   --home-header-offset: calc(9.25rem + env(safe-area-inset-top, 0px));
 }
 
@@ -56,6 +57,7 @@
   --ring: 230 8% 72%;
   --page-glow-1: 220 30% 18%;
   --page-glow-2: 260 20% 14%;
+  --nav-border: 280 25% 32%;
 }
 
 @theme inline {
@@ -99,26 +101,24 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
-  background-color: hsl(var(--background));
-  background-image:
-    radial-gradient(
-      ellipse 90% 55% at 50% -15%,
-      hsl(var(--page-glow-1) / 0.75),
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 70% 50% at 100% 100%,
-      hsl(var(--page-glow-2) / 0.55),
-      transparent 65%
-    ),
-    linear-gradient(
-      180deg,
-      hsl(var(--background)) 0%,
-      hsl(var(--muted) / 0.35) 100%
-    );
+  background: linear-gradient(
+    145deg,
+    #ffe4e6 0%,
+    #e0f2fe 42%,
+    #fef3c7 100%
+  );
   background-attachment: fixed;
   color: hsl(var(--foreground));
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.dark body {
+  background: linear-gradient(
+    145deg,
+    #1e1b4b 0%,
+    #4c1d95 45%,
+    #134e4a 100%
+  );
 }
 
 .page-container {
@@ -207,28 +207,29 @@ body.gallery-chrome-hidden .front-floating-nav * {
   pointer-events: none;
 }
 
-.photo-viewer-shell,
-.trip-page-shell,
-.gallery-page-shell,
-.map-page-shell {
+.front-floating-nav--solid {
+  border-bottom: 1px solid hsl(var(--nav-border) / 0.55);
   background: linear-gradient(
-    145deg,
-    #ffe4e6 0%,
-    #e0f2fe 42%,
-    #fef3c7 100%
+    125deg,
+    rgb(187 247 208 / 0.94) 0%,
+    rgb(129 230 217 / 0.92) 38%,
+    rgb(196 181 253 / 0.94) 100%
+  );
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.dark .front-floating-nav--solid {
+  background: linear-gradient(
+    125deg,
+    rgb(6 78 59 / 0.94) 0%,
+    rgb(30 64 175 / 0.9) 42%,
+    rgb(88 28 135 / 0.94) 100%
   );
 }
 
-.dark .photo-viewer-shell,
-.dark .trip-page-shell,
-.dark .gallery-page-shell,
-.dark .map-page-shell {
-  background: linear-gradient(
-    145deg,
-    #1e1b4b 0%,
-    #4c1d95 45%,
-    #134e4a 100%
-  );
+.front-floating-nav--solid .front-nav-mobile {
+  border-top-color: hsl(var(--nav-border) / 0.45);
 }
 
 .photo-viewer-canvas {

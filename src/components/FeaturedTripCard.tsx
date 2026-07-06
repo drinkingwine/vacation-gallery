@@ -49,7 +49,7 @@ export function FeaturedTripCard({
                   {trip.description}
                 </p>
               ) : dates ? (
-                <p className="text-sm text-zinc-600/80 dark:text-white/60">
+                <p className="text-xs text-zinc-600/80 dark:text-white/60">
                   {dates}
                 </p>
               ) : null}

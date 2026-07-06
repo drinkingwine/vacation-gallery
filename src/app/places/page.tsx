@@ -2,6 +2,6 @@ import { GalleryPlacesSelection } from "@/components/gallery/GalleryPlacesSelect
 
 export const dynamic = "force-dynamic";
 
-export default function GalleryPlacesPage() {
+export default function PlacesPage() {
   return <GalleryPlacesSelection />;
 }

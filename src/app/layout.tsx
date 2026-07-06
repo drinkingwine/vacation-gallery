@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Lora, Open_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
+import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 
 const lora = Lora({
@@ -42,9 +43,11 @@ export default function RootLayout({
     >
       <body className="relative flex min-h-full flex-col font-medium text-foreground">
         <AuthProvider>
-          <div className="relative z-10 flex min-h-full flex-1 flex-col">
-            {children}
-          </div>
+          <AppShell>
+            <div className="relative z-10 flex min-h-full flex-1 flex-col">
+              {children}
+            </div>
+          </AppShell>
         </AuthProvider>
       </body>
     </html>

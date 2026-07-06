@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { PlaceCard } from "@/components/gallery/PlaceCard";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { PlaceSummary } from "@/lib/places-gallery";
@@ -18,7 +16,7 @@ export function GalleryPlacesSelection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/gallery/places");
+      const res = await fetch("/api/places");
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -37,10 +35,7 @@ export function GalleryPlacesSelection() {
   }, [fetchPlaces]);
 
   return (
-    <>
-      <Header />
-
-      <div className="gallery-page-shell flex flex-1 flex-col">
+    <div className="gallery-page-shell flex flex-1 flex-col">
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
           <div className="space-y-10">
             <header className="front-fade-up space-y-4">
@@ -94,16 +89,17 @@ export function GalleryPlacesSelection() {
               </div>
             ) : (
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                {places.map((place) => (
-                  <PlaceCard key={place.slug} place={place} />
+                {places.map((place, index) => (
+                  <PlaceCard
+                    key={place.slug}
+                    place={place}
+                    priority={index === 0}
+                  />
                 ))}
               </div>
             )}
           </div>
         </main>
-
-        <Footer />
       </div>
-    </>
   );
 }

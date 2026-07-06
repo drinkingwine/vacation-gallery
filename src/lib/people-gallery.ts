@@ -34,5 +34,5 @@ export function buildPeopleGalleryList(photos: GalleryPhoto[]): PersonSummary[] 
 }
 
 export function personGalleryPath(tag: string) {
-  return `/gallery/people/${encodeURIComponent(tag)}`;
+  return `/people/${encodeURIComponent(tag)}`;
 }

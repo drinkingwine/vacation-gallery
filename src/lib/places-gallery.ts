@@ -124,5 +124,5 @@ export function findPlaceSummary(
 }
 
 export function placeGalleryPath(slug: string) {
-  return `/gallery/places/${encodeURIComponent(slug)}`;
+  return `/places/${encodeURIComponent(slug)}`;
 }

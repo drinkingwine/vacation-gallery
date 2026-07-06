@@ -2,6 +2,6 @@ import { GalleryPeopleSelection } from "@/components/gallery/GalleryPeopleSelect
 
 export const dynamic = "force-dynamic";
 
-export default function GalleryPeoplePage() {
+export default function PeoplePage() {
   return <GalleryPeopleSelection />;
 }

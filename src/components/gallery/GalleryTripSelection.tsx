@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { useUploadModal } from "@/components/AppShell";
 import { TripCard } from "@/components/TripCard";
-import { UploadModal } from "@/components/UploadModal";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 
@@ -15,9 +14,9 @@ export function GalleryTripSelection() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
+  const { openUpload } = useUploadModal();
 
   const fetchTrips = useCallback(async () => {
     setLoading(true);
@@ -39,6 +38,12 @@ export function GalleryTripSelection() {
 
   useEffect(() => {
     fetchTrips();
+  }, [fetchTrips]);
+
+  useEffect(() => {
+    const refresh = () => fetchTrips();
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchTrips]);
 
   const handleDeleteTrip = async (trip: Trip) => {
@@ -68,14 +73,8 @@ export function GalleryTripSelection() {
     }
   };
 
-  const uploadTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
-
   return (
     <>
-      <Header
-        onUpload={isAdmin ? () => setShowUpload(true) : undefined}
-      />
-
       <div className="gallery-page-shell flex flex-1 flex-col">
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <div className="space-y-10">
@@ -88,26 +87,6 @@ export function GalleryTripSelection() {
             >
               Gallery
             </h1>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <Link
-                href="/gallery/all"
-                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
-              >
-                Browse all photos →
-              </Link>
-              <Link
-                href="/gallery/people"
-                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
-              >
-                People gallery →
-              </Link>
-              <Link
-                href="/gallery/places"
-                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
-              >
-                Places gallery →
-              </Link>
-            </div>
           </header>
 
           {error ? (
@@ -152,7 +131,7 @@ export function GalleryTripSelection() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setShowUpload(true)}
+                    onClick={() => openUpload()}
                     className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
                   >
                     Upload photos
@@ -162,10 +141,11 @@ export function GalleryTripSelection() {
             </div>
           ) : (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-              {trips.map((trip) => (
+              {trips.map((trip, index) => (
                 <TripCard
                   key={trip.path}
                   trip={trip}
+                  priority={index === 0}
                   isAdmin={isAdmin && !isFavoritesTrip(trip.name)}
                   onDelete={handleDeleteTrip}
                   deleting={deletingTrip === trip.name}
@@ -175,17 +155,7 @@ export function GalleryTripSelection() {
           )}
         </div>
         </main>
-
-        <Footer />
       </div>
-
-      {showUpload && isAdmin && (
-        <UploadModal
-          trips={uploadTrips}
-          onClose={() => setShowUpload(false)}
-          onUploadComplete={fetchTrips}
-        />
-      )}
     </>
   );
 }

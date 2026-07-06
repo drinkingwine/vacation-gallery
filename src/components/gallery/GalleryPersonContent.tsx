@@ -61,7 +61,7 @@ export async function GalleryPersonContent({
             label: `${sorted.length} ${sorted.length === 1 ? "photo" : "photos"}`,
           },
         ]}
-        backHref="/gallery/people"
+        backHref="/people"
         backLabel="All people"
       />
 
