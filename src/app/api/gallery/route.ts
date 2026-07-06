@@ -5,6 +5,7 @@ import {
   filterGalleryPhotosByMediaType,
   filterGalleryPhotosByTag,
   filterGalleryPhotosByTrip,
+  filterGalleryPhotosByPlace,
   paginateGalleryPhotos,
   sortGalleryPhotos,
 } from "@/lib/gallery-query";
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
     const keyword = params.get("q") ?? "";
     const tag = params.get("tag") ?? "";
     const trip = params.get("trip") ?? "";
+    const place = params.get("place") ?? "";
     const mediaType = params.get("mediaType") ?? "all";
     const sortOrder: GallerySortOrder =
       params.get("sortOrder") === "oldest" ? "oldest" : "newest";
@@ -36,9 +38,12 @@ export async function GET(req: NextRequest) {
     const all = sortGalleryPhotos(
       filterGalleryPhotos(
         filterGalleryPhotosByTrip(
-          filterGalleryPhotosByTag(
-            filterGalleryPhotosByMediaType(sourcePhotos, mediaType),
-            tag,
+          filterGalleryPhotosByPlace(
+            filterGalleryPhotosByTag(
+              filterGalleryPhotosByMediaType(sourcePhotos, mediaType),
+              tag,
+            ),
+            place,
           ),
           trip,
         ),

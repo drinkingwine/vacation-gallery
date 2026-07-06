@@ -25,9 +25,14 @@ type SortOrder = "newest" | "oldest";
 
 type GalleryWithFilterProps = {
   initialItems: GalleryItem[];
+  initialViewerItems?: GalleryItem[];
   initialHasNext: boolean;
   pageSize: number;
   initialKeyword?: string;
+  tag?: string;
+  place?: string;
+  trip?: string;
+  emptyMessage?: string;
 };
 
 const mediaTypeFilters = [
@@ -36,11 +41,18 @@ const mediaTypeFilters = [
   { value: "video" as MediaType, key: "video" },
 ] as const;
 
+const SCOPED_VIEWER_PAGE_SIZE = 10_000;
+
 export function GalleryWithFilter({
   initialItems,
+  initialViewerItems,
   initialHasNext,
   pageSize,
   initialKeyword = "",
+  tag = "",
+  place = "",
+  trip = "",
+  emptyMessage,
 }: GalleryWithFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -55,7 +67,11 @@ export function GalleryWithFilter({
     return param === "oldest" ? "oldest" : "newest";
   });
   const [keyword, setKeyword] = useState(initialKeyword);
+  const isScoped = Boolean(tag || place || trip);
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
+  const [viewerItems, setViewerItems] = useState<GalleryItem[]>(
+    initialViewerItems ?? initialItems,
+  );
   const [hasNext, setHasNext] = useState(initialHasNext);
   const [selectedId, setSelectedId] = useState<string | null>(
     searchParams.get("media"),
@@ -63,7 +79,9 @@ export function GalleryWithFilter({
   const [isFiltering, startTransition] = useTransition();
 
   const debouncedKeyword = useDebounce(keyword, 280);
-  const lastFilterKeyRef = useRef(`all|newest|${initialKeyword.trim()}`);
+  const lastFilterKeyRef = useRef(
+    `all|newest|${initialKeyword.trim()}|${tag}|${place}|${trip}`,
+  );
 
   const replaceQuery = useCallback(
     (patch: Record<string, string | null>) => {
@@ -110,26 +128,56 @@ export function GalleryWithFilter({
           sortOrder: nextSortOrder,
         });
         if (nextKeyword) params.set("q", nextKeyword);
+        if (tag) params.set("tag", tag);
+        if (place) params.set("place", place);
+        if (trip) params.set("trip", trip);
 
         try {
-          const res = await fetch(`/api/gallery?${params.toString()}`, {
-            cache: "no-store",
-          });
-          if (!res.ok) return;
-          const data = await res.json();
+          const requests: Promise<Response>[] = [
+            fetch(`/api/gallery?${params.toString()}`, { cache: "no-store" }),
+          ];
+
+          if (isScoped) {
+            const viewerParams = new URLSearchParams(params);
+            viewerParams.set("pageSize", String(SCOPED_VIEWER_PAGE_SIZE));
+            requests.push(
+              fetch(`/api/gallery?${viewerParams.toString()}`, {
+                cache: "no-store",
+              }),
+            );
+          }
+
+          const responses = await Promise.all(requests);
+          if (!responses[0]?.ok) return;
+
+          const data = await responses[0].json();
           setItems(data.items);
           setHasNext(data.hasNext);
-          setSelectedId(null);
+
+          let nextViewerItems = data.items as GalleryItem[];
+          if (isScoped && responses[1]?.ok) {
+            const viewerData = await responses[1].json();
+            nextViewerItems = viewerData.items as GalleryItem[];
+          }
+          setViewerItems(nextViewerItems);
+
+          const activeMedia = searchParams.get("media");
+          if (
+            activeMedia &&
+            !nextViewerItems.some((item) => item.id === activeMedia)
+          ) {
+            setSelectedId(null);
+          }
         } catch {
           // keep current data
         }
       });
     },
-    [pageSize, replaceQuery],
+    [isScoped, pageSize, place, replaceQuery, searchParams, tag, trip],
   );
 
   useEffect(() => {
-    const filterKey = `${mediaType}|${sortOrder}|${normalizedKeyword}`;
+    const filterKey = `${mediaType}|${sortOrder}|${normalizedKeyword}|${tag}|${place}|${trip}`;
     if (lastFilterKeyRef.current === filterKey) return;
     lastFilterKeyRef.current = filterKey;
     void applyFilter(mediaType, sortOrder, normalizedKeyword);
@@ -152,6 +200,15 @@ export function GalleryWithFilter({
     setSelectedId(next);
     replaceQuery({ media: next });
   };
+
+  const handleItemRemoved = useCallback((itemId: string) => {
+    setItems((prev) => prev.filter((item) => String(item.id) !== itemId));
+    setViewerItems((prev) => prev.filter((item) => String(item.id) !== itemId));
+    if (selectedId === itemId) {
+      setSelectedId(null);
+      replaceQuery({ media: null });
+    }
+  }, [replaceQuery, selectedId]);
 
   return (
     <div className="space-y-8">
@@ -220,19 +277,27 @@ export function GalleryWithFilter({
         <GallerySkeleton />
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white/60 p-10 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
-          {galleryCopy.noResults}
+          {normalizedKeyword
+            ? galleryCopy.noResults
+            : (emptyMessage ?? galleryCopy.noResults)}
         </div>
       ) : (
         <GalleryInfinite
           initialItems={items}
+          viewerItems={isScoped ? viewerItems : undefined}
           initialPage={1}
           pageSize={pageSize}
           hasNext={hasNext}
           mediaType={mediaType}
           sortOrder={sortOrder}
           keyword={normalizedKeyword}
+          tag={tag}
+          place={place}
+          trip={trip}
           selectedId={selectedId}
           onSelectedIdChange={handleSelectedIdChange}
+          showHeader={!isScoped}
+          onItemRemoved={isScoped ? handleItemRemoved : undefined}
         />
       )}
     </div>

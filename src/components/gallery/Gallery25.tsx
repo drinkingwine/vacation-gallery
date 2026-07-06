@@ -14,6 +14,7 @@ import {
   PhotoCardEditDeleteBar,
   PhotoCardToolbar,
   PhotoTagBadges,
+  PhotoTagHoverOverlay,
   VideoTypeBadge,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { galleryCopy } from "@/lib/gallery-copy";
@@ -40,6 +41,7 @@ type GalleryId = string | number;
 
 type Gallery25Props = {
   items?: GalleryItem[];
+  viewerItems?: GalleryItem[];
   className?: string;
   showChrome?: boolean;
   showGrid?: boolean;
@@ -122,6 +124,7 @@ const resolveTimelineTimestamp = (item: GalleryItem) => {
 
 export function Gallery25({
   items = [],
+  viewerItems,
   className,
   showChrome = true,
   showGrid = true,
@@ -212,6 +215,8 @@ export function Gallery25({
   const previousFullBleed = useRef(isFullBleed);
   const lastScrollY = useRef(0);
 
+  const navigationItems = viewerItems ?? items;
+
   const timelineItems = useMemo(
     () =>
       items
@@ -253,14 +258,39 @@ export function Gallery25({
     () => createBalancedColumns(visibleItems, displayColumnCount, ratioMap),
     [displayColumnCount, ratioMap, visibleItems],
   );
-  const selectedIndex = useMemo(() => {
+  const modalVisibleItems = useMemo(() => {
+    if (filter === "timeline") {
+      return navigationItems
+        .map((item, index) => ({ item, index }))
+        .sort((a, b) => {
+          const timeA = resolveTimelineTimestamp(a.item);
+          const timeB = resolveTimelineTimestamp(b.item);
+          if (timeA === timeB) return a.index - b.index;
+          return timeB - timeA;
+        })
+        .map((entry) => entry.item);
+    }
+    if (filter === "all") return navigationItems;
+    if (filter === "video") {
+      return navigationItems.filter((item) => item.type === "video");
+    }
+    return navigationItems.filter((item) => item.type === filter);
+  }, [filter, navigationItems]);
+
+  const modalSelectedIndex = useMemo(() => {
     if (!selectedId) return -1;
-    return visibleItems.findIndex((item) => item.id === selectedId);
-  }, [selectedId, visibleItems]);
-  const selected = useMemo(() => {
+    return modalVisibleItems.findIndex(
+      (item) => String(item.id) === String(selectedId),
+    );
+  }, [modalVisibleItems, selectedId]);
+
+  const modalSelected = useMemo(() => {
     if (!selectedId) return null;
-    return visibleItems.find((item) => item.id === selectedId) ?? null;
-  }, [selectedId, visibleItems]);
+    return (
+      modalVisibleItems.find((item) => String(item.id) === String(selectedId)) ??
+      null
+    );
+  }, [modalVisibleItems, selectedId]);
 
   const chromeVisible = showChrome && (!isFullBleed || isChromeVisible);
   const gridControlsVisible = showChrome;
@@ -326,32 +356,36 @@ export function Gallery25({
   }, [isFullBleed]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!modalSelected) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSelectedId(null);
         return;
       }
-      if (visibleItems.length < 2) return;
+      if (modalVisibleItems.length < 2) return;
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         const prevIndex =
-          selectedIndex <= 0 ? visibleItems.length - 1 : selectedIndex - 1;
-        setSelectedId(visibleItems[prevIndex]?.id ?? null);
+          modalSelectedIndex <= 0
+            ? modalVisibleItems.length - 1
+            : modalSelectedIndex - 1;
+        setSelectedId(modalVisibleItems[prevIndex]?.id ?? null);
       }
       if (event.key === "ArrowRight") {
         event.preventDefault();
         const nextIndex =
-          selectedIndex >= visibleItems.length - 1 ? 0 : selectedIndex + 1;
-        setSelectedId(visibleItems[nextIndex]?.id ?? null);
+          modalSelectedIndex >= modalVisibleItems.length - 1
+            ? 0
+            : modalSelectedIndex + 1;
+        setSelectedId(modalVisibleItems[nextIndex]?.id ?? null);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selected, selectedIndex, setSelectedId, visibleItems]);
+  }, [modalSelected, modalSelectedIndex, modalVisibleItems, setSelectedId]);
 
   useEffect(() => {
-    if (selected) {
+    if (modalSelected) {
       document.body.style.overflow = "hidden";
       document.body.classList.add("gallery-modal-open");
     } else {
@@ -362,27 +396,28 @@ export function Gallery25({
       document.body.style.overflow = "";
       document.body.classList.remove("gallery-modal-open");
     };
-  }, [selected]);
+  }, [modalSelected]);
 
-  const canNavigate = visibleItems.length > 1 && selectedIndex !== -1;
+  const canNavigate =
+    modalVisibleItems.length > 1 && modalSelectedIndex !== -1;
   const handleNavigate = (direction: "prev" | "next") => {
     if (!canNavigate) return;
     const nextIndex =
       direction === "prev"
-        ? selectedIndex <= 0
-          ? visibleItems.length - 1
-          : selectedIndex - 1
-        : selectedIndex >= visibleItems.length - 1
+        ? modalSelectedIndex <= 0
+          ? modalVisibleItems.length - 1
+          : modalSelectedIndex - 1
+        : modalSelectedIndex >= modalVisibleItems.length - 1
           ? 0
-          : selectedIndex + 1;
-    setSelectedId(visibleItems[nextIndex]?.id ?? null);
+          : modalSelectedIndex + 1;
+    setSelectedId(modalVisibleItems[nextIndex]?.id ?? null);
   };
 
   if (!showGrid) {
     return (
       <PhotoDetailModal
-        selectedItem={selected}
-        items={visibleItems}
+        selectedItem={modalSelected}
+        items={modalVisibleItems}
         onSelect={(id) => setSelectedId(id)}
         onClose={() => setSelectedId(null)}
         onPrev={() => handleNavigate("prev")}
@@ -519,7 +554,9 @@ export function Gallery25({
                   const isVideo = item.type === "video";
                   const displayTags = getItemDisplayTags(item);
                   const showAdminToolbar = isAdmin;
-                  const showCardFooter = showAdminToolbar || displayTags.length > 0;
+                  const showFooterTags = isAdmin && displayTags.length > 0;
+                  const showCardFooter = showAdminToolbar || showFooterTags;
+                  const showHoverTags = !isAdmin && displayTags.length > 0;
 
                   return (
                     <motion.article
@@ -588,6 +625,9 @@ export function Gallery25({
                               <VideoTypeBadge variant="overlay" />
                             </div>
                           ) : null}
+                          {showHoverTags ? (
+                            <PhotoTagHoverOverlay tags={displayTags} />
+                          ) : null}
                         </div>
                       </div>
                       {showCardFooter ? (
@@ -608,10 +648,12 @@ export function Gallery25({
                               />
                             </PhotoCardToolbar>
                           ) : null}
-                          <PhotoTagBadges
-                            tags={displayTags}
-                            dividedFromToolbar={showAdminToolbar}
-                          />
+                          {showFooterTags ? (
+                            <PhotoTagBadges
+                              tags={displayTags}
+                              dividedFromToolbar={showAdminToolbar}
+                            />
+                          ) : null}
                         </>
                       ) : null}
                     </motion.article>
@@ -623,8 +665,8 @@ export function Gallery25({
         </div>
       </div>
       <PhotoDetailModal
-        selectedItem={selected}
-        items={visibleItems}
+        selectedItem={modalSelected}
+        items={modalVisibleItems}
         onSelect={(id) => setSelectedId(id)}
         onClose={() => setSelectedId(null)}
         onPrev={() => handleNavigate("prev")}

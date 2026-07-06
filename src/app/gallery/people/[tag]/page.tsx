@@ -9,11 +9,20 @@ export const dynamic = "force-dynamic";
 
 type GalleryPersonPageProps = {
   params: Promise<{ tag: string }>;
+  searchParams: Promise<{
+    q?: string;
+    media?: string;
+  }>;
 };
 
-export default async function GalleryPersonPage({ params }: GalleryPersonPageProps) {
+export default async function GalleryPersonPage({
+  params,
+  searchParams,
+}: GalleryPersonPageProps) {
   const { tag: rawTag } = await params;
   const tag = decodeURIComponent(rawTag).trim().toLowerCase();
+  const query = await searchParams;
+  const keyword = typeof query.q === "string" ? query.q : "";
 
   if (!PRESET_PHOTO_TAGS.includes(tag as (typeof PRESET_PHOTO_TAGS)[number])) {
     notFound();
@@ -23,7 +32,7 @@ export default async function GalleryPersonPage({ params }: GalleryPersonPagePro
     <GalleryPageClient>
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <Suspense fallback={<GallerySkeleton />}>
-          <GalleryPersonContent tag={tag} />
+          <GalleryPersonContent tag={tag} initialKeyword={keyword} />
         </Suspense>
       </main>
     </GalleryPageClient>

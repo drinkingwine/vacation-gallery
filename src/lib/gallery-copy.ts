@@ -23,7 +23,8 @@ export const galleryCopy = {
   places: {
     eyebrow: "Gallery / Places",
     title: "Places Gallery",
-    description: "Browse photos by trip, sorted A–Z.",
+    description:
+      "Browse photos by place, sorted A–Z. Trips sharing the same folder name are combined.",
     empty: "No trips with photos yet.",
     noPhotos: (name: string) => `No photos in ${name} yet.`,
   },

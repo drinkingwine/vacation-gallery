@@ -28,6 +28,7 @@ type GalleryResponse = {
 
 type GalleryInfiniteProps = {
   initialItems: GalleryItem[];
+  viewerItems?: GalleryItem[];
   hasNext: boolean;
   initialPage: number;
   pageSize: number;
@@ -36,12 +37,16 @@ type GalleryInfiniteProps = {
   keyword?: string;
   tag?: string;
   trip?: string;
+  place?: string;
   selectedId?: string | null;
   onSelectedIdChange?: (id: string | number | null) => void;
+  showHeader?: boolean;
+  onItemRemoved?: (itemId: string) => void;
 };
 
 export function GalleryInfinite({
   initialItems,
+  viewerItems,
   hasNext: initialHasNext,
   initialPage,
   pageSize,
@@ -50,8 +55,11 @@ export function GalleryInfinite({
   keyword = "",
   tag = "",
   trip = "",
+  place = "",
   selectedId,
   onSelectedIdChange,
+  showHeader = true,
+  onItemRemoved,
 }: GalleryInfiniteProps) {
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [page, setPage] = useState(initialPage);
@@ -65,7 +73,7 @@ export function GalleryInfinite({
     setPage(initialPage);
     setHasNext(initialHasNext);
     setLoadError(false);
-  }, [initialItems, initialPage, initialHasNext, mediaType, sortOrder, keyword, tag, trip]);
+  }, [initialItems, initialPage, initialHasNext, mediaType, sortOrder, keyword, tag, trip, place]);
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasNext) return;
@@ -82,6 +90,7 @@ export function GalleryInfinite({
     if (keyword) params.set("q", keyword);
     if (tag) params.set("tag", tag);
     if (trip) params.set("trip", trip);
+    if (place) params.set("place", place);
 
     try {
       const response = await fetch(`/api/gallery?${params.toString()}`, {
@@ -97,7 +106,7 @@ export function GalleryInfinite({
     } finally {
       setIsLoading(false);
     }
-  }, [hasNext, isLoading, keyword, mediaType, page, pageSize, sortOrder, tag, trip]);
+  }, [hasNext, isLoading, keyword, mediaType, page, pageSize, sortOrder, tag, trip, place]);
 
   useEffect(() => {
     if (!hasNext || loadError) return;
@@ -122,12 +131,15 @@ export function GalleryInfinite({
 
   const handleItemRemoved = useCallback((itemId: string) => {
     setItems((prev) => prev.filter((item) => String(item.id) !== itemId));
-  }, []);
+    onItemRemoved?.(itemId);
+  }, [onItemRemoved]);
 
   return (
     <>
       <Gallery25
         items={items}
+        viewerItems={viewerItems}
+        showHeader={showHeader}
         selectedId={selectedId ?? null}
         onSelectedIdChange={onSelectedIdChange}
         onItemTagsChange={handleItemTagsChange}

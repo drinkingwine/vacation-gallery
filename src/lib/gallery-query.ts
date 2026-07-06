@@ -1,5 +1,6 @@
 import type { GalleryPhoto, GallerySortOrder } from "@/lib/types";
 import { hasPhotoTag } from "@/lib/photo-tags";
+import { getPlaceSlugFromTripName } from "@/lib/places-gallery";
 
 export function sortGalleryPhotos(
   photos: GalleryPhoto[],
@@ -51,6 +52,17 @@ export function filterGalleryPhotosByTrip(photos: GalleryPhoto[], tripName: stri
   const normalized = tripName.trim();
   if (!normalized) return photos;
   return photos.filter((photo) => photo.tripName === normalized);
+}
+
+export function filterGalleryPhotosByPlace(
+  photos: GalleryPhoto[],
+  placeSlug: string,
+) {
+  const normalized = placeSlug.trim().toLowerCase();
+  if (!normalized) return photos;
+  return photos.filter(
+    (photo) => getPlaceSlugFromTripName(photo.tripName) === normalized,
+  );
 }
 
 export function paginateGalleryPhotos<T>(

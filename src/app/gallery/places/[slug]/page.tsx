@@ -3,21 +3,30 @@ import { notFound } from "next/navigation";
 import { GalleryPageClient } from "@/components/gallery/GalleryPageClient";
 import { GalleryPlaceContent } from "@/components/gallery/GalleryPlaceContent";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
-import { isFavoritesTrip } from "@/lib/favorites-trip";
-import { getTrip } from "@/lib/github";
+import { listTrips } from "@/lib/github";
+import { findPlaceSummary } from "@/lib/places-gallery";
 
 export const dynamic = "force-dynamic";
 
 type GalleryPlacePageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    q?: string;
+    media?: string;
+  }>;
 };
 
-export default async function GalleryPlacePage({ params }: GalleryPlacePageProps) {
+export default async function GalleryPlacePage({
+  params,
+  searchParams,
+}: GalleryPlacePageProps) {
   const { slug: rawSlug } = await params;
-  const tripSlug = decodeURIComponent(rawSlug);
-  const trip = await getTrip(tripSlug);
+  const placeSlug = decodeURIComponent(rawSlug).trim().toLowerCase();
+  const query = await searchParams;
+  const keyword = typeof query.q === "string" ? query.q : "";
+  const place = findPlaceSummary(await listTrips(), placeSlug);
 
-  if (!trip || isFavoritesTrip(trip.name)) {
+  if (!place) {
     notFound();
   }
 
@@ -25,7 +34,7 @@ export default async function GalleryPlacePage({ params }: GalleryPlacePageProps
     <GalleryPageClient>
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <Suspense fallback={<GallerySkeleton />}>
-          <GalleryPlaceContent tripSlug={tripSlug} />
+          <GalleryPlaceContent placeSlug={placeSlug} initialKeyword={keyword} />
         </Suspense>
       </main>
     </GalleryPageClient>

@@ -9,11 +9,12 @@ import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { UploadModal } from "@/components/UploadModal";
+import { GalleryAlbumHero } from "@/components/gallery/GalleryAlbumHero";
+import { pickHeroImages } from "@/lib/hero-images";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
 import { formatMediaCount } from "@/lib/media-count";
-import { cn } from "@/lib/utils";
 import type { Photo, Trip } from "@/lib/types";
 
 export default function TripPage() {
@@ -28,7 +29,6 @@ export default function TripPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
-  const [heroIndex, setHeroIndex] = useState(0);
   const { isAdmin } = useAuth();
   const router = useRouter();
 
@@ -73,26 +73,17 @@ export default function TripPage() {
     fetchTrips();
   }, [fetchTrip, fetchTrips]);
 
-  const heroImages = useMemo(() => {
-    const imagePhotos = photos.filter((p) => p.mediaType !== "video");
-    const urls = imagePhotos.map((p) => p.downloadUrl);
-    if (trip?.coverUrl && imagePhotos.some((p) => p.downloadUrl === trip.coverUrl)) {
-      const rest = urls.filter((url) => url !== trip.coverUrl);
-      return [trip.coverUrl, ...rest].slice(0, 8);
-    }
-    return urls.length > 0 ? urls.slice(0, 8) : [];
-  }, [photos, trip?.coverUrl]);
-
-  const safeHeroIndex = heroImages.length ? heroIndex % heroImages.length : 0;
+  const heroImages = useMemo(
+    () =>
+      pickHeroImages(
+        photos
+          .filter((photo) => photo.mediaType !== "video")
+          .map((photo) => photo.downloadUrl),
+        trip?.coverUrl,
+      ),
+    [photos, trip?.coverUrl],
+  );
   const dates = trip ? formatDateRange(trip.startDate, trip.endDate) : null;
-
-  useEffect(() => {
-    if (heroImages.length <= 1) return;
-    const timer = window.setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroImages.length);
-    }, 6500);
-    return () => window.clearInterval(timer);
-  }, [heroImages.length]);
 
   const isFavorites = isFavoritesTrip(tripName);
   const uploadTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
@@ -133,73 +124,18 @@ export default function TripPage() {
 
       <div className="trip-page-shell flex flex-1 flex-col">
         <main className="main-offset relative z-0 flex-1 pb-16">
-        <section className="front-fade-up page-container relative mx-auto h-[52vh] min-h-[320px] max-h-[900px] overflow-hidden rounded-2xl bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900 sm:h-[65vh] sm:min-h-[420px] sm:rounded-[32px] md:h-[78vh] md:min-h-[560px]">
-          {heroImages.length > 0 ? (
-            heroImages.map((src, index) => (
-              <div
-                key={`${src}-${index}`}
-                className={cn(
-                  "absolute inset-0 bg-cover bg-center transition-opacity",
-                  index === safeHeroIndex ? "opacity-100" : "opacity-0",
-                )}
-                style={{
-                  backgroundImage: `url(${src})`,
-                  transitionDuration: "1200ms",
-                }}
-              />
-            ))
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-violet-500 to-teal-500 dark:from-indigo-800 dark:via-purple-900 dark:to-teal-900" />
-          )}
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-transparent" />
-
-          {heroImages.length > 1 && (
-            <div className="absolute bottom-6 right-4 z-20 flex gap-2 sm:bottom-10 sm:right-10">
-              {heroImages.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setHeroIndex(index)}
-                  className={cn(
-                    "h-0.5 transition-all",
-                    index === safeHeroIndex ? "w-8 bg-white" : "w-4 bg-white/30",
-                  )}
-                  aria-label={`Slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="absolute inset-0 flex items-end px-4 pb-8 pt-20 sm:px-6 sm:pb-10 sm:pt-24 md:px-12 md:pb-14">
-            <div className="w-full space-y-4 text-white sm:space-y-6">
-              <div className="flex flex-wrap gap-2">
-                {trip?.location && (
-                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
-                    {trip.location}
-                  </span>
-                )}
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
-                  {formatMediaCount(photos)}
-                </span>
-              </div>
-              <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">
-                {trip?.title ?? tripName.replace(/-/g, " ")}
-              </h1>
-              {trip?.description && (
-                <p className="max-w-2xl text-sm font-light leading-relaxed text-white/70 md:text-lg">
-                  {trip.description}
-                </p>
-              )}
-              {dates && (
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/60">
-                  {dates}
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
+        <div className="page-container mx-auto">
+          <GalleryAlbumHero
+            images={heroImages}
+            title={trip?.title ?? tripName.replace(/-/g, " ")}
+            badges={[
+              ...(trip?.location ? [{ label: trip.location }] : []),
+              { label: formatMediaCount(photos) },
+            ]}
+            description={trip?.description}
+            subtitle={dates ?? undefined}
+          />
+        </div>
 
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           {isAdmin && (

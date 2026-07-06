@@ -1,5 +1,5 @@
 import { Loader2, Pencil, Star, Trash2, Video } from "lucide-react";
-import { FAVORITE_TAG, formatTagLabel } from "@/lib/photo-tags";
+import { FAVORITE_TAG, formatTagLabel, getPresetTagColorClasses, isPresetPhotoTag } from "@/lib/photo-tags";
 import { cn } from "@/lib/utils";
 
 type Variant = "overlay" | "toolbar";
@@ -331,6 +331,50 @@ export function PhotoTagBadges({
           </span>
         );
       })}
+    </div>
+  );
+}
+
+export function PhotoTagHoverOverlay({
+  tags,
+  className,
+}: {
+  tags: string[];
+  className?: string;
+}) {
+  if (!tags.length) return null;
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100",
+        className,
+      )}
+    >
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-1.5 px-3 pb-3">
+        {tags.map((tag) => {
+          const isFavoriteTag = tag.toLowerCase() === FAVORITE_TAG;
+          const presetClasses = isPresetPhotoTag(tag)
+            ? getPresetTagColorClasses(tag)
+            : null;
+
+          return (
+            <span
+              key={tag}
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] font-medium shadow-sm",
+                isFavoriteTag
+                  ? "border-rose-400/70 bg-rose-950/80 text-rose-200"
+                  : presetClasses ??
+                      "border-white/25 bg-black/50 text-white backdrop-blur-sm",
+              )}
+            >
+              #{formatTagLabel(tag)}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
