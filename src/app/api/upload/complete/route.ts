@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertPhotoMetadata } from "@/lib/github";
+import { getTripMetadata, upsertPhotoMetadata } from "@/lib/github";
 import { isMedia, sanitizeMediaFilename } from "@/lib/media";
 import { headMedia } from "@/lib/r2";
 import {
   formatCoordinates,
   reverseGeocode,
 } from "@/lib/reverse-geocode";
+import type { PhotoMetaEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -28,6 +29,50 @@ function parseLongitude(value: unknown): number | undefined {
   if (typeof value !== "number" || Number.isNaN(value)) return undefined;
   if (value < -180 || value > 180) return undefined;
   return value;
+}
+
+async function resolveUploadLocation(
+  imageLatitude: number | undefined,
+  imageLongitude: number | undefined,
+  tripPath: string,
+): Promise<Partial<PhotoMetaEntry> | null> {
+  if (imageLatitude !== undefined && imageLongitude !== undefined) {
+    let location = await reverseGeocode(imageLatitude, imageLongitude);
+    if (!location) {
+      location = formatCoordinates(imageLatitude, imageLongitude);
+    }
+
+    return {
+      location,
+      latitude: imageLatitude,
+      longitude: imageLongitude,
+    };
+  }
+
+  const tripMeta = await getTripMetadata(tripPath);
+  const tripLatitude =
+    typeof tripMeta.latitude === "number" && !Number.isNaN(tripMeta.latitude)
+      ? tripMeta.latitude
+      : undefined;
+  const tripLongitude =
+    typeof tripMeta.longitude === "number" && !Number.isNaN(tripMeta.longitude)
+      ? tripMeta.longitude
+      : undefined;
+  const tripLocation = tripMeta.location?.trim();
+
+  if (tripLatitude !== undefined && tripLongitude !== undefined) {
+    return {
+      location: tripLocation || formatCoordinates(tripLatitude, tripLongitude),
+      latitude: tripLatitude,
+      longitude: tripLongitude,
+    };
+  }
+
+  if (tripLocation) {
+    return { location: tripLocation };
+  }
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -57,20 +102,16 @@ export async function POST(req: NextRequest) {
     const tripPath =
       trip ?? (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
-    if (tripPath && latitude !== undefined && longitude !== undefined) {
-      let location = await reverseGeocode(latitude, longitude);
-      if (!location) {
-        location = formatCoordinates(latitude, longitude);
-      }
-
-      await upsertPhotoMetadata(tripPath, safeName, {
-        location,
-        latitude,
-        longitude,
+    if (tripPath) {
+      const locationMeta = await resolveUploadLocation(latitude, longitude, tripPath);
+      const patch: Partial<PhotoMetaEntry> = {
+        ...(locationMeta ?? {}),
         ...(dateTaken ? { dateTaken } : {}),
-      });
-    } else if (tripPath && dateTaken) {
-      await upsertPhotoMetadata(tripPath, safeName, { dateTaken });
+      };
+
+      if (Object.keys(patch).length > 0) {
+        await upsertPhotoMetadata(tripPath, safeName, patch);
+      }
     }
 
     return NextResponse.json({ success: true, path });

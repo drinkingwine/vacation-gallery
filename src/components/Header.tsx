@@ -11,7 +11,6 @@ type HeaderProps = {
   backHref?: string;
   backLabel?: string;
   onUpload?: () => void;
-  onCreateTrip?: () => void;
 };
 
 const navItems = [
@@ -41,7 +40,7 @@ function IconButton({
   );
 }
 
-export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderProps) {
+export function Header({ backHref, backLabel, onUpload }: HeaderProps) {
   const pathname = usePathname();
   const onHome = pathname === "/";
   const { isAdmin, role, logout, loading, authenticated } = useAuth();
@@ -256,17 +255,14 @@ export function Header({ backHref, backLabel, onUpload, onCreateTrip }: HeaderPr
                           {isAdmin ? "Admin" : "Guest"}
                         </p>
                       </div>
-                      {isAdmin && onCreateTrip && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onCreateTrip();
-                            setAccountOpen(false);
-                          }}
+                      {isAdmin && (
+                        <Link
+                          href="/trips/new"
+                          onClick={() => setAccountOpen(false)}
                           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-white/10 dark:hover:bg-white/10"
                         >
                           New trip
-                        </button>
+                        </Link>
                       )}
                       {isAdmin && onUpload && (
                         <button

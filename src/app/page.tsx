@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { FeaturedTripCard } from "@/components/FeaturedTripCard";
@@ -8,7 +9,6 @@ import { Header } from "@/components/Header";
 import { HomeHero } from "@/components/HomeHero";
 import { SectionHeader } from "@/components/SectionHeader";
 import { UploadModal } from "@/components/UploadModal";
-import { CreateTripModal } from "@/components/CreateTripModal";
 import type { Trip } from "@/lib/types";
 import { totalMediaCount } from "@/lib/media-count";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
@@ -18,7 +18,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
 
@@ -77,7 +76,6 @@ export default function Home() {
     <>
       <Header
         onUpload={isAdmin ? () => setShowUpload(true) : undefined}
-        onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
       <main className="flex-1 overflow-x-hidden">
@@ -136,13 +134,12 @@ export default function Home() {
               </p>
               {isAdmin && (
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateTrip(true)}
+                  <Link
+                    href="/trips/new"
                     className="rounded-full border border-zinc-300 px-6 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
                     New trip
-                  </button>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setShowUpload(true)}
@@ -176,13 +173,6 @@ export default function Home() {
             : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`
         }
       />
-
-      {showCreateTrip && isAdmin && (
-        <CreateTripModal
-          onClose={() => setShowCreateTrip(false)}
-          onCreated={() => fetchTrips()}
-        />
-      )}
 
       {showUpload && isAdmin && (
         <UploadModal

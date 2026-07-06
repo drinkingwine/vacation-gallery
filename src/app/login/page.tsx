@@ -130,6 +130,7 @@ function LoginForm() {
                 id="username"
                 type="text"
                 autoComplete="username"
+                autoFocus
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-2.5 text-zinc-900 backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-white"

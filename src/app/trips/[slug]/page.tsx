@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { CreateTripModal } from "@/components/CreateTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
@@ -27,7 +26,6 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
   const { isAdmin } = useAuth();
   const router = useRouter();
@@ -119,7 +117,6 @@ export default function TripPage() {
     <>
       <Header
         onUpload={isAdmin && !isFavorites ? () => setShowUpload(true) : undefined}
-        onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
       <div className="trip-page-shell flex flex-1 flex-col">
@@ -197,16 +194,6 @@ export default function TripPage() {
 
         <Footer />
       </div>
-
-      {showCreateTrip && isAdmin && (
-        <CreateTripModal
-          onClose={() => setShowCreateTrip(false)}
-          onCreated={() => {
-            fetchTrips();
-            fetchTrip();
-          }}
-        />
-      )}
 
       {showUpload && isAdmin && !isFavorites && (
         <UploadModal

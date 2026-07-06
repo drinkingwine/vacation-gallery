@@ -1,6 +1,8 @@
 export interface TripMetadata {
   title?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   startDate?: string;
   endDate?: string;
   description?: string;
@@ -34,6 +36,8 @@ export interface Trip {
   coverPhoto?: string;
   title: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   startDate?: string;
   endDate?: string;
   description?: string;
@@ -55,6 +59,8 @@ export interface CreateTripInput {
   name: string;
   title?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   startDate?: string;
   endDate?: string;
   description?: string;

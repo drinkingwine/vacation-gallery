@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { CreateTripModal } from "@/components/CreateTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { TripCard } from "@/components/TripCard";
@@ -17,7 +16,6 @@ export function GalleryTripSelection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
 
@@ -76,7 +74,6 @@ export function GalleryTripSelection() {
     <>
       <Header
         onUpload={isAdmin ? () => setShowUpload(true) : undefined}
-        onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
 
       <div className="gallery-page-shell flex flex-1 flex-col">
@@ -147,13 +144,12 @@ export function GalleryTripSelection() {
               </p>
               {isAdmin ? (
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateTrip(true)}
+                  <Link
+                    href="/trips/new"
                     className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
                   >
                     New trip
-                  </button>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setShowUpload(true)}
@@ -182,13 +178,6 @@ export function GalleryTripSelection() {
 
         <Footer />
       </div>
-
-      {showCreateTrip && isAdmin && (
-        <CreateTripModal
-          onClose={() => setShowCreateTrip(false)}
-          onCreated={() => fetchTrips()}
-        />
-      )}
 
       {showUpload && isAdmin && (
         <UploadModal

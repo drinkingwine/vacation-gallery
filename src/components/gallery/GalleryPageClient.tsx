@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { CreateTripModal } from "@/components/CreateTripModal";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { UploadModal } from "@/components/UploadModal";
@@ -15,7 +14,6 @@ type GalleryPageClientProps = {
 
 export function GalleryPageClient({ children }: GalleryPageClientProps) {
   const [showUpload, setShowUpload] = useState(false);
-  const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const { isAdmin } = useAuth();
 
@@ -44,22 +42,11 @@ export function GalleryPageClient({ children }: GalleryPageClientProps) {
     <>
       <Header
         onUpload={isAdmin ? () => setShowUpload(true) : undefined}
-        onCreateTrip={isAdmin ? () => setShowCreateTrip(true) : undefined}
       />
       <div className="gallery-page-shell flex flex-1 flex-col">
         {children}
         <Footer />
       </div>
-
-      {showCreateTrip && isAdmin && (
-        <CreateTripModal
-          onClose={() => setShowCreateTrip(false)}
-          onCreated={() => {
-            fetchTrips();
-            refreshGallery();
-          }}
-        />
-      )}
 
       {showUpload && isAdmin && (
         <UploadModal
