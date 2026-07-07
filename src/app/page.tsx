@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { FeaturedTripCard } from "@/components/FeaturedTripCard";
 import { HomeHero } from "@/components/HomeHero";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -23,6 +24,7 @@ export default function Home() {
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
+  const confirm = useConfirm();
 
   const fetchTrips = useCallback(async () => {
     setLoading(true);
@@ -65,13 +67,11 @@ export default function Home() {
   const handleDeleteTrip = async (trip: Trip) => {
     if (isFavoritesTrip(trip.name)) return;
 
-    if (
-      !confirm(
-        `Delete trip "${trip.title}" and all ${totalMediaCount(trip)} items? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Are you sure?",
+      message: `Delete trip "${trip.title}" and all ${totalMediaCount(trip)} items? This cannot be undone.`,
+    });
+    if (!confirmed) return;
 
     setDeletingTrip(trip.name);
     try {

@@ -17,6 +17,7 @@ export function NewTripForm() {
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
+  const [geoLocation, setGeoLocation] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [startDate, setStartDate] = useState("");
@@ -35,13 +36,19 @@ export function NewTripForm() {
 
   const selectedLocation: GeoLocatorResult | null =
     latitude != null && longitude != null
-      ? { label: location || formatCoords(latitude, longitude), latitude, longitude }
+      ? {
+          location: location || formatCoords(latitude, longitude),
+          geoLocation: geoLocation || location || formatCoords(latitude, longitude),
+          latitude,
+          longitude,
+        }
       : null;
 
   const mapLocation = selectedLocation ?? previewLocation;
 
   const handleLocationSelect = (result: GeoLocatorResult) => {
-    setLocation(result.label);
+    setLocation(result.location);
+    setGeoLocation(result.geoLocation);
     setLatitude(result.latitude);
     setLongitude(result.longitude);
   };
@@ -65,6 +72,7 @@ export function NewTripForm() {
           name: name.trim(),
           title: title.trim() || undefined,
           location: location.trim() || undefined,
+          geoLocation: geoLocation.trim() || undefined,
           latitude: latitude ?? undefined,
           longitude: longitude ?? undefined,
           startDate: startDate || undefined,
@@ -148,6 +156,7 @@ export function NewTripForm() {
                       value={location}
                       onChange={(e) => {
                         setLocation(e.target.value);
+                        setGeoLocation("");
                         setLatitude(null);
                         setLongitude(null);
                         setPreviewLocation(null);
@@ -155,11 +164,48 @@ export function NewTripForm() {
                       placeholder="Optional — use geo locator or type manually"
                       className={formFieldClass}
                     />
-                    {latitude != null && longitude != null ? (
-                      <p className="mt-1.5 font-mono text-xs text-zinc-500 dark:text-zinc-400">
-                        {latitude.toFixed(6)}, {longitude.toFixed(6)}
-                      </p>
-                    ) : null}
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Geo location
+                    </label>
+                    <input
+                      type="text"
+                      value={geoLocation}
+                      onChange={(e) => setGeoLocation(e.target.value)}
+                      placeholder="Full geocoded address"
+                      className={formFieldClass}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Latitude
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={latitude ?? ""}
+                        onChange={(e) => setLatitude(parseCoordInput(e.target.value))}
+                        placeholder="e.g. 18.5601"
+                        className={formFieldClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Longitude
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={longitude ?? ""}
+                        onChange={(e) => setLongitude(parseCoordInput(e.target.value))}
+                        placeholder="e.g. -68.3725"
+                        className={formFieldClass}
+                      />
+                    </div>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -216,7 +262,7 @@ export function NewTripForm() {
             <LocationPreviewMap
               latitude={mapLocation?.latitude}
               longitude={mapLocation?.longitude}
-              label={mapLocation?.label}
+              label={mapLocation?.geoLocation ?? mapLocation?.location}
             />
 
             <div className="flex justify-end gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -243,4 +289,11 @@ export function NewTripForm() {
 
 function formatCoords(latitude: number, longitude: number): string {
   return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+}
+
+function parseCoordInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
 }

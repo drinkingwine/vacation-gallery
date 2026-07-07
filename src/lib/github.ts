@@ -232,6 +232,7 @@ function buildTrip(
     coverPhoto: metadata.coverPhoto ?? cover.coverPhoto,
     title: metadata.title ?? tripLabel(dir.name),
     location: metadata.location,
+    geoLocation: metadata.geoLocation,
     latitude: metadata.latitude,
     longitude: metadata.longitude,
     startDate: metadata.startDate,
@@ -400,6 +401,7 @@ function metadataPayload(input: CreateTripInput): TripMetadata {
   return {
     title: input.title ?? tripLabel(input.name),
     location: input.location,
+    geoLocation: input.geoLocation,
     latitude: input.latitude,
     longitude: input.longitude,
     startDate: input.startDate,

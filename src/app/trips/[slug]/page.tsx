@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { GalleryAlbumHero } from "@/components/gallery/GalleryAlbumHero";
 import { pickHeroImages } from "@/lib/hero-images";
@@ -26,6 +27,7 @@ export default function TripPage() {
   const [deletingTrip, setDeletingTrip] = useState(false);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
+  const confirm = useConfirm();
   const router = useRouter();
 
   const fetchTrip = useCallback(async () => {
@@ -82,13 +84,11 @@ export default function TripPage() {
   const handleDeleteTrip = async () => {
     if (isFavorites) return;
 
-    if (
-      !confirm(
-        `Delete trip "${trip?.title ?? tripName}" and all its photos? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Are you sure?",
+      message: `Delete trip "${trip?.title ?? tripName}" and all its photos? This cannot be undone.`,
+    });
+    if (!confirmed) return;
 
     setDeletingTrip(true);
     try {

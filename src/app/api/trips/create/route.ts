@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
       title: typeof body.title === "string" ? body.title.trim() : undefined,
       location:
         typeof body.location === "string" ? body.location.trim() : undefined,
+      geoLocation:
+        typeof body.geoLocation === "string" ? body.geoLocation.trim() : undefined,
       latitude: typeof body.latitude === "number" ? body.latitude : undefined,
       longitude: typeof body.longitude === "number" ? body.longitude : undefined,
       startDate:

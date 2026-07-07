@@ -78,6 +78,10 @@ export async function PATCH(
           : tripLabel(tripName),
       location:
         typeof body.location === "string" ? body.location.trim() || undefined : undefined,
+      geoLocation:
+        typeof body.geoLocation === "string"
+          ? body.geoLocation.trim() || undefined
+          : undefined,
       latitude: typeof body.latitude === "number" ? body.latitude : undefined,
       longitude: typeof body.longitude === "number" ? body.longitude : undefined,
       startDate:

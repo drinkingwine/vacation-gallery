@@ -7,7 +7,8 @@ import { formFieldClass } from "@/lib/form-styles";
 import { cn } from "@/lib/utils";
 
 export type GeoLocatorResult = {
-  label: string;
+  location: string;
+  geoLocation: string;
   latitude: number;
   longitude: number;
 };
@@ -74,7 +75,8 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
         }
 
         const located = {
-          label: data.label || query,
+          location: query,
+          geoLocation: data.label || query,
           latitude: data.latitude,
           longitude: data.longitude,
         };
@@ -102,7 +104,8 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
       }
 
       const located = {
-        label: data.label || query,
+        location: query,
+        geoLocation: data.label || query,
         latitude: data.latitude,
         longitude: data.longitude,
       };
@@ -278,8 +281,8 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
         <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-950/50">
           <div className="space-y-2 text-sm">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">Label</p>
-              <p className="mt-1 text-zinc-900 dark:text-white">{activeResult.label}</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">Geo location</p>
+              <p className="mt-1 text-zinc-900 dark:text-white">{activeResult.geoLocation}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
