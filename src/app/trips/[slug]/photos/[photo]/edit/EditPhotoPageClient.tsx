@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
-import { useNavbarConfig } from "@/components/navbar-config";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { PresetTagSectionList } from "@/components/gallery/PresetTagSectionList";
 import { formFieldClass } from "@/lib/form-styles";
@@ -36,8 +35,6 @@ export default function EditPhotoPageClient() {
   const returnTo = searchParams.get("from");
   const tripHref = `/trips/${encodeURIComponent(tripName)}`;
   const cancelHref = returnTo ?? tripHref;
-
-  useNavbarConfig({ backHref: cancelHref, backLabel: "Back" });
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [photo, setPhoto] = useState<Photo | null>(null);
@@ -380,14 +377,14 @@ export default function EditPhotoPageClient() {
               <div className="flex justify-end gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <Link
                   href={cancelHref}
-                  className="rounded-xl px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  className="rounded-full border border-amber-400/60 bg-amber-50 px-5 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100 dark:hover:bg-amber-500/25"
                 >
                   Cancel
                 </Link>
                 <button
                   type="submit"
                   disabled={saving || !filename.trim()}
-                  className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                  className="rounded-full bg-green-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Save changes"}
                 </button>

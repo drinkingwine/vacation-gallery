@@ -218,22 +218,27 @@ function PhotoDetailContent({
         <button
           type="button"
           onClick={onClose}
-          className={viewerToolClass()}
+          className={cn(
+            viewerToolClass(),
+            "border-blue-900 bg-blue-950 text-white hover:bg-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-white dark:hover:bg-blue-900",
+          )}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           {galleryCopy.grid.modal.back}
         </button>
-        <button
-          type="button"
-          onClick={() => setShowDetails((prev) => !prev)}
-          className={viewerToolClass(showDetails)}
-          aria-pressed={showDetails}
-        >
-          <Info className="h-3.5 w-3.5" />
-          {showDetails
-            ? galleryCopy.grid.modal.hideDetails
-            : galleryCopy.grid.modal.details}
-        </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={() => setShowDetails((prev) => !prev)}
+            className={viewerToolClass(showDetails)}
+            aria-pressed={showDetails}
+          >
+            <Info className="h-3.5 w-3.5" />
+            {showDetails
+              ? galleryCopy.grid.modal.hideDetails
+              : galleryCopy.grid.modal.details}
+          </button>
+        ) : null}
       </nav>
 
       <div

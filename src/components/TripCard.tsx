@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CoverImage, coverPlaceholderClass } from "@/components/gallery/CoverImage";
+import {
+  CoverImage,
+  coverFrameClass,
+  coverPlaceholderClass,
+} from "@/components/gallery/CoverImage";
 import { formatDateRange } from "@/lib/trip-meta";
 import { totalMediaCount } from "@/lib/media-count";
-import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 
 type TripCardProps = {
@@ -15,18 +18,6 @@ type TripCardProps = {
   deleting?: boolean;
   priority?: boolean;
 };
-
-const stackTransforms = [
-  { x: 0, y: 0, rotate: 0, opacity: 1 },
-  { x: -6, y: -4, rotate: -4, opacity: 0.88 },
-  { x: 8, y: -6, rotate: 5, opacity: 0.76 },
-];
-
-const stackHoverTransforms = [
-  { x: 0, y: 0, rotate: 0, opacity: 1 },
-  { x: -20, y: -16, rotate: -8, opacity: 1 },
-  { x: 28, y: -20, rotate: 10, opacity: 1 },
-];
 
 export function TripCard({
   trip,
@@ -38,8 +29,6 @@ export function TripCard({
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const cover = trip.coverUrl;
   const [coverLoaded, setCoverLoaded] = useState(false);
-  const showStack = totalMediaCount(trip) > 1;
-  const layers = showStack ? stackTransforms : [stackTransforms[0]];
 
   useEffect(() => {
     setCoverLoaded(false);
@@ -51,46 +40,20 @@ export function TripCard({
         href={`/trips/${encodeURIComponent(trip.name)}`}
         className="block"
       >
-        <div
-          className={cn(
-            "relative mb-4 aspect-video w-full",
-            !coverLoaded && cover && "animate-pulse",
-          )}
-        >
+        <div className={coverFrameClass(coverLoaded)}>
           {cover ? (
-            layers.map((transform, index) => (
-              <div
-                key={index}
-                className={cn(
-                  coverPlaceholderClass(coverLoaded || index > 0),
-                  "transition-all duration-500 ease-out",
-                  "group-hover:[transform:var(--hover-transform)]",
-                )}
-                style={
-                  {
-                    zIndex: 3 - index,
-                    transform: `translate(${transform.x}px, ${transform.y}px) rotate(${transform.rotate}deg)`,
-                    opacity: transform.opacity,
-                    "--hover-transform": `translate(${stackHoverTransforms[index].x}px, ${stackHoverTransforms[index].y}px) rotate(${stackHoverTransforms[index].rotate}deg)`,
-                  } as React.CSSProperties
-                }
-              >
-                <CoverImage
-                  src={cover}
-                  alt={index === 0 ? trip.title : ""}
-                  fill
-                  unoptimized
-                  priority={priority && index === 0}
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                  forceLoaded={index > 0 && coverLoaded}
-                  onCoverLoad={index === 0 ? () => setCoverLoaded(true) : undefined}
-                />
-                {index > 0 && (
-                  <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0 dark:bg-black/20" />
-                )}
-              </div>
-            ))
+            <div className={coverPlaceholderClass(coverLoaded)}>
+              <CoverImage
+                src={cover}
+                alt={trip.title}
+                fill
+                unoptimized
+                priority={priority}
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover transition duration-500 group-hover:scale-105"
+                onCoverLoad={() => setCoverLoaded(true)}
+              />
+            </div>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200/80 bg-zinc-100 shadow-lg dark:border-white/10 dark:bg-white/10">
               <svg
