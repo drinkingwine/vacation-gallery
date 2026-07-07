@@ -167,6 +167,7 @@ export function TripPhotoGallery({
     <Gallery25
       items={items}
       showHeader={false}
+      tripTitle={trip?.title ?? tripName.replace(/-/g, " ")}
       clickToEdit={isAdmin}
       coverPhoto={coverPhoto}
       coverUrl={coverUrl}

@@ -8,7 +8,6 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
 import { GalleryHeader } from "@/components/gallery/GalleryHeader";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
-import { getResponsiveColumnCount } from "@/lib/responsive";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import {
   DefaultPhotoBadge,
@@ -59,6 +58,7 @@ type Gallery25Props = {
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
   clickToEdit?: boolean;
   showTimestamp?: boolean;
+  tripTitle?: string | null;
 };
 
 const filters = [
@@ -74,8 +74,8 @@ const clampColumnCount = (value: number, max = 10) =>
   Math.min(max, Math.max(2, value));
 
 const getColumnSliderMax = (width: number) => {
-  if (width >= 1024) return getResponsiveColumnCount(width);
-  if (width >= 640) return 4;
+  if (width >= 1024) return 10;
+  if (width >= 640) return 6;
   return 4;
 };
 
@@ -144,6 +144,7 @@ export function Gallery25({
   onItemTagsChange,
   clickToEdit = false,
   showTimestamp = false,
+  tripTitle = null,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -256,18 +257,11 @@ export function Gallery25({
   }, [filter, items, timelineItems]);
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
-  const usesResponsiveColumns = viewportWidth >= 1024;
-  const responsiveColumnCount = getResponsiveColumnCount(viewportWidth);
-  const targetColumnCount = usesResponsiveColumns
-    ? responsiveColumnCount
-    : columnCount;
-  const displayColumnCount = usesResponsiveColumns
-    ? responsiveColumnCount
-    : Math.min(
-        targetColumnCount,
-        columnSliderMax,
-        Math.max(1, visibleItems.length),
-      );
+  const displayColumnCount = Math.min(
+    columnCount,
+    columnSliderMax,
+    Math.max(1, visibleItems.length),
+  );
   const gridSizes = `(max-width: 640px) 47vw, (max-width: 1024px) 33vw, ${Math.round(
     (isFullBleed ? 100 : 88) / displayColumnCount,
   )}vw`;
@@ -275,6 +269,22 @@ export function Gallery25({
     () => createBalancedColumns(visibleItems, displayColumnCount, ratioMap),
     [displayColumnCount, ratioMap, visibleItems],
   );
+
+  const gridSummaryLabel = useMemo(() => {
+    if (filter === "video") {
+      const count = visibleItems.length;
+      const mediaLabel = count === 1 ? "Video" : "Videos";
+      return tripTitle
+        ? galleryCopy.grid.tripSummary(count, tripTitle, mediaLabel)
+        : galleryCopy.grid.summary(count);
+    }
+
+    const count = visibleItems.length;
+    const mediaLabel = count === 1 ? "Image" : "Images";
+    return tripTitle
+      ? galleryCopy.grid.tripSummary(count, tripTitle, mediaLabel)
+      : galleryCopy.grid.summary(count);
+  }, [filter, tripTitle, visibleItems.length]);
   const modalVisibleItems = useMemo(() => {
     if (filter === "timeline") {
       return navigationItems
@@ -315,6 +325,10 @@ export function Gallery25({
   useEffect(() => {
     window.localStorage.setItem("gallery25-columns", String(columnCount));
   }, [columnCount]);
+
+  useEffect(() => {
+    setColumnCount((current) => clampColumnCount(current, columnSliderMax));
+  }, [columnSliderMax]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !isFullBleed) return;
@@ -499,43 +513,30 @@ export function Gallery25({
 
             <div className="flex w-full flex-wrap items-center gap-3 text-sm text-muted-foreground sm:w-auto sm:justify-end">
               <span className="text-xs sm:text-sm">
-                {galleryCopy.grid.summary(visibleItems.length, items.length)}
+                {gridSummaryLabel}
               </span>
-              <label
-                className={cn(
-                  "flex min-w-[10rem] flex-1 items-center gap-2 text-xs text-muted-foreground sm:min-w-0 sm:flex-none",
-                  usesResponsiveColumns && "flex-none",
-                )}
-              >
+              <label className="flex min-w-[10rem] flex-1 items-center gap-2 text-xs text-muted-foreground sm:min-w-0 sm:flex-none">
                 <span className="shrink-0">{galleryCopy.grid.columns.label}</span>
-                {usesResponsiveColumns ? (
-                  <span className="shrink-0 tabular-nums">
-                    {galleryCopy.grid.columns.count(displayColumnCount)}
-                  </span>
-                ) : (
-                  <>
-                    <input
-                      type="range"
-                      min={2}
-                      max={columnSliderMax}
-                      step={1}
-                      value={Math.min(columnCount, columnSliderMax)}
-                      onChange={(event) =>
-                        setColumnCount(
-                          clampColumnCount(
-                            Number(event.target.value),
-                            columnSliderMax,
-                          ),
-                        )
-                      }
-                      className="h-1 min-w-0 flex-1 cursor-pointer accent-primary sm:w-32 sm:flex-none"
-                      aria-label={galleryCopy.grid.columns.aria}
-                    />
-                    <span className="shrink-0 tabular-nums">
-                      {galleryCopy.grid.columns.count(displayColumnCount)}
-                    </span>
-                  </>
-                )}
+                <input
+                  type="range"
+                  min={2}
+                  max={columnSliderMax}
+                  step={1}
+                  value={Math.min(columnCount, columnSliderMax)}
+                  onChange={(event) =>
+                    setColumnCount(
+                      clampColumnCount(
+                        Number(event.target.value),
+                        columnSliderMax,
+                      ),
+                    )
+                  }
+                  className="h-1 min-w-0 flex-1 cursor-pointer accent-primary sm:w-32 sm:flex-none"
+                  aria-label={galleryCopy.grid.columns.aria}
+                />
+                <span className="shrink-0 tabular-nums">
+                  {galleryCopy.grid.columns.count(displayColumnCount)}
+                </span>
               </label>
               <button
                 type="button"

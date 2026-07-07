@@ -62,14 +62,25 @@ export function GalleryAlbumHero({
             <div
               key={`${src}-${index}`}
               className={cn(
-                "absolute inset-0 bg-cover bg-center transition-opacity",
+                "absolute inset-0 transition-opacity",
                 index === safeHeroIndex ? "opacity-100" : "opacity-0",
               )}
-              style={{
-                backgroundImage: `url(${src})`,
-                transitionDuration: "1200ms",
-              }}
-            />
+              style={{ transitionDuration: "1200ms" }}
+            >
+              <div
+                aria-hidden
+                className="absolute inset-0 scale-110 bg-cover bg-center blur-3xl brightness-75"
+                style={{ backgroundImage: `url(${src})` }}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt=""
+                className="absolute inset-0 h-full w-full object-contain object-center"
+                loading={index === 0 ? "eager" : "lazy"}
+                decoding="async"
+              />
+            </div>
           ))
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-violet-500 to-teal-500 dark:from-indigo-800 dark:via-purple-900 dark:to-teal-900" />

@@ -37,8 +37,9 @@ export const galleryCopy = {
     oldest: "Oldest First",
   },
   grid: {
-    summary: (visible: number, total: number) =>
-      `Showing ${visible} / ${total} items`,
+    summary: (count: number) => String(count),
+    tripSummary: (count: number, trip: string, mediaLabel: string) =>
+      `${count} ${mediaLabel} in ${trip}`,
     columns: {
       label: "Per row",
       aria: "Items per row",
