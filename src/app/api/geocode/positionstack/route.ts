@@ -75,12 +75,6 @@ async function geocodeWithNominatim(
 export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.POSITIONSTACK_ACCESS_KEY || process.env.POSITIONSTACK_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { success: false, error: "POSITIONSTACK_ACCESS_KEY is not configured" },
-        { status: 500 },
-      );
-    }
 
     const parts = parseGeocodeAddressPartsFromSearchParams(request.nextUrl.searchParams);
     const mode = request.nextUrl.searchParams.get("mode") === "place" ? "place" : "address";
@@ -93,42 +87,44 @@ export async function GET(request: NextRequest) {
 
     const countryCode = resolveCountryCodeForRequest(parts, query, mode);
     const region = resolveGeocodeRegionForRequest(parts, query);
-    const apiParams = new URLSearchParams({
-      access_key: apiKey,
-      query,
-      limit: "5",
-    });
-    if (countryCode) {
-      apiParams.set("country", countryCode);
-    }
-    if (mode === "address" && region) {
-      apiParams.set("region", region);
-    }
-
     let results: PositionstackResult[] = [];
 
-    const response = await fetch(`http://api.positionstack.com/v1/forward?${apiParams}`, {
-      cache: "no-store",
-    });
+    if (apiKey) {
+      const apiParams = new URLSearchParams({
+        access_key: apiKey,
+        query,
+        limit: "5",
+      });
+      if (countryCode) {
+        apiParams.set("country", countryCode);
+      }
+      if (mode === "address" && region) {
+        apiParams.set("region", region);
+      }
 
-    if (response.ok) {
-      const data = (await response.json()) as PositionstackApiResponse;
-      results = Array.isArray(data?.data)
-        ? data.data.flatMap((result) =>
-            typeof result.latitude === "number" && typeof result.longitude === "number"
-              ? [
-                  {
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                    label: result.label,
-                    postal_code: result.postal_code,
-                    region: result.region,
-                    region_code: result.region_code,
-                  },
-                ]
-              : [],
-          )
-        : [];
+      const response = await fetch(`http://api.positionstack.com/v1/forward?${apiParams}`, {
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as PositionstackApiResponse;
+        results = Array.isArray(data?.data)
+          ? data.data.flatMap((result) =>
+              typeof result.latitude === "number" && typeof result.longitude === "number"
+                ? [
+                    {
+                      latitude: result.latitude,
+                      longitude: result.longitude,
+                      label: result.label,
+                      postal_code: result.postal_code,
+                      region: result.region,
+                      region_code: result.region_code,
+                    },
+                  ]
+                : [],
+            )
+          : [];
+      }
     }
 
     const useQueryScoring =

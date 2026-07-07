@@ -141,13 +141,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
                     <input
                       type="text"
                       value={location}
-                      onChange={(e) => {
-                        setLocation(e.target.value);
-                        setGeoLocation("");
-                        setLatitude(null);
-                        setLongitude(null);
-                        setPreviewLocation(null);
-                      }}
+                      onChange={(e) => setLocation(e.target.value)}
                       placeholder="Optional — use geo locator or type manually"
                       className={formFieldClass}
                     />

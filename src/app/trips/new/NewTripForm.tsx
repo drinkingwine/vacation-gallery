@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
 import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
 import { useAuth } from "@/components/AuthProvider";
-import { useNavbarConfig } from "@/components/navbar-config";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { formFieldClass } from "@/lib/form-styles";
 
@@ -26,8 +25,6 @@ export function NewTripForm() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewLocation, setPreviewLocation] = useState<GeoLocatorResult | null>(null);
-
-  useNavbarConfig({ backHref: "/", backLabel: "Back" });
 
   useEffect(() => {
     if (authLoading) return;
@@ -154,13 +151,7 @@ export function NewTripForm() {
                     <input
                       type="text"
                       value={location}
-                      onChange={(e) => {
-                        setLocation(e.target.value);
-                        setGeoLocation("");
-                        setLatitude(null);
-                        setLongitude(null);
-                        setPreviewLocation(null);
-                      }}
+                      onChange={(e) => setLocation(e.target.value)}
                       placeholder="Optional — use geo locator or type manually"
                       className={formFieldClass}
                     />
