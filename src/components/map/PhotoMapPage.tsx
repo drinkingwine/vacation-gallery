@@ -10,6 +10,11 @@ import {
 } from "@vis.gl/react-google-maps";
 import { LocationViewPanel } from "@/components/map/LocationViewPanel";
 import { cn } from "@/lib/utils";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
+import {
+  getCachedMapData,
+  loadMapData,
+} from "@/lib/map-data-cache";
 import type { MapLocationMarker } from "@/lib/map";
 
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
@@ -104,27 +109,25 @@ function PhotoMap({ locations }: PhotoMapProps) {
 }
 
 export function PhotoMapPage() {
-  const [locations, setLocations] = useState<MapLocationMarker[]>([]);
-  const [photoCount, setPhotoCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const cached = getCachedMapData();
+  const [locations, setLocations] = useState<MapLocationMarker[]>(
+    () => cached?.locations ?? [],
+  );
+  const [photoCount, setPhotoCount] = useState(() => cached?.photoCount ?? 0);
+  const [loading, setLoading] = useState(() => !cached);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadLocations() {
-      setLoading(true);
+    async function loadLocations(force = false) {
+      if (!force && !getCachedMapData()) {
+        setLoading(true);
+      }
       setError(null);
+
       try {
-        const res = await fetch("/api/map/photos");
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error ?? `HTTP ${res.status}`);
-        }
-        const data = (await res.json()) as {
-          locations: MapLocationMarker[];
-          photoCount: number;
-        };
+        const data = await loadMapData(force ? { force: true } : undefined);
         if (!cancelled) {
           setLocations(data.locations);
           setPhotoCount(data.photoCount);
@@ -139,8 +142,14 @@ export function PhotoMapPage() {
     }
 
     void loadLocations();
+
+    const refresh = () => {
+      void loadLocations(true);
+    };
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => {
       cancelled = true;
+      window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
     };
   }, []);
 

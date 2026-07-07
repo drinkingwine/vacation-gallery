@@ -12,6 +12,9 @@ import type { Trip } from "@/lib/types";
 import { totalMediaCount } from "@/lib/media-count";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
+import { prefetchMapDataWhenIdle } from "@/lib/map-data-cache";
+import { prefetchGalleryListsWhenIdle } from "@/lib/gallery-lists-cache";
+import { loadTrips, prefetchTripsWhenIdle } from "@/lib/trips-data-cache";
 
 export default function Home() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -25,12 +28,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/trips");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? `HTTP ${res.status}`);
-      }
-      const data: Trip[] = await res.json();
+      const data = await loadTrips();
       setTrips(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
@@ -48,6 +46,13 @@ export default function Home() {
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchTrips]);
+
+  useEffect(() => {
+    if (loading) return;
+    prefetchTripsWhenIdle();
+    prefetchGalleryListsWhenIdle();
+    prefetchMapDataWhenIdle();
+  }, [loading]);
 
   const totalMedia = trips.reduce((sum, t) => sum + totalMediaCount(t), 0);
 

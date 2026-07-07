@@ -1,28 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PlaceCard } from "@/components/gallery/PlaceCard";
 import { galleryCopy } from "@/lib/gallery-copy";
+import { placesListCache } from "@/lib/gallery-lists-cache";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import { cn } from "@/lib/utils";
 
+const skeletonClass =
+  "aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600";
+
 export function GalleryPlacesSelection() {
-  const [places, setPlaces] = useState<PlaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = placesListCache.get();
+  const [places, setPlaces] = useState<PlaceSummary[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(() => !cached);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlaces = useCallback(async () => {
-    setLoading(true);
+  const fetchPlaces = useCallback(async (force = false) => {
+    if (!force && !placesListCache.get()) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetch("/api/places");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { places: PlaceSummary[] };
-      setPlaces(data.places);
+      const data = await placesListCache.load(force ? { force: true } : undefined);
+      setPlaces(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load places");
     } finally {
@@ -31,7 +33,15 @@ export function GalleryPlacesSelection() {
   }, []);
 
   useEffect(() => {
-    fetchPlaces();
+    void fetchPlaces();
+  }, [fetchPlaces]);
+
+  useEffect(() => {
+    const refresh = () => {
+      void fetchPlaces(true);
+    };
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchPlaces]);
 
   return (
@@ -39,26 +49,14 @@ export function GalleryPlacesSelection() {
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
           <div className="space-y-10">
             <header className="front-fade-up space-y-4">
-              <p className="text-xs uppercase tracking-[0.4em] text-zinc-600/80 dark:text-white/60">
-                {galleryCopy.places.eyebrow}
-              </p>
               <h1
                 className={cn(
                   "font-serif",
                   "text-4xl font-semibold text-zinc-800/90 dark:text-white/85 md:text-5xl",
                 )}
               >
-                {galleryCopy.places.title}
+                Places
               </h1>
-              <p className="max-w-2xl text-sm text-zinc-600/80 dark:text-white/60">
-                {galleryCopy.places.description}
-              </p>
-              <Link
-                href="/gallery"
-                className="inline-flex text-xs uppercase tracking-[0.25em] text-zinc-500 transition hover:text-zinc-900 dark:text-white/50 dark:hover:text-white"
-              >
-                ← Back to trips
-              </Link>
             </header>
 
             {error ? (
@@ -66,7 +64,7 @@ export function GalleryPlacesSelection() {
                 <p>{error}</p>
                 <button
                   type="button"
-                  onClick={fetchPlaces}
+                  onClick={() => void fetchPlaces(true)}
                   className="mt-2 underline"
                 >
                   Retry
@@ -77,10 +75,7 @@ export function GalleryPlacesSelection() {
             {loading ? (
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {Array.from({ length: 10 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800"
-                  />
+                  <div key={index} className={skeletonClass} />
                 ))}
               </div>
             ) : places.length === 0 ? (
@@ -93,7 +88,7 @@ export function GalleryPlacesSelection() {
                   <PlaceCard
                     key={place.slug}
                     place={place}
-                    priority={index === 0}
+                    priority={index < 6}
                   />
                 ))}
               </div>

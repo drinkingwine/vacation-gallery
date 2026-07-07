@@ -15,6 +15,9 @@ import { FooterConfigProvider } from "@/components/footer-config";
 import { NavbarConfigProvider } from "@/components/navbar-config";
 import { UploadModal } from "@/components/UploadModal";
 import { GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
+import { invalidateMapData, prefetchMapData } from "@/lib/map-data-cache";
+import { invalidateGalleryListCaches } from "@/lib/gallery-lists-cache";
+import { invalidateTripsCache, loadTrips, getCachedTrips } from "@/lib/trips-data-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import type { Trip } from "@/lib/types";
 
@@ -37,13 +40,13 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [defaultTrip, setDefaultTrip] = useState("");
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const [trips, setTrips] = useState<Trip[]>(() => getCachedTrips() ?? []);
   const { isAdmin } = useAuth();
 
   const fetchTrips = useCallback(async () => {
     try {
-      const res = await fetch("/api/trips");
-      if (res.ok) setTrips(await res.json());
+      const data = await loadTrips();
+      setTrips(data);
     } catch {
       // non-critical
     }
@@ -83,8 +86,12 @@ export function AppShell({ children }: AppShellProps) {
               setDefaultTrip("");
             }}
             onUploadComplete={() => {
+              invalidateTripsCache();
+              invalidateGalleryListCaches();
+              invalidateMapData();
               fetchTrips();
               refreshGallery();
+              prefetchMapData();
             }}
           />
         )}

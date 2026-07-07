@@ -3,25 +3,30 @@
 import { useCallback, useEffect, useState } from "react";
 import { PersonCard } from "@/components/gallery/PersonCard";
 import { galleryCopy } from "@/lib/gallery-copy";
+import {
+  peopleListCache,
+} from "@/lib/gallery-lists-cache";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { PersonSummary } from "@/lib/people-gallery";
 import { cn } from "@/lib/utils";
 
+const skeletonClass =
+  "aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600";
+
 export function GalleryPeopleSelection() {
-  const [people, setPeople] = useState<PersonSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = peopleListCache.get();
+  const [people, setPeople] = useState<PersonSummary[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(() => !cached);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPeople = useCallback(async () => {
-    setLoading(true);
+  const fetchPeople = useCallback(async (force = false) => {
+    if (!force && !peopleListCache.get()) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetch("/api/people");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { people: PersonSummary[] };
-      setPeople(data.people);
+      const data = await peopleListCache.load(force ? { force: true } : undefined);
+      setPeople(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load people");
     } finally {
@@ -30,7 +35,15 @@ export function GalleryPeopleSelection() {
   }, []);
 
   useEffect(() => {
-    fetchPeople();
+    void fetchPeople();
+  }, [fetchPeople]);
+
+  useEffect(() => {
+    const refresh = () => {
+      void fetchPeople(true);
+    };
+    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchPeople]);
 
   return (
@@ -38,20 +51,14 @@ export function GalleryPeopleSelection() {
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
           <div className="space-y-10">
             <header className="front-fade-up space-y-4">
-              <p className="text-xs uppercase tracking-[0.4em] text-zinc-600/80 dark:text-white/60">
-                {galleryCopy.people.eyebrow}
-              </p>
               <h1
                 className={cn(
                   "font-serif",
                   "text-4xl font-semibold text-zinc-800/90 dark:text-white/85 md:text-5xl",
                 )}
               >
-                {galleryCopy.people.title}
+                People
               </h1>
-              <p className="max-w-2xl text-sm text-zinc-600/80 dark:text-white/60">
-                {galleryCopy.people.description}
-              </p>
             </header>
 
             {error ? (
@@ -59,7 +66,7 @@ export function GalleryPeopleSelection() {
                 <p>{error}</p>
                 <button
                   type="button"
-                  onClick={fetchPeople}
+                  onClick={() => void fetchPeople(true)}
                   className="mt-2 underline"
                 >
                   Retry
@@ -70,10 +77,7 @@ export function GalleryPeopleSelection() {
             {loading ? (
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {Array.from({ length: 10 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800"
-                  />
+                  <div key={index} className={skeletonClass} />
                 ))}
               </div>
             ) : people.length === 0 ? (
@@ -86,7 +90,7 @@ export function GalleryPeopleSelection() {
                   <PersonCard
                     key={person.tag}
                     person={person}
-                    priority={index === 0}
+                    priority={index < 6}
                   />
                 ))}
               </div>

@@ -1,7 +1,12 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  CoverImage,
+  coverFrameClass,
+  coverPlaceholderClass,
+} from "@/components/gallery/CoverImage";
 import { formatDateRange } from "@/lib/trip-meta";
 import { totalMediaCount } from "@/lib/media-count";
 import { cn } from "@/lib/utils";
@@ -36,6 +41,12 @@ export function TripCard({
 }: TripCardProps) {
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const cover = trip.coverUrl;
+  const [coverLoaded, setCoverLoaded] = useState(false);
+  const layers = coverLoaded ? stackTransforms : [stackTransforms[0]];
+
+  useEffect(() => {
+    setCoverLoaded(false);
+  }, [cover]);
 
   return (
     <div className="group relative mt-2 block">
@@ -43,14 +54,15 @@ export function TripCard({
         href={`/trips/${encodeURIComponent(trip.name)}`}
         className="block"
       >
-        <div className="relative mb-4 aspect-video w-full">
+        <div className={coverFrameClass(coverLoaded)}>
           {cover ? (
-            stackTransforms.map((transform, index) => (
+            layers.map((transform, index) => (
               <div
                 key={index}
                 className={cn(
-                  "absolute inset-0 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg transition-all duration-500 ease-out dark:border-zinc-800 dark:bg-zinc-800",
-                  "group-hover:[transform:var(--hover-transform)]",
+                  coverPlaceholderClass(coverLoaded && index === 0 ? true : coverLoaded),
+                  "transition-all duration-500 ease-out dark:border-zinc-600 dark:bg-zinc-600",
+                  coverLoaded && "group-hover:[transform:var(--hover-transform)]",
                 )}
                 style={
                   {
@@ -61,17 +73,29 @@ export function TripCard({
                   } as React.CSSProperties
                 }
               >
-                <Image
-                  src={cover}
-                  alt={trip.title}
-                  fill
-                  unoptimized
-                  priority={priority && index === 0}
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                />
-                {index > 0 && (
-                  <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0 dark:bg-black/30" />
+                {index === 0 ? (
+                  <CoverImage
+                    src={cover}
+                    alt={trip.title}
+                    fill
+                    unoptimized
+                    priority={priority}
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
+                    onCoverLoad={() => setCoverLoaded(true)}
+                  />
+                ) : (
+                  <CoverImage
+                    src={cover}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
+                  />
+                )}
+                {coverLoaded && index > 0 && (
+                  <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0 dark:bg-black/20" />
                 )}
               </div>
             ))

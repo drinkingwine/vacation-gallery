@@ -7,28 +7,27 @@ import { useUploadModal } from "@/components/AppShell";
 import { TripCard } from "@/components/TripCard";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
+import { getCachedTrips, loadTrips } from "@/lib/trips-data-cache";
 import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 
 export function GalleryTripSelection() {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = getCachedTrips();
+  const [trips, setTrips] = useState<Trip[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(() => !cached);
   const [error, setError] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
 
-  const fetchTrips = useCallback(async () => {
-    setLoading(true);
+  const fetchTrips = useCallback(async (force = false) => {
+    if (!force && !getCachedTrips()) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetch("/api/trips");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? `HTTP ${res.status}`);
-      }
-
-      setTrips(await res.json());
+      const data = await loadTrips(force ? { force: true } : undefined);
+      setTrips(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
     } finally {
@@ -41,7 +40,9 @@ export function GalleryTripSelection() {
   }, [fetchTrips]);
 
   useEffect(() => {
-    const refresh = () => fetchTrips();
+    const refresh = () => {
+      void fetchTrips(true);
+    };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchTrips]);
@@ -94,7 +95,7 @@ export function GalleryTripSelection() {
               <p>{error}</p>
               <button
                 type="button"
-                onClick={fetchTrips}
+                onClick={() => void fetchTrips(true)}
                 className="mt-2 underline"
               >
                 Retry
@@ -107,7 +108,7 @@ export function GalleryTripSelection() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800"
+                  className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600"
                 />
               ))}
             </div>
@@ -145,7 +146,7 @@ export function GalleryTripSelection() {
                 <TripCard
                   key={trip.path}
                   trip={trip}
-                  priority={index === 0}
+                  priority={index < 6}
                   isAdmin={isAdmin && !isFavoritesTrip(trip.name)}
                   onDelete={handleDeleteTrip}
                   deleting={deletingTrip === trip.name}

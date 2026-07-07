@@ -1,10 +1,14 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  CoverImage,
+  coverFrameClass,
+  coverPlaceholderClass,
+} from "@/components/gallery/CoverImage";
 import { getPresetTagColorClasses } from "@/lib/photo-tags";
 import { personGalleryPath, type PersonSummary } from "@/lib/people-gallery";
-import { cn } from "@/lib/utils";
 
 type PersonCardProps = {
   person: PersonSummary;
@@ -13,14 +17,21 @@ type PersonCardProps = {
 
 export function PersonCard({ person, priority = false }: PersonCardProps) {
   const cover = person.coverUrl;
+  const [coverLoaded, setCoverLoaded] = useState(false);
+
+  useEffect(() => {
+    setCoverLoaded(false);
+  }, [cover]);
 
   return (
     <div className="group relative mt-2 block">
       <Link href={personGalleryPath(person.tag)} className="block">
-        <div className="relative mb-4 aspect-video w-full">
+        <div className={coverFrameClass(coverLoaded)}>
           {cover ? (
-            <div className="absolute inset-0 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg transition-all duration-500 ease-out group-hover:-translate-y-1 group-hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-800">
-              <Image
+            <div
+              className={coverPlaceholderClass(coverLoaded)}
+            >
+              <CoverImage
                 src={cover}
                 alt={person.label}
                 fill
@@ -28,11 +39,12 @@ export function PersonCard({ person, priority = false }: PersonCardProps) {
                 priority={priority}
                 sizes="(max-width: 768px) 100vw, 20vw"
                 className="object-cover transition duration-500 group-hover:scale-105"
+                onCoverLoad={() => setCoverLoaded(true)}
               />
             </div>
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white shadow-lg dark:border-zinc-700 dark:from-zinc-800 dark:to-zinc-900">
-              <span className="text-3xl font-serif text-zinc-400 dark:text-zinc-500">
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white shadow-lg dark:border-zinc-600 dark:from-zinc-700 dark:to-zinc-800">
+              <span className="text-3xl font-serif text-zinc-400 dark:text-zinc-300">
                 {person.label.charAt(0)}
               </span>
             </div>
@@ -41,10 +53,7 @@ export function PersonCard({ person, priority = false }: PersonCardProps) {
 
         <div className="space-y-2 px-1">
           <span
-            className={cn(
-              "inline-flex rounded-full border px-2.5 py-1 text-xs font-medium",
-              getPresetTagColorClasses(person.tag),
-            )}
+            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${getPresetTagColorClasses(person.tag)}`}
           >
             {person.label}
           </span>
