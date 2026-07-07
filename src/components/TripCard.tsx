@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   CoverImage,
   coverFrameClass,
-  coverPlaceholderClass,
 } from "@/components/gallery/CoverImage";
 import { formatDateRange } from "@/lib/trip-meta";
 import { totalMediaCount } from "@/lib/media-count";
@@ -42,18 +41,14 @@ export function TripCard({
       >
         <div className={coverFrameClass(coverLoaded)}>
           {cover ? (
-            <div className={coverPlaceholderClass(coverLoaded)}>
-              <CoverImage
-                src={cover}
-                alt={trip.title}
-                fill
-                unoptimized
-                priority={priority}
-                sizes="(max-width: 768px) 100vw, 33vw"
-                className="object-cover transition duration-500 group-hover:scale-105"
-                onCoverLoad={() => setCoverLoaded(true)}
-              />
-            </div>
+            <CoverImage
+              src={cover}
+              alt={trip.title}
+              unoptimized
+              priority={priority}
+              sizes="(max-width: 768px) 100vw, 33vw"
+              onCoverLoad={() => setCoverLoaded(true)}
+            />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200/80 bg-zinc-100 shadow-lg dark:border-white/10 dark:bg-white/10">
               <svg
@@ -65,23 +60,23 @@ export function TripCard({
               </svg>
             </div>
           )}
-          <div className="absolute bottom-3 right-3 z-10 rounded-full border border-orange-400/60 bg-orange-500 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white shadow-sm">
+          <div className="absolute bottom-3 right-3 z-10 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/90 backdrop-blur-md">
             {totalMediaCount(trip)}
           </div>
         </div>
 
         <div className="px-2">
-          <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-zinc-800 transition-colors group-hover:text-indigo-600 dark:text-zinc-200 dark:group-hover:text-indigo-400">
+          <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-zinc-800 transition-colors group-hover:text-indigo-600 dark:text-zinc-200 dark:group-hover:text-indigo-400">
             {trip.title}
           </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            {dates ?? "Trip album"}
-          </p>
-          {trip.location && (
-            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-500">
+          {dates ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{dates}</p>
+          ) : null}
+          {trip.location ? (
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
               {trip.location}
             </p>
-          )}
+          ) : null}
         </div>
       </Link>
 

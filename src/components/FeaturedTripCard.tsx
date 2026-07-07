@@ -38,9 +38,11 @@ export function FeaturedTripCard({
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-30 dark:opacity-70" />
             )}
             <div className="relative z-10 space-y-4">
-              <span className="text-[11px] uppercase tracking-[0.3em] text-zinc-600/80 dark:text-white/60">
-                {trip.location ?? "Trip album"}
-              </span>
+              {trip.location ? (
+                <span className="text-xs text-zinc-600/80 dark:text-white/60">
+                  {trip.location}
+                </span>
+              ) : null}
               <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white">
                 {trip.title}
               </h3>

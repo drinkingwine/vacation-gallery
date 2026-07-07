@@ -119,6 +119,19 @@ const getAspectRatioValue = (
   return 4 / 3;
 };
 
+const getImageLayoutSize = (
+  item: GalleryItem,
+  ratioMap: Record<string, number>,
+) => {
+  const ratio = getAspectRatioValue(item, ratioMap);
+  const width = item.width && item.width > 0 ? item.width : 1200;
+  const height =
+    item.height && item.height > 0
+      ? item.height
+      : Math.max(1, Math.round(width / ratio));
+  return { width, height };
+};
+
 const resolveTimelineTimestamp = (item: GalleryItem) => {
   const value = item.dateShot ?? item.createdAt;
   if (!value) return 0;
@@ -158,6 +171,19 @@ export function Gallery25({
         : undefined;
     requestGalleryPhotoEdit(item, returnTo);
   }, []);
+
+  const rememberItemAspectRatio = useCallback(
+    (item: GalleryItem, width: number, height: number) => {
+      if (!width || !height) return;
+      const ratio = width / height;
+      const ratioKey = getRatioKey(item.id);
+      setRatioMap((prev) => {
+        if (prev[ratioKey] === ratio) return prev;
+        return { ...prev, [ratioKey]: ratio };
+      });
+    },
+    [],
+  );
 
   const isCoverPhoto = useCallback(
     (item: GalleryItem) => {
@@ -589,6 +615,7 @@ export function Gallery25({
                     isAdmin && !clickToEdit && displayTags.length > 0 && !tagsVisible;
                   const showCardFooter = showAdminToolbar || showFooterTags;
                   const showTagOverlay = tagsVisible && displayTags.length > 0;
+                  const imageLayout = getImageLayoutSize(item, ratioMap);
 
                   return (
                     <motion.article
@@ -615,40 +642,40 @@ export function Gallery25({
                         }}
                         className="block w-full cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
                       >
-                        <div
-                          className="relative w-full overflow-hidden"
-                          style={{
-                            aspectRatio: getAspectRatioValue(item, ratioMap),
-                          }}
-                        >
+                        <div className="relative w-full overflow-hidden">
                           {isVideo ? (
                             <video
                               src={item.src}
                               muted
                               playsInline
                               preload="metadata"
-                              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                              className="block h-auto w-full"
+                              onLoadedMetadata={(event) => {
+                                const video = event.currentTarget;
+                                rememberItemAspectRatio(
+                                  item,
+                                  video.videoWidth,
+                                  video.videoHeight,
+                                );
+                              }}
                             />
                           ) : (
                             <BlurImage
-                              fill
+                              width={imageLayout.width}
+                              height={imageLayout.height}
                               sizes={gridSizes}
                               quality={85}
                               priority={itemIndex < 4 && columnIndex < 2}
-                              className="object-cover transition duration-300 group-hover:scale-105"
+                              className="block h-auto w-full"
                               src={item.src}
                               alt={item.title}
                               blurHash={item.blurHash}
                               onLoadingComplete={(image) => {
-                                const ratioKey = getRatioKey(item.id);
-                                if (ratioMap[ratioKey]) return;
-                                if (!image.naturalWidth || !image.naturalHeight)
-                                  return;
-                                setRatioMap((prev) => ({
-                                  ...prev,
-                                  [ratioKey]:
-                                    image.naturalWidth / image.naturalHeight,
-                                }));
+                                rememberItemAspectRatio(
+                                  item,
+                                  image.naturalWidth,
+                                  image.naturalHeight,
+                                );
                               }}
                             />
                           )}

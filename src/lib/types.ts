@@ -26,6 +26,9 @@ export interface Photo {
   dateTaken?: string;
   sourceTrip?: string;
   sourcePath?: string;
+  width?: number;
+  height?: number;
+  blurHash?: string;
 }
 
 export interface Trip {

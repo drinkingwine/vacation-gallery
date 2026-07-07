@@ -6,56 +6,71 @@ import { cn } from "@/lib/utils";
 
 type CoverImageProps = Omit<ImageProps, "onLoad" | "onLoadingComplete"> & {
   onCoverLoad?: () => void;
+  onDimensions?: (width: number, height: number) => void;
   forceLoaded?: boolean;
 };
 
 export function CoverImage({
   onCoverLoad,
+  onDimensions,
   forceLoaded = false,
   className,
   src,
   alt,
+  width,
+  height,
   ...props
 }: CoverImageProps) {
   const [loaded, setLoaded] = useState(false);
+  const [layoutSize, setLayoutSize] = useState({
+    width: typeof width === "number" ? width : 1600,
+    height: typeof height === "number" ? height : 900,
+  });
   const isVisible = loaded || forceLoaded;
 
   useEffect(() => {
     setLoaded(false);
-  }, [src]);
+    setLayoutSize({
+      width: typeof width === "number" ? width : 1600,
+      height: typeof height === "number" ? height : 900,
+    });
+  }, [height, src, width]);
 
-  const markLoaded = () => {
+  const markLoaded = (image?: HTMLImageElement) => {
     setLoaded(true);
     onCoverLoad?.();
+    if (image?.naturalWidth && image.naturalHeight) {
+      setLayoutSize({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+      onDimensions?.(image.naturalWidth, image.naturalHeight);
+    }
   };
 
   return (
     <Image
       src={src}
       alt={alt}
+      width={layoutSize.width}
+      height={layoutSize.height}
       className={cn(
-        className,
+        "block h-auto w-full",
         "transition-opacity duration-500",
         isVisible ? "opacity-100" : "opacity-0",
+        className,
       )}
-      onLoad={markLoaded}
+      onLoad={(event) => markLoaded(event.currentTarget)}
       onLoadingComplete={markLoaded}
       {...props}
     />
   );
 }
 
-export function coverPlaceholderClass(loaded: boolean) {
-  return cn(
-    "absolute inset-0 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-200 shadow-lg",
-    "dark:border-white/10 dark:bg-white/10",
-    !loaded && "animate-pulse",
-  );
-}
-
 export function coverFrameClass(loaded: boolean) {
   return cn(
-    "relative mb-4 aspect-video w-full rounded-xl bg-zinc-200 dark:bg-white/10",
-    !loaded && "animate-pulse",
+    "relative mb-4 w-full overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-200 shadow-lg",
+    "dark:border-white/10 dark:bg-white/10",
+    !loaded && "min-h-40 animate-pulse",
   );
 }

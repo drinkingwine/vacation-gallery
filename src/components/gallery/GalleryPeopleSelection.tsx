@@ -10,9 +10,6 @@ import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { PersonSummary } from "@/lib/people-gallery";
 import { cn } from "@/lib/utils";
 
-const skeletonClass =
-  "aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600";
-
 export function GalleryPeopleSelection() {
   const cached = peopleListCache.get();
   const [people, setPeople] = useState<PersonSummary[]>(() => cached ?? []);
@@ -75,9 +72,12 @@ export function GalleryPeopleSelection() {
             ) : null}
 
             {loading ? (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {Array.from({ length: 10 }).map((_, index) => (
-                  <div key={index} className={skeletonClass} />
+                  <div
+                    key={index}
+                    className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600"
+                  />
                 ))}
               </div>
             ) : people.length === 0 ? (
@@ -85,7 +85,7 @@ export function GalleryPeopleSelection() {
                 {galleryCopy.people.empty}
               </div>
             ) : (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {people.map((person, index) => (
                   <PersonCard
                     key={person.tag}

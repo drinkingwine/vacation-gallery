@@ -8,9 +8,6 @@ import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import { cn } from "@/lib/utils";
 
-const skeletonClass =
-  "aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600";
-
 export function GalleryPlacesSelection() {
   const cached = placesListCache.get();
   const [places, setPlaces] = useState<PlaceSummary[]>(() => cached ?? []);
@@ -73,9 +70,12 @@ export function GalleryPlacesSelection() {
             ) : null}
 
             {loading ? (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {Array.from({ length: 10 }).map((_, index) => (
-                  <div key={index} className={skeletonClass} />
+                  <div
+                    key={index}
+                    className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600"
+                  />
                 ))}
               </div>
             ) : places.length === 0 ? (
@@ -83,7 +83,7 @@ export function GalleryPlacesSelection() {
                 {galleryCopy.places.empty}
               </div>
             ) : (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {places.map((place, index) => (
                   <PlaceCard
                     key={place.slug}
