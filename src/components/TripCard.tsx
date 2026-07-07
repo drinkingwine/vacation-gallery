@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  CoverImage,
-  coverFrameClass,
-  coverPlaceholderClass,
-} from "@/components/gallery/CoverImage";
+import { CoverImage, coverPlaceholderClass } from "@/components/gallery/CoverImage";
 import { formatDateRange } from "@/lib/trip-meta";
 import { totalMediaCount } from "@/lib/media-count";
 import { cn } from "@/lib/utils";
@@ -42,7 +38,8 @@ export function TripCard({
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const cover = trip.coverUrl;
   const [coverLoaded, setCoverLoaded] = useState(false);
-  const layers = coverLoaded ? stackTransforms : [stackTransforms[0]];
+  const showStack = totalMediaCount(trip) > 1;
+  const layers = showStack ? stackTransforms : [stackTransforms[0]];
 
   useEffect(() => {
     setCoverLoaded(false);
@@ -54,15 +51,20 @@ export function TripCard({
         href={`/trips/${encodeURIComponent(trip.name)}`}
         className="block"
       >
-        <div className={coverFrameClass(coverLoaded)}>
+        <div
+          className={cn(
+            "relative mb-4 aspect-video w-full",
+            !coverLoaded && cover && "animate-pulse",
+          )}
+        >
           {cover ? (
             layers.map((transform, index) => (
               <div
                 key={index}
                 className={cn(
-                  coverPlaceholderClass(coverLoaded && index === 0 ? true : coverLoaded),
-                  "transition-all duration-500 ease-out dark:border-zinc-600 dark:bg-zinc-600",
-                  coverLoaded && "group-hover:[transform:var(--hover-transform)]",
+                  coverPlaceholderClass(coverLoaded || index > 0),
+                  "transition-all duration-500 ease-out",
+                  "group-hover:[transform:var(--hover-transform)]",
                 )}
                 style={
                   {
@@ -73,34 +75,24 @@ export function TripCard({
                   } as React.CSSProperties
                 }
               >
-                {index === 0 ? (
-                  <CoverImage
-                    src={cover}
-                    alt={trip.title}
-                    fill
-                    unoptimized
-                    priority={priority}
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover"
-                    onCoverLoad={() => setCoverLoaded(true)}
-                  />
-                ) : (
-                  <CoverImage
-                    src={cover}
-                    alt=""
-                    fill
-                    unoptimized
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover"
-                  />
-                )}
-                {coverLoaded && index > 0 && (
+                <CoverImage
+                  src={cover}
+                  alt={index === 0 ? trip.title : ""}
+                  fill
+                  unoptimized
+                  priority={priority && index === 0}
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover"
+                  forceLoaded={index > 0 && coverLoaded}
+                  onCoverLoad={index === 0 ? () => setCoverLoaded(true) : undefined}
+                />
+                {index > 0 && (
                   <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0 dark:bg-black/20" />
                 )}
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white shadow-lg transition-shadow group-hover:shadow-xl dark:border-zinc-700 dark:from-zinc-800 dark:to-zinc-900">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200/80 bg-zinc-100 shadow-lg dark:border-white/10 dark:bg-white/10">
               <svg
                 className="h-10 w-10 text-zinc-400 dark:text-zinc-500"
                 viewBox="0 0 24 24"

@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { AppNavbar } from "@/components/AppNavbar";
 import { AppFooter } from "@/components/AppFooter";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { FooterConfigProvider } from "@/components/footer-config";
 import { NavbarConfigProvider } from "@/components/navbar-config";
 import { UploadModal } from "@/components/UploadModal";
@@ -72,6 +73,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <NavbarConfigProvider>
       <FooterConfigProvider>
+        <ConfirmProvider>
         <UploadControlContext.Provider value={{ openUpload }}>
           <AppNavbar onUpload={isAdmin ? () => openUpload() : undefined} />
           {children}
@@ -96,6 +98,7 @@ export function AppShell({ children }: AppShellProps) {
           />
         )}
         </UploadControlContext.Provider>
+        </ConfirmProvider>
       </FooterConfigProvider>
     </NavbarConfigProvider>
   );

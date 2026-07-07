@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { TripCard } from "@/components/TripCard";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
@@ -18,6 +19,7 @@ export function GalleryTripSelection() {
   const [error, setError] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
+  const confirm = useConfirm();
   const { openUpload } = useUploadModal();
 
   const fetchTrips = useCallback(async (force = false) => {
@@ -50,13 +52,11 @@ export function GalleryTripSelection() {
   const handleDeleteTrip = async (trip: Trip) => {
     if (isFavoritesTrip(trip.name)) return;
 
-    if (
-      !confirm(
-        `Delete trip "${trip.title}" and all ${trip.photoCount} photos? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Are you sure?",
+      message: `Delete trip "${trip.title}" and all ${trip.photoCount} photos? This cannot be undone.`,
+    });
+    if (!confirmed) return;
 
     setDeletingTrip(trip.name);
     try {

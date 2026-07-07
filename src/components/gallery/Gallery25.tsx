@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
 import { GalleryHeader } from "@/components/gallery/GalleryHeader";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
@@ -139,6 +140,7 @@ export function Gallery25({
   onItemTagsChange,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
+  const confirm = useConfirm();
   const viewportWidth = useViewportWidth();
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
 
@@ -182,12 +184,13 @@ export function Gallery25({
 
   const handleDeleteItem = useCallback(
     async (item: GalleryItem) => {
-      if (
-        !confirm(`Delete "${item.filename}"? This cannot be undone.`) ||
-        busyItemId
-      ) {
-        return;
-      }
+      if (busyItemId) return;
+
+      const confirmed = await confirm({
+        title: "Are you sure?",
+        message: `Delete "${item.filename}"? This cannot be undone.`,
+      });
+      if (!confirmed) return;
 
       setBusyItemId(String(item.id));
       try {
@@ -208,7 +211,7 @@ export function Gallery25({
         setBusyItemId(null);
       }
     },
-    [busyItemId, onItemRemoved, onPhotoChanged, selectedId, setSelectedId],
+    [busyItemId, confirm, onItemRemoved, onPhotoChanged, selectedId, setSelectedId],
   );
 
   const gridRef = useRef<HTMLDivElement | null>(null);

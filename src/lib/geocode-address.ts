@@ -4,6 +4,7 @@ export type GeocodeAddressParts = {
   city?: string | null;
   state?: string | null;
   zip?: string | null;
+  country?: string | null;
 };
 
 export type PositionstackResult = {
@@ -166,9 +167,105 @@ function isUsStateCode(value: string): boolean {
 
 export function buildGeocodeQuery(parts: GeocodeAddressParts): string {
   const streetLine = [normalizePart(parts.street), normalizePart(parts.line2)].filter(Boolean).join(", ");
-  return [streetLine, normalizePart(parts.city), normalizePart(parts.state), normalizePart(parts.zip)]
+  return [
+    streetLine,
+    normalizePart(parts.city),
+    normalizePart(parts.state),
+    normalizePart(parts.zip),
+    normalizePart(parts.country),
+  ]
     .filter(Boolean)
     .join(", ");
+}
+
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  "united states": "US",
+  usa: "US",
+  "united states of america": "US",
+  "dominican republic": "DO",
+  "republica dominicana": "DO",
+  mexico: "MX",
+  canada: "CA",
+  italy: "IT",
+  france: "FR",
+  spain: "ES",
+  germany: "DE",
+  "united kingdom": "GB",
+  uk: "GB",
+  "great britain": "GB",
+  ireland: "IE",
+  portugal: "PT",
+  greece: "GR",
+  jamaica: "JM",
+  bahamas: "BS",
+  australia: "AU",
+  japan: "JP",
+};
+
+function normalizeCountryName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function inferCountryCodeFromText(text?: string | null): string | null {
+  const normalized = normalizeCountryName(normalizePart(text));
+  if (!normalized) return null;
+
+  if (
+    /\bdominican\b/.test(normalized) ||
+    /\bdominicana\b/.test(normalized) ||
+    /\bcominican\b/.test(normalized) ||
+    /\brepublica dominicana\b/.test(normalized) ||
+    (/\bdominic/.test(normalized) && /\brepublic\b/.test(normalized))
+  ) {
+    return "DO";
+  }
+
+  if (/\bunited states\b/.test(normalized) || /\bamerica\b/.test(normalized)) {
+    return "US";
+  }
+
+  for (const [name, code] of Object.entries(COUNTRY_NAME_TO_CODE)) {
+    if (normalized.includes(name)) {
+      return code;
+    }
+  }
+
+  return null;
+}
+
+export function resolveCountryCode(country?: string | null): string | null {
+  const raw = normalizePart(country);
+  if (!raw) return null;
+  if (/^[a-z]{2}$/i.test(raw)) return raw.toUpperCase();
+
+  const normalized = normalizeCountryName(raw);
+  if (COUNTRY_NAME_TO_CODE[normalized]) {
+    return COUNTRY_NAME_TO_CODE[normalized];
+  }
+
+  return inferCountryCodeFromText(raw);
+}
+
+export function resolveCountryCodeForRequest(
+  parts: GeocodeAddressParts,
+  query: string,
+  mode: "place" | "address",
+): string | null {
+  const fromField = resolveCountryCode(parts.country);
+  if (fromField) return fromField;
+
+  const fromQuery = inferCountryCodeFromText(query);
+  if (fromQuery) return fromQuery;
+
+  if (mode === "address" && !normalizePart(parts.country)) {
+    return "US";
+  }
+
+  return null;
 }
 
 export function extractZipFromQuery(query: string): string | null {
@@ -230,6 +327,7 @@ export function parseGeocodeAddressPartsFromSearchParams(
     city: searchParams.get("city"),
     state: searchParams.get("state"),
     zip: searchParams.get("zip"),
+    country: searchParams.get("country"),
   };
 }
 
@@ -237,6 +335,9 @@ export function resolveGeocodeRegionForRequest(
   parts: GeocodeAddressParts,
   query: string,
 ): string | null {
+  const countryCode = resolveCountryCode(parts.country);
+  if (countryCode && countryCode !== "US") return null;
+
   const zip = normalizePart(parts.zip) || extractZipFromQuery(query) || null;
   return resolveGeocodeRegion(parts.state, zip);
 }

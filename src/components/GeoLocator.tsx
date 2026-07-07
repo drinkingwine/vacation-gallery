@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Loader2, MapPin } from "lucide-react";
+import { buildGeocodeQuery } from "@/lib/geocode-address";
 import { formFieldClass } from "@/lib/form-styles";
-import { formatCoordinates } from "@/lib/reverse-geocode";
 import { cn } from "@/lib/utils";
 
 export type GeoLocatorResult = {
@@ -12,7 +12,7 @@ export type GeoLocatorResult = {
   longitude: number;
 };
 
-type LookupMode = "place" | "coordinates";
+type LookupMode = "place" | "address";
 
 type GeocodeApiResponse = {
   success: boolean;
@@ -29,23 +29,14 @@ type GeoLocatorProps = {
   className?: string;
 };
 
-function parseCoordinatePair(latRaw: string, lngRaw: string): GeoLocatorResult | null {
-  const latitude = Number(latRaw.trim());
-  const longitude = Number(lngRaw.trim());
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
-  return {
-    label: formatCoordinates(latitude, longitude),
-    latitude,
-    longitude,
-  };
-}
-
 export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLocatorProps) {
   const [mode, setMode] = useState<LookupMode>("place");
   const [placeQuery, setPlaceQuery] = useState("");
-  const [latitudeInput, setLatitudeInput] = useState("");
-  const [longitudeInput, setLongitudeInput] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [country, setCountry] = useState("United States");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GeoLocatorResult | null>(null);
@@ -55,13 +46,40 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
     setIsLoading(true);
 
     try {
-      if (mode === "coordinates") {
-        const parsed = parseCoordinatePair(latitudeInput, longitudeInput);
-        if (!parsed) {
-          throw new Error("Enter valid latitude (-90 to 90) and longitude (-180 to 180).");
+      if (mode === "address") {
+        const addressParts = { street, city, state, zip, country };
+        const query = buildGeocodeQuery(addressParts);
+        if (!query) {
+          throw new Error("Enter at least a street, city, or postal code.");
         }
-        setResult(parsed);
-        onLocated?.(parsed);
+
+        const params = new URLSearchParams({
+          mode: "address",
+          street,
+          city,
+          state,
+          zip,
+          country,
+        });
+
+        const response = await fetch(`/api/geocode/positionstack?${params}`);
+        const data = (await response.json()) as GeocodeApiResponse;
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Address lookup failed.");
+        }
+
+        if (typeof data.latitude !== "number" || typeof data.longitude !== "number") {
+          throw new Error("No coordinates returned for this address.");
+        }
+
+        const located = {
+          label: data.label || query,
+          latitude: data.latitude,
+          longitude: data.longitude,
+        };
+        setResult(located);
+        onLocated?.(located);
         return;
       }
 
@@ -105,27 +123,32 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
       <div>
         <h3 className="text-sm font-medium text-zinc-900 dark:text-white">Geo locator</h3>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Search for a place or enter coordinates, then apply it as the trip location.
+          Search by place name or street address, then apply it as the trip location.
         </p>
       </div>
 
       <div className="flex gap-2">
-        {(["place", "coordinates"] as const).map((option) => (
+        {(
+          [
+            { id: "place", label: "Place search" },
+            { id: "address", label: "Address search" },
+          ] as const
+        ).map((option) => (
           <button
-            key={option}
+            key={option.id}
             type="button"
             onClick={() => {
-              setMode(option);
+              setMode(option.id);
               setError(null);
             }}
             className={cn(
               "rounded-full px-3 py-1.5 text-xs font-medium transition",
-              mode === option
+              mode === option.id
                 ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                 : "border border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800",
             )}
           >
-            {option === "place" ? "Place search" : "Coordinates"}
+            {option.label}
           </button>
         ))}
       </div>
@@ -140,7 +163,7 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
             type="text"
             value={placeQuery}
             onChange={(event) => setPlaceQuery(event.target.value)}
-            placeholder="Amalfi Coast, Italy"
+            placeholder="Excellence Punta Cana, Dominican Republic"
             className={formFieldClass}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -151,34 +174,81 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
           />
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
           <div>
-            <label htmlFor="geo-latitude" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Latitude
+            <label htmlFor="geo-street" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Street address
             </label>
             <input
-              id="geo-latitude"
+              id="geo-street"
               type="text"
-              inputMode="decimal"
-              value={latitudeInput}
-              onChange={(event) => setLatitudeInput(event.target.value)}
-              placeholder="40.633984"
+              value={street}
+              onChange={(event) => setStreet(event.target.value)}
+              placeholder="123 Main St"
               className={formFieldClass}
             />
           </div>
-          <div>
-            <label htmlFor="geo-longitude" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Longitude
-            </label>
-            <input
-              id="geo-longitude"
-              type="text"
-              inputMode="decimal"
-              value={longitudeInput}
-              onChange={(event) => setLongitudeInput(event.target.value)}
-              placeholder="14.602850"
-              className={formFieldClass}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="geo-city" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                City
+              </label>
+              <input
+                id="geo-city"
+                type="text"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                placeholder="Austin"
+                className={formFieldClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="geo-country" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Country
+              </label>
+              <input
+                id="geo-country"
+                type="text"
+                value={country}
+                onChange={(event) => setCountry(event.target.value)}
+                placeholder="United States"
+                className={formFieldClass}
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="geo-state" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                State / province
+              </label>
+              <input
+                id="geo-state"
+                type="text"
+                value={state}
+                onChange={(event) => setState(event.target.value)}
+                placeholder="TX"
+                className={formFieldClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="geo-zip" className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Postal code
+              </label>
+              <input
+                id="geo-zip"
+                type="text"
+                value={zip}
+                onChange={(event) => setZip(event.target.value)}
+                placeholder="78701"
+                className={formFieldClass}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleLookup();
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
