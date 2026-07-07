@@ -55,6 +55,7 @@ type Gallery25Props = {
   onPhotoChanged?: () => void;
   onItemRemoved?: (itemId: string) => void;
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
+  clickToEdit?: boolean;
 };
 
 const filters = [
@@ -138,6 +139,7 @@ export function Gallery25({
   onPhotoChanged,
   onItemRemoved,
   onItemTagsChange,
+  clickToEdit = false,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -556,7 +558,7 @@ export function Gallery25({
                   const isBusy = busyItemId === String(item.id);
                   const isVideo = item.type === "video";
                   const displayTags = getItemDisplayTags(item);
-                  const showAdminToolbar = isAdmin;
+                  const showAdminToolbar = isAdmin && !clickToEdit;
                   const showFooterTags = isAdmin && displayTags.length > 0;
                   const showCardFooter = showAdminToolbar || showFooterTags;
                   const showHoverTags = !isAdmin && displayTags.length > 0;
@@ -572,11 +574,16 @@ export function Gallery25({
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => setSelectedId(item.id)}
+                        onClick={() =>
+                          clickToEdit
+                            ? handlePhotoEdit(item)
+                            : setSelectedId(item.id)
+                        }
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            setSelectedId(item.id);
+                            if (clickToEdit) handlePhotoEdit(item);
+                            else setSelectedId(item.id);
                           }
                         }}
                         className="block w-full cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"

@@ -137,6 +137,7 @@ export function TripPhotoGallery({
     <Gallery25
       items={items}
       showHeader={false}
+      clickToEdit={isAdmin}
       coverPhoto={coverPhoto}
       coverUrl={coverUrl}
       onMakeDefault={isAdmin ? handleMakeDefault : undefined}

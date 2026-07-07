@@ -109,18 +109,20 @@ export default function TripPage() {
   return (
     <div className="trip-page-shell flex flex-1 flex-col">
         <main className="main-offset relative z-0 flex-1 pb-16">
-        <div className="page-container mx-auto">
-          <GalleryAlbumHero
-            images={heroImages}
-            title={trip?.title ?? tripName.replace(/-/g, " ")}
-            badges={[
-              ...(trip?.location ? [{ label: trip.location }] : []),
-              { label: formatMediaCount(photos) },
-            ]}
-            description={trip?.description}
-            subtitle={dates ?? undefined}
-          />
-        </div>
+        {!isAdmin ? (
+          <div className="page-container mx-auto">
+            <GalleryAlbumHero
+              images={heroImages}
+              title={trip?.title ?? tripName.replace(/-/g, " ")}
+              badges={[
+                ...(trip?.location ? [{ label: trip.location }] : []),
+                { label: formatMediaCount(photos) },
+              ]}
+              description={trip?.description}
+              subtitle={dates ?? undefined}
+            />
+          </div>
+        ) : null}
 
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           {isAdmin && (
