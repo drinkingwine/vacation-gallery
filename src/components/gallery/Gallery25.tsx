@@ -12,10 +12,12 @@ import { getResponsiveColumnCount } from "@/lib/responsive";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import {
   DefaultPhotoBadge,
+  DeleteIconButton,
   PhotoCardEditDeleteBar,
   PhotoCardToolbar,
   PhotoTagBadges,
   PhotoTagHoverOverlay,
+  PhotoTimestampOverlay,
   VideoTypeBadge,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { galleryCopy } from "@/lib/gallery-copy";
@@ -56,6 +58,7 @@ type Gallery25Props = {
   onItemRemoved?: (itemId: string) => void;
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
   clickToEdit?: boolean;
+  showTimestamp?: boolean;
 };
 
 const filters = [
@@ -140,6 +143,7 @@ export function Gallery25({
   onItemRemoved,
   onItemTagsChange,
   clickToEdit = false,
+  showTimestamp = false,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -188,11 +192,13 @@ export function Gallery25({
     async (item: GalleryItem) => {
       if (busyItemId) return;
 
-      const confirmed = await confirm({
-        title: "Are you sure?",
-        message: `Delete "${item.filename}"? This cannot be undone.`,
-      });
-      if (!confirmed) return;
+      if (!clickToEdit) {
+        const confirmed = await confirm({
+          title: "Are you sure?",
+          message: `Delete "${item.filename}"? This cannot be undone.`,
+        });
+        if (!confirmed) return;
+      }
 
       setBusyItemId(String(item.id));
       try {
@@ -213,7 +219,7 @@ export function Gallery25({
         setBusyItemId(null);
       }
     },
-    [busyItemId, confirm, onItemRemoved, onPhotoChanged, selectedId, setSelectedId],
+    [busyItemId, clickToEdit, confirm, onItemRemoved, onPhotoChanged, selectedId, setSelectedId],
   );
 
   const gridRef = useRef<HTMLDivElement | null>(null);
@@ -635,8 +641,23 @@ export function Gallery25({
                               <VideoTypeBadge variant="overlay" />
                             </div>
                           ) : null}
+                          {isAdmin && clickToEdit ? (
+                            <div className="absolute right-2 top-2 z-20">
+                              <DeleteIconButton
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteItem(item);
+                                }}
+                                busy={isBusy}
+                                disabled={isBusy}
+                              />
+                            </div>
+                          ) : null}
                           {showHoverTags ? (
                             <PhotoTagHoverOverlay tags={displayTags} />
+                          ) : null}
+                          {showTimestamp ? (
+                            <PhotoTimestampOverlay dateTaken={item.dateTaken} />
                           ) : null}
                         </div>
                       </div>

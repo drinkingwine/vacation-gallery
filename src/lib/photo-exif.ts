@@ -1,10 +1,34 @@
 import exifr from "exifr";
 
 export type PhotoExifData = {
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   dateTaken?: string;
 };
+
+export function parsePhotoTimestamp(value: string | undefined | null): number | null {
+  if (!value?.trim()) return null;
+
+  const trimmed = value.trim();
+  const exifMatch = trimmed.match(
+    /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/,
+  );
+  if (exifMatch) {
+    const [, year, month, day, hour, minute, second] = exifMatch;
+    const parsed = Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    );
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 function toIsoDate(value: unknown): string | undefined {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -26,24 +50,24 @@ export async function extractPhotoExif(
       exifr.parse(file, ["DateTimeOriginal", "CreateDate", "ModifyDate"]),
     ]);
 
-    if (
-      !gps ||
-      typeof gps.latitude !== "number" ||
-      typeof gps.longitude !== "number" ||
-      Number.isNaN(gps.latitude) ||
-      Number.isNaN(gps.longitude)
-    ) {
-      return null;
-    }
-
     const dateTaken =
       toIsoDate(exif?.DateTimeOriginal) ??
       toIsoDate(exif?.CreateDate) ??
       toIsoDate(exif?.ModifyDate);
 
+    const hasGps =
+      gps &&
+      typeof gps.latitude === "number" &&
+      typeof gps.longitude === "number" &&
+      !Number.isNaN(gps.latitude) &&
+      !Number.isNaN(gps.longitude);
+
+    if (!hasGps && !dateTaken) return null;
+
     return {
-      latitude: gps.latitude,
-      longitude: gps.longitude,
+      ...(hasGps
+        ? { latitude: gps.latitude, longitude: gps.longitude }
+        : {}),
       ...(dateTaken ? { dateTaken } : {}),
     };
   } catch {

@@ -14,6 +14,7 @@ export type GalleryItem = {
   latitude?: number | null;
   longitude?: number | null;
   dateShot?: string | null;
+  dateTaken?: string | null;
   createdAt?: string | null;
   tags?: string[];
   size?: number | null;
@@ -21,16 +22,13 @@ export type GalleryItem = {
   height?: number | null;
   blurHash?: string | null;
   tripName?: string;
+  tripTitle?: string | null;
   sourceTrip?: string;
   sourcePath?: string;
 };
 
 export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
   const title = photo.caption?.trim() || photo.name;
-  const metaTags = photo.tags ?? [];
-  const autoTags = [photo.tripTitle, photo.tripLocation].filter(
-    (value): value is string => Boolean(value),
-  );
 
   return {
     id: photo.id,
@@ -45,10 +43,12 @@ export function buildGalleryItem(photo: GalleryPhoto): GalleryItem {
     latitude: photo.latitude ?? null,
     longitude: photo.longitude ?? null,
     dateShot: photo.dateTaken ?? photo.tripStartDate ?? null,
+    dateTaken: photo.dateTaken ?? null,
     createdAt: photo.dateTaken ?? photo.tripStartDate ?? null,
-    tags: [...new Set([...metaTags, ...autoTags])],
+    tags: photo.tags ?? [],
     size: photo.size,
     tripName: photo.tripName,
+    tripTitle: photo.tripTitle ?? null,
     sourceTrip: photo.sourceTrip,
     sourcePath: photo.sourcePath,
   };
@@ -60,7 +60,7 @@ export function buildGalleryItems(photos: GalleryPhoto[]): GalleryItem[] {
 
 export function getItemDisplayTags(item: GalleryItem, max = 4) {
   const auto = new Set(
-    [item.tripName, item.locationName]
+    [item.tripName, item.tripTitle, item.locationName]
       .filter((value): value is string => Boolean(value))
       .map((value) => value.toLowerCase()),
   );
@@ -84,24 +84,13 @@ export function getEditablePhotoTags(
   photo: Photo,
   trip?: Pick<Trip, "name" | "title" | "location" | "startDate"> | null,
 ) {
-  if (!trip) {
-    return (photo.tags ?? []).filter(
-      (tag) => tag.toLowerCase() !== FAVORITE_TAG,
-    );
-  }
-
-  const item = buildGalleryItem({
-    ...photo,
-    id: photo.path,
-    tripName: trip.name,
-    tripTitle: trip.title,
-    tripLocation: trip.location,
-    tripStartDate: trip.startDate,
-  });
-
-  return getItemDisplayTags(item, 100).filter(
+  const tags = (photo.tags ?? []).filter(
     (tag) => tag.toLowerCase() !== FAVORITE_TAG,
   );
+
+  if (!trip) return tags;
+
+  return stripAutoPhotoTags(tags, photo, trip);
 }
 
 export function stripAutoPhotoTags(

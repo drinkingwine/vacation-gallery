@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { Trip, UploadFile } from "@/lib/types";
 import {
@@ -54,6 +54,35 @@ export function UploadModal({
   const [isUploading, setIsUploading] = useState(false);
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
   const abortRef = useRef(false);
+
+  useEffect(() => {
+    setLocalTrips(trips);
+  }, [trips]);
+
+  useEffect(() => {
+    setSelectedTrip(defaultTrip);
+  }, [defaultTrip]);
+
+  const selectableTrips = useMemo(() => {
+    const tripKey = defaultTrip.trim();
+    if (!tripKey) return localTrips;
+    if (
+      localTrips.some((trip) => trip.path === tripKey || trip.name === tripKey)
+    ) {
+      return localTrips;
+    }
+
+    return [
+      {
+        name: tripKey,
+        path: tripKey,
+        photoCount: 0,
+        coverUrl: null,
+        title: tripKey.replace(/-/g, " "),
+      },
+      ...localTrips,
+    ];
+  }, [defaultTrip, localTrips]);
 
   useEffect(() => {
     abortRef.current = false;
@@ -389,7 +418,7 @@ export function UploadModal({
                   className="flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/40 disabled:opacity-60"
                 >
                   <option value="">Root (no trip folder)</option>
-                  {localTrips.map((t) => (
+                  {selectableTrips.map((t) => (
                     <option key={t.path} value={t.path}>
                       {t.name.replace(/-/g, " ")} ({formatMediaCountFromTrip(t)})
                     </option>

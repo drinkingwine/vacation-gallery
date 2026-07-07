@@ -56,7 +56,8 @@ export function AppShell({ children }: AppShellProps) {
   const openUpload = useCallback((tripName = "") => {
     setDefaultTrip(tripName);
     setShowUpload(true);
-  }, []);
+    void fetchTrips();
+  }, [fetchTrips]);
 
   useEffect(() => {
     fetchTrips();

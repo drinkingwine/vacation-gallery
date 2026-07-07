@@ -1,4 +1,5 @@
 import { Loader2, Pencil, Star, Trash2, Video } from "lucide-react";
+import { formatPhotoTimestamp } from "@/lib/photo-details";
 import { FAVORITE_TAG, formatTagLabel, getPresetTagColorClasses, isPresetPhotoTag } from "@/lib/photo-tags";
 import { cn } from "@/lib/utils";
 
@@ -292,6 +293,27 @@ export function VideoTypeBadge({
     >
       <Video className="h-3.5 w-3.5" />
     </span>
+  );
+}
+
+export function PhotoTimestampOverlay({
+  dateTaken,
+  className,
+}: {
+  dateTaken?: string | null;
+  className?: string;
+}) {
+  const label = formatPhotoTimestamp(dateTaken) ?? "No timestamp";
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute bottom-2 left-2 z-10 max-w-[calc(100%-1rem)] rounded bg-black/65 px-2 py-1 font-mono text-[10px] leading-tight text-white backdrop-blur-sm",
+        className,
+      )}
+    >
+      {label}
+    </div>
   );
 }
 

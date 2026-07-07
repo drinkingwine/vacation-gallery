@@ -1,3 +1,5 @@
+import { parsePhotoTimestamp } from "@/lib/photo-exif";
+
 export function formatPhotoFileSize(bytes?: number | null) {
   if (typeof bytes !== "number") return null;
   const units = ["B", "KB", "MB", "GB"];
@@ -13,6 +15,23 @@ export function formatPhotoFileSize(bytes?: number | null) {
 export function formatPhotoDate(date?: string | null) {
   if (!date) return null;
   return new Date(date).toLocaleString(undefined, { hour12: false });
+}
+
+export function formatPhotoTimestamp(date?: string | null) {
+  if (!date?.trim()) return null;
+
+  const parsed = parsePhotoTimestamp(date);
+  if (parsed === null) return date.trim();
+
+  return new Date(parsed).toLocaleString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 }
 
 export function formatPhotoResolution(

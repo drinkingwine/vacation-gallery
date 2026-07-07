@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { buildGalleryItem } from "@/lib/gallery";
+import { buildGalleryItem, getItemDisplayTags } from "@/lib/gallery";
+import { parsePhotoTimestamp } from "@/lib/photo-exif";
+import { FAVORITE_TAG } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
 
 const Gallery25 = dynamic(
@@ -62,6 +64,10 @@ export function TripPhotoGallery({
       ),
     [photos, trip?.location, trip?.startDate, trip?.title, tripName],
   );
+  const photoDateTakenByPath = useMemo(
+    () => new Map(photos.map((photo) => [photo.path, photo.dateTaken])),
+    [photos],
+  );
   const [itemTagPatches, setItemTagPatches] = useState<Record<string, string[]>>(
     {},
   );
@@ -70,15 +76,37 @@ export function TripPhotoGallery({
     setItemTagPatches({});
   }, [photos]);
 
-  const items = useMemo(
-    () =>
-      baseItems.map((item) =>
-        itemTagPatches[item.id]
-          ? { ...item, tags: itemTagPatches[item.id] }
-          : item,
-      ),
-    [baseItems, itemTagPatches],
-  );
+  const items = useMemo(() => {
+    const merged = baseItems.map((item) =>
+      itemTagPatches[item.id]
+        ? { ...item, tags: itemTagPatches[item.id] }
+        : item,
+    );
+
+    if (!isAdmin) {
+      return [...merged].sort((a, b) => {
+        const timeA =
+          parsePhotoTimestamp(photoDateTakenByPath.get(a.path)) ??
+          Number.POSITIVE_INFINITY;
+        const timeB =
+          parsePhotoTimestamp(photoDateTakenByPath.get(b.path)) ??
+          Number.POSITIVE_INFINITY;
+        if (timeA !== timeB) return timeA - timeB;
+        return a.filename.localeCompare(b.filename);
+      });
+    }
+
+    return [...merged].sort((a, b) => {
+      const aTagged = getItemDisplayTags(a, 100).some(
+        (tag) => tag.toLowerCase() !== FAVORITE_TAG,
+      );
+      const bTagged = getItemDisplayTags(b, 100).some(
+        (tag) => tag.toLowerCase() !== FAVORITE_TAG,
+      );
+      if (aTagged !== bTagged) return aTagged ? 1 : -1;
+      return a.filename.localeCompare(b.filename);
+    });
+  }, [baseItems, isAdmin, itemTagPatches, photoDateTakenByPath]);
 
   const handleItemTagsChange = useCallback((itemId: string, tags: string[]) => {
     setItemTagPatches((prev) => ({ ...prev, [itemId]: tags }));
@@ -137,6 +165,7 @@ export function TripPhotoGallery({
     <Gallery25
       items={items}
       showHeader={false}
+      showTimestamp
       clickToEdit={isAdmin}
       coverPhoto={coverPhoto}
       coverUrl={coverUrl}
