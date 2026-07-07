@@ -83,17 +83,19 @@ export function TripPhotoGallery({
         : item,
     );
 
+    const compareByDateAsc = (a: (typeof merged)[number], b: (typeof merged)[number]) => {
+      const timeA =
+        parsePhotoTimestamp(photoDateTakenByPath.get(a.path)) ??
+        Number.POSITIVE_INFINITY;
+      const timeB =
+        parsePhotoTimestamp(photoDateTakenByPath.get(b.path)) ??
+        Number.POSITIVE_INFINITY;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.filename.localeCompare(b.filename);
+    };
+
     if (!isAdmin) {
-      return [...merged].sort((a, b) => {
-        const timeA =
-          parsePhotoTimestamp(photoDateTakenByPath.get(a.path)) ??
-          Number.POSITIVE_INFINITY;
-        const timeB =
-          parsePhotoTimestamp(photoDateTakenByPath.get(b.path)) ??
-          Number.POSITIVE_INFINITY;
-        if (timeA !== timeB) return timeA - timeB;
-        return a.filename.localeCompare(b.filename);
-      });
+      return [...merged].sort(compareByDateAsc);
     }
 
     return [...merged].sort((a, b) => {
@@ -104,7 +106,7 @@ export function TripPhotoGallery({
         (tag) => tag.toLowerCase() !== FAVORITE_TAG,
       );
       if (aTagged !== bTagged) return aTagged ? 1 : -1;
-      return a.filename.localeCompare(b.filename);
+      return compareByDateAsc(a, b);
     });
   }, [baseItems, isAdmin, itemTagPatches, photoDateTakenByPath]);
 
@@ -165,7 +167,6 @@ export function TripPhotoGallery({
     <Gallery25
       items={items}
       showHeader={false}
-      showTimestamp
       clickToEdit={isAdmin}
       coverPhoto={coverPhoto}
       coverUrl={coverUrl}

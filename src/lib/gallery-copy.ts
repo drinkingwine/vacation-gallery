@@ -44,9 +44,13 @@ export const galleryCopy = {
       aria: "Items per row",
       count: (count: number) => `${count} cols`,
     },
-    fullBleed: {
-      on: "Full bleed",
-      off: "Add margins",
+    timestamps: {
+      on: "Timestamps",
+      off: "Hide timestamps",
+    },
+    tags: {
+      on: "Tags",
+      off: "Hide tags",
     },
     modal: {
       closeAria: "Close",

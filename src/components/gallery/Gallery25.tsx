@@ -16,7 +16,7 @@ import {
   PhotoCardEditDeleteBar,
   PhotoCardToolbar,
   PhotoTagBadges,
-  PhotoTagHoverOverlay,
+  PhotoTagOverlay,
   PhotoTimestampOverlay,
   VideoTypeBadge,
 } from "@/components/gallery/PhotoOverlayIcons";
@@ -168,13 +168,19 @@ export function Gallery25({
   );
   const [uncontrolledSelectedId, setUncontrolledSelectedId] =
     useState<GalleryId | null>(null);
-  const [isFullBleed, setIsFullBleed] = useState(false);
+  const [isFullBleed] = useState(false);
+  const [timestampsVisible, setTimestampsVisible] = useState(showTimestamp);
+  const [tagsVisible, setTagsVisible] = useState(false);
   const [columnCount, setColumnCount] = useState(() =>
     readStoredNumber("gallery25-columns", 4),
   );
   const [filter, setFilter] = useState<FilterValue>("all");
   const [isChromeVisible, setIsChromeVisible] = useState(true);
   const [ratioMap, setRatioMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setTimestampsVisible(showTimestamp);
+  }, [showTimestamp]);
 
   const selectedId =
     controlledSelectedId === undefined
@@ -533,18 +539,31 @@ export function Gallery25({
               </label>
               <button
                 type="button"
-                onClick={() => {
-                  const next = !isFullBleed;
-                  setIsFullBleed(next);
-                  if (!next) {
-                    setIsChromeVisible(true);
-                  }
-                }}
-                className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                onClick={() => setTagsVisible((visible) => !visible)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
+                  tagsVisible
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
               >
-                {isFullBleed
-                  ? galleryCopy.grid.fullBleed.off
-                  : galleryCopy.grid.fullBleed.on}
+                {tagsVisible
+                  ? galleryCopy.grid.tags.off
+                  : galleryCopy.grid.tags.on}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimestampsVisible((visible) => !visible)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
+                  timestampsVisible
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {timestampsVisible
+                  ? galleryCopy.grid.timestamps.off
+                  : galleryCopy.grid.timestamps.on}
               </button>
             </div>
           </div>
@@ -565,9 +584,10 @@ export function Gallery25({
                   const isVideo = item.type === "video";
                   const displayTags = getItemDisplayTags(item);
                   const showAdminToolbar = isAdmin && !clickToEdit;
-                  const showFooterTags = isAdmin && displayTags.length > 0;
+                  const showFooterTags =
+                    isAdmin && !clickToEdit && displayTags.length > 0 && !tagsVisible;
                   const showCardFooter = showAdminToolbar || showFooterTags;
-                  const showHoverTags = !isAdmin && displayTags.length > 0;
+                  const showTagOverlay = tagsVisible && displayTags.length > 0;
 
                   return (
                     <motion.article
@@ -653,10 +673,10 @@ export function Gallery25({
                               />
                             </div>
                           ) : null}
-                          {showHoverTags ? (
-                            <PhotoTagHoverOverlay tags={displayTags} />
+                          {showTagOverlay ? (
+                            <PhotoTagOverlay tags={displayTags} />
                           ) : null}
-                          {showTimestamp ? (
+                          {timestampsVisible ? (
                             <PhotoTimestampOverlay dateTaken={item.dateTaken} />
                           ) : null}
                         </div>
