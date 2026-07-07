@@ -670,7 +670,7 @@ export function Gallery25({
                               src={item.src}
                               alt={item.title}
                               blurHash={item.blurHash}
-                              onLoadingComplete={(image) => {
+                              onImageLoad={(image) => {
                                 rememberItemAspectRatio(
                                   item,
                                   image.naturalWidth,

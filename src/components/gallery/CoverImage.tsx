@@ -61,7 +61,6 @@ export function CoverImage({
         className,
       )}
       onLoad={(event) => markLoaded(event.currentTarget)}
-      onLoadingComplete={markLoaded}
       {...props}
     />
   );

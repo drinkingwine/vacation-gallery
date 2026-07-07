@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface BlurImageProps extends ImageProps {
   blurHash?: string | null;
+  onImageLoad?: (image: HTMLImageElement) => void;
 }
 
 export function BlurImage({
@@ -14,7 +15,8 @@ export function BlurImage({
   blurHash,
   alt,
   className,
-  onLoadingComplete,
+  onImageLoad,
+  onLoad,
   width,
   height,
   fill,
@@ -71,7 +73,8 @@ export function BlurImage({
         unoptimized={shouldBypassOptimization}
         onLoad={(event) => {
           setIsLoaded(true);
-          onLoadingComplete?.(event.currentTarget);
+          onLoad?.(event);
+          onImageLoad?.(event.currentTarget);
         }}
         onError={() => setIsLoaded(true)}
         {...(useFill
