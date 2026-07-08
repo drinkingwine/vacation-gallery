@@ -1,42 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { PlaceCard } from "@/components/gallery/PlaceCard";
+import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import { galleryCopy } from "@/lib/gallery-copy";
-import { fetchPlacesWithRandomCovers } from "@/lib/gallery-lists-cache";
-import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
-import type { PlaceSummary } from "@/lib/places-gallery";
 import { cn } from "@/lib/utils";
 
 export function GalleryPlacesSelection() {
-  const [places, setPlaces] = useState<PlaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPlaces = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchPlacesWithRandomCovers();
-      setPlaces(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load places");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchPlaces();
-  }, [fetchPlaces]);
-
-  useEffect(() => {
-    const refresh = () => {
-      void fetchPlaces();
-    };
-    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
-    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [fetchPlaces]);
+  const { value: places, loading } = useGalleryHomeSlice("places");
 
   return (
     <div className="gallery-page-shell flex flex-1 flex-col">
@@ -52,19 +22,6 @@ export function GalleryPlacesSelection() {
                 Places
               </h1>
             </header>
-
-            {error ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-                <p>{error}</p>
-                <button
-                  type="button"
-                  onClick={() => void fetchPlaces()}
-                  className="mt-2 underline"
-                >
-                  Retry
-                </button>
-              </div>
-            ) : null}
 
             {loading ? (
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">

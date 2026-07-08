@@ -1,54 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { TripCard } from "@/components/TripCard";
-import { withRandomFavoritesCover } from "@/lib/favorites-gallery-cover";
+import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
-import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
-import { getCachedTrips, loadTrips } from "@/lib/trips-data-cache";
+import { refreshGallery } from "@/lib/gallery-admin";
+import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 
 export function GalleryTripSelection() {
-  const cached = getCachedTrips();
-  const [trips, setTrips] = useState<Trip[]>(() => cached ?? []);
-  const [loading, setLoading] = useState(() => !cached);
-  const [error, setError] = useState<string | null>(null);
+  const { value: trips, loading } = useGalleryHomeSlice("trips");
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
   const { openUpload } = useUploadModal();
-
-  const fetchTrips = useCallback(async (force = false) => {
-    if (!force && !getCachedTrips()) {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const data = await loadTrips(force ? { force: true } : undefined);
-      setTrips(await withRandomFavoritesCover(data));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load trips");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
-
-  useEffect(() => {
-    const refresh = () => {
-      void fetchTrips(true);
-    };
-    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
-    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [fetchTrips]);
 
   const handleDeleteTrip = async (trip: Trip) => {
     if (isFavoritesTrip(trip.name)) return;
@@ -67,7 +37,8 @@ export function GalleryTripSelection() {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Delete failed");
-      fetchTrips();
+      invalidateGalleryHomeCache();
+      refreshGallery();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Delete failed");
     } finally {
@@ -90,19 +61,6 @@ export function GalleryTripSelection() {
               Gallery
             </h1>
           </header>
-
-          {error ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-              <p>{error}</p>
-              <button
-                type="button"
-                onClick={() => void fetchTrips(true)}
-                className="mt-2 underline"
-              >
-                Retry
-              </button>
-            </div>
-          ) : null}
 
           {loading ? (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">

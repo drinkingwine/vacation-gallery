@@ -9,50 +9,49 @@ import { FeaturedTripCard } from "@/components/FeaturedTripCard";
 import { HomeHero } from "@/components/HomeHero";
 import { SectionHeader } from "@/components/SectionHeader";
 import { useFooterConfig } from "@/components/footer-config";
+import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import type { Trip } from "@/lib/types";
 import { totalMediaCount } from "@/lib/media-count";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
-import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
+import { GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
+import {
+  invalidateGalleryHomeCache,
+  refreshGalleryHomeRandomized,
+} from "@/lib/gallery-home-cache";
 import { prefetchMapDataWhenIdle } from "@/lib/map-data-cache";
-import { prefetchGalleryListsWhenIdle } from "@/lib/gallery-lists-cache";
-import { loadTrips, prefetchTripsWhenIdle } from "@/lib/trips-data-cache";
 
 export default function Home() {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { value: trips, loading } = useGalleryHomeSlice("trips");
   const [error, setError] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
   const confirm = useConfirm();
 
-  const fetchTrips = useCallback(async () => {
-    setLoading(true);
+  const loadHome = useCallback(async () => {
     setError(null);
     try {
-      const data = await loadTrips();
-      setTrips(data);
+      await refreshGalleryHomeRandomized();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    void loadHome();
+  }, [loadHome]);
 
   useEffect(() => {
-    const refresh = () => fetchTrips();
+    const refresh = () => {
+      invalidateGalleryHomeCache();
+      void loadHome();
+    };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [fetchTrips]);
+  }, [loadHome]);
 
   useEffect(() => {
     if (loading) return;
-    prefetchTripsWhenIdle();
-    prefetchGalleryListsWhenIdle();
     prefetchMapDataWhenIdle();
   }, [loading]);
 
@@ -81,7 +80,8 @@ export default function Home() {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Delete failed");
-      fetchTrips();
+      invalidateGalleryHomeCache();
+      refreshGallery();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Delete failed");
     } finally {
@@ -108,7 +108,7 @@ export default function Home() {
               )}
               <button
                 type="button"
-                onClick={fetchTrips}
+                onClick={() => void loadHome()}
                 className="mt-2 text-sm underline"
               >
                 Retry

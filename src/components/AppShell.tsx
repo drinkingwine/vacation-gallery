@@ -15,10 +15,13 @@ import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { FooterConfigProvider } from "@/components/footer-config";
 import { NavbarConfigProvider } from "@/components/navbar-config";
 import { UploadModal } from "@/components/UploadModal";
-import { GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
+import { GALLERY_HOME_READY_EVENT, GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
 import { invalidateMapData, prefetchMapData } from "@/lib/map-data-cache";
-import { invalidateGalleryListCaches } from "@/lib/gallery-lists-cache";
-import { invalidateTripsCache, loadTrips, getCachedTrips } from "@/lib/trips-data-cache";
+import {
+  getCachedTrips,
+  invalidateGalleryHomeCache,
+  loadGalleryHome,
+} from "@/lib/gallery-home-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import type { Trip } from "@/lib/types";
 
@@ -44,10 +47,14 @@ export function AppShell({ children }: AppShellProps) {
   const [trips, setTrips] = useState<Trip[]>(() => getCachedTrips() ?? []);
   const { isAdmin } = useAuth();
 
-  const fetchTrips = useCallback(async () => {
+  const syncTripsFromCache = useCallback(() => {
+    setTrips(getCachedTrips() ?? []);
+  }, []);
+
+  const fetchGalleryHome = useCallback(async () => {
     try {
-      const data = await loadTrips();
-      setTrips(data);
+      const data = await loadGalleryHome();
+      setTrips(data.trips);
     } catch {
       // non-critical
     }
@@ -56,20 +63,28 @@ export function AppShell({ children }: AppShellProps) {
   const openUpload = useCallback((tripName = "") => {
     setDefaultTrip(tripName);
     setShowUpload(true);
-    void fetchTrips();
-  }, [fetchTrips]);
+    void fetchGalleryHome();
+  }, [fetchGalleryHome]);
 
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    void fetchGalleryHome();
+  }, [fetchGalleryHome]);
+
+  useEffect(() => {
+    syncTripsFromCache();
+    window.addEventListener(GALLERY_HOME_READY_EVENT, syncTripsFromCache);
+    return () =>
+      window.removeEventListener(GALLERY_HOME_READY_EVENT, syncTripsFromCache);
+  }, [syncTripsFromCache]);
 
   useEffect(() => {
     const refresh = () => {
-      fetchTrips();
+      invalidateGalleryHomeCache();
+      void fetchGalleryHome();
     };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [fetchTrips]);
+  }, [fetchGalleryHome]);
 
   return (
     <NavbarConfigProvider>
@@ -89,10 +104,8 @@ export function AppShell({ children }: AppShellProps) {
               setDefaultTrip("");
             }}
             onUploadComplete={() => {
-              invalidateTripsCache();
-              invalidateGalleryListCaches();
+              invalidateGalleryHomeCache();
               invalidateMapData();
-              fetchTrips();
               refreshGallery();
               prefetchMapData();
             }}
