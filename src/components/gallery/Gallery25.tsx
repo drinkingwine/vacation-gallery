@@ -57,6 +57,7 @@ type Gallery25Props = {
   onItemRemoved?: (itemId: string) => void;
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
   clickToEdit?: boolean;
+  allowCardDelete?: boolean;
   showTimestamp?: boolean;
   tripTitle?: string | null;
 };
@@ -164,6 +165,7 @@ export function Gallery25({
   onItemRemoved,
   onItemTagsChange,
   clickToEdit = false,
+  allowCardDelete = false,
   showTimestamp = false,
   tripTitle = null,
 }: Gallery25Props) {
@@ -708,7 +710,7 @@ export function Gallery25({
                               <VideoTypeBadge variant="overlay" />
                             </div>
                           ) : null}
-                          {isAdmin && clickToEdit ? (
+                          {isAdmin && clickToEdit && allowCardDelete ? (
                             <div className="absolute right-2 top-2 z-20">
                               <DeleteIconButton
                                 onClick={(e) => {

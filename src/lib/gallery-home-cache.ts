@@ -7,8 +7,9 @@ import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
 import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
+import type { ThingSummary } from "@/lib/things-gallery";
 
-const STORAGE_KEY = "gallery-home-cache";
+const STORAGE_KEY = "gallery-home-cache-v2";
 
 let cache: GalleryHomeData | null = null;
 let inflight: Promise<GalleryHomeData> | null = null;
@@ -58,6 +59,10 @@ export function getCachedPeople(): PersonSummary[] | null {
 
 export function getCachedPlaces(): PlaceSummary[] | null {
   return cache?.places ?? null;
+}
+
+export function getCachedThings(): ThingSummary[] | null {
+  return cache?.things ?? null;
 }
 
 export function invalidateGalleryHomeCache(): void {
@@ -123,6 +128,13 @@ export async function loadPlaces(options?: {
 }): Promise<PlaceSummary[]> {
   const data = await loadGalleryHome(options);
   return data.places;
+}
+
+export async function loadThings(options?: {
+  force?: boolean;
+}): Promise<ThingSummary[]> {
+  const data = await loadGalleryHome(options);
+  return data.things;
 }
 
 export async function refreshGalleryHomeRandomized(): Promise<GalleryHomeData> {

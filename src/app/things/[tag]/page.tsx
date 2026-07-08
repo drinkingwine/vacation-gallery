@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { GalleryPageClient } from "@/components/gallery/GalleryPageClient";
-import { GalleryPersonContent } from "@/components/gallery/GalleryPersonContent";
+import { GalleryThingContent } from "@/components/gallery/GalleryThingContent";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
-import { isPeoplePhotoTag } from "@/lib/photo-tags";
+import { isThingPhotoTag } from "@/lib/photo-tags";
 
 export const dynamic = "force-dynamic";
 
-type PersonPageProps = {
+type ThingPageProps = {
   params: Promise<{ tag: string }>;
   searchParams: Promise<{
     q?: string;
@@ -15,16 +15,16 @@ type PersonPageProps = {
   }>;
 };
 
-export default async function PersonPage({
+export default async function ThingPage({
   params,
   searchParams,
-}: PersonPageProps) {
+}: ThingPageProps) {
   const { tag: rawTag } = await params;
   const tag = decodeURIComponent(rawTag).trim().toLowerCase();
   const query = await searchParams;
   const keyword = typeof query.q === "string" ? query.q : "";
 
-  if (!isPeoplePhotoTag(tag)) {
+  if (!isThingPhotoTag(tag)) {
     notFound();
   }
 
@@ -32,7 +32,7 @@ export default async function PersonPage({
     <GalleryPageClient>
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <Suspense fallback={<GallerySkeleton />}>
-          <GalleryPersonContent tag={tag} initialKeyword={keyword} />
+          <GalleryThingContent tag={tag} initialKeyword={keyword} />
         </Suspense>
       </main>
     </GalleryPageClient>

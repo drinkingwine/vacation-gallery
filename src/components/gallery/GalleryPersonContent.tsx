@@ -1,4 +1,4 @@
-import { GalleryAlbumHero } from "@/components/gallery/GalleryAlbumHero";
+import { GuestGalleryAlbumHero } from "@/components/gallery/GuestGalleryAlbumHero";
 import { pickHeroImages } from "@/lib/hero-images";
 import { GalleryWithFilter } from "@/components/gallery/GalleryWithFilter";
 import { buildGalleryItems } from "@/lib/gallery";
@@ -52,7 +52,7 @@ export async function GalleryPersonContent({
 
   return (
     <div className="space-y-8">
-      <GalleryAlbumHero
+      <GuestGalleryAlbumHero
         images={heroImages}
         title={label}
         eyebrow={galleryCopy.people.eyebrow}

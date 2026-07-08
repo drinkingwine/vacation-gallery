@@ -28,6 +28,13 @@ export const galleryCopy = {
     empty: "No trips with photos yet.",
     noPhotos: (name: string) => `No photos in ${name} yet.`,
   },
+  things: {
+    eyebrow: "Gallery / Things",
+    title: "Things Gallery",
+    description: "Browse photos by subject, sorted A–Z.",
+    empty: "No tagged things yet. Add subject tags when editing a photo.",
+    noPhotos: (name: string) => `No photos tagged with ${name} yet.`,
+  },
   filters: {
     all: "All",
     photo: "Photo",

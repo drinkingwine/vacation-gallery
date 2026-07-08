@@ -169,6 +169,7 @@ export function TripPhotoGallery({
       showHeader={false}
       tripTitle={trip?.title ?? tripName.replace(/-/g, " ")}
       clickToEdit={isAdmin}
+      allowCardDelete={isAdmin}
       coverPhoto={coverPhoto}
       coverUrl={coverUrl}
       onMakeDefault={isAdmin ? handleMakeDefault : undefined}

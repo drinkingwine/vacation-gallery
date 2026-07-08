@@ -11,6 +11,8 @@ import {
 } from "@/lib/gallery-query";
 import { listAllGalleryPhotos } from "@/lib/github";
 import { galleryPhotosForPeople } from "@/lib/people-gallery";
+import { galleryPhotosForThings } from "@/lib/things-gallery";
+import { isPeoplePhotoTag, isThingPhotoTag } from "@/lib/photo-tags";
 import type { GallerySortOrder } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +33,14 @@ export async function GET(req: NextRequest) {
     const sortOrder: GallerySortOrder =
       params.get("sortOrder") === "oldest" ? "oldest" : "newest";
 
+    const allPhotos = await listAllGalleryPhotos();
     const sourcePhotos = tag
-      ? galleryPhotosForPeople(await listAllGalleryPhotos())
-      : await listAllGalleryPhotos();
+      ? isThingPhotoTag(tag)
+        ? galleryPhotosForThings(allPhotos)
+        : isPeoplePhotoTag(tag)
+          ? galleryPhotosForPeople(allPhotos)
+          : allPhotos
+      : allPhotos;
 
     const all = sortGalleryPhotos(
       filterGalleryPhotos(

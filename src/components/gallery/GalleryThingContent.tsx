@@ -5,37 +5,33 @@ import { buildGalleryItems } from "@/lib/gallery";
 import {
   filterGalleryPhotos,
   filterGalleryPhotosByMediaType,
-  filterGalleryPhotosByPlace,
+  filterGalleryPhotosByTag,
   paginateGalleryPhotos,
   sortGalleryPhotos,
 } from "@/lib/gallery-query";
 import { galleryCopy } from "@/lib/gallery-copy";
-import { listAllGalleryPhotos, listTrips } from "@/lib/github";
-import { findPlaceSummary } from "@/lib/places-gallery";
+import { listAllGalleryPhotos } from "@/lib/github";
+import { formatTagLabel } from "@/lib/photo-tags";
+import { galleryPhotosForThings } from "@/lib/things-gallery";
 
 const PAGE_SIZE = 24;
 
-type GalleryPlaceContentProps = {
-  placeSlug: string;
+type GalleryThingContentProps = {
+  tag: string;
   initialKeyword?: string;
 };
 
-export async function GalleryPlaceContent({
-  placeSlug,
+export async function GalleryThingContent({
+  tag,
   initialKeyword = "",
-}: GalleryPlaceContentProps) {
-  const normalizedSlug = placeSlug.trim().toLowerCase();
+}: GalleryThingContentProps) {
+  const normalizedTag = tag.trim().toLowerCase();
   const keyword = initialKeyword.trim();
-  const place = findPlaceSummary(await listTrips(), normalizedSlug);
-  if (!place) {
-    return null;
-  }
-
-  const allPhotos = await listAllGalleryPhotos();
+  const allPhotos = galleryPhotosForThings(await listAllGalleryPhotos());
   const filtered = filterGalleryPhotos(
-    filterGalleryPhotosByPlace(
+    filterGalleryPhotosByTag(
       filterGalleryPhotosByMediaType(allPhotos, "all"),
-      normalizedSlug,
+      normalizedTag,
     ),
     keyword,
   );
@@ -47,28 +43,26 @@ export async function GalleryPlaceContent({
     PAGE_SIZE,
   );
   const items = buildGalleryItems(pagePhotos);
+  const label = formatTagLabel(normalizedTag);
   const heroImages = pickHeroImages(
     viewerItems
       .filter((item) => item.type === "photo")
       .map((item) => item.src),
-    place.coverUrl,
   );
 
   return (
     <div className="space-y-8">
       <GuestGalleryAlbumHero
         images={heroImages}
-        title={place.title}
-        eyebrow={galleryCopy.places.eyebrow}
+        title={label}
+        eyebrow={galleryCopy.things.eyebrow}
         badges={[
-          { label: place.mediaLabel },
-          ...(place.location ? [{ label: place.location }] : []),
+          {
+            label: `${sorted.length} ${sorted.length === 1 ? "photo" : "photos"}`,
+          },
         ]}
-        subtitle={
-          place.tripCount > 1 ? place.tripTitles.join(" · ") : undefined
-        }
-        backHref="/places"
-        backLabel="All places"
+        backHref="/things"
+        backLabel="All things"
       />
 
       <GalleryWithFilter
@@ -77,8 +71,8 @@ export async function GalleryPlaceContent({
         initialHasNext={hasNext}
         pageSize={PAGE_SIZE}
         initialKeyword={keyword}
-        place={normalizedSlug}
-        emptyMessage={galleryCopy.places.noPhotos(place.title)}
+        tag={normalizedTag}
+        emptyMessage={galleryCopy.things.noPhotos(label)}
       />
     </div>
   );

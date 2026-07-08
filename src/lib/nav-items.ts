@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Home, Images, Landmark, Map, Users } from "lucide-react";
+import { Home, History, Images, Landmark, Map, Shapes, Users } from "lucide-react";
 
 export type MainNavItem = {
   label: string;
@@ -12,5 +12,7 @@ export const mainNavItems: readonly MainNavItem[] = [
   { label: "Gallery", href: "/gallery", icon: Images },
   { label: "People", href: "/people", icon: Users },
   { label: "Places", href: "/places", icon: Landmark },
+  { label: "Things", href: "/things", icon: Shapes },
+  { label: "Timeline", href: "/timeline", icon: History },
   { label: "Map", href: "/map", icon: Map },
 ];

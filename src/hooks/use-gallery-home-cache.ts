@@ -5,7 +5,7 @@ import { GALLERY_HOME_READY_EVENT } from "@/lib/gallery-admin";
 import { getCachedGalleryHome } from "@/lib/gallery-home-cache";
 import type { GalleryHomeData } from "@/lib/gallery-home-data";
 
-export type GalleryHomeSlice = "trips" | "people" | "places";
+export type GalleryHomeSlice = "trips" | "people" | "places" | "things";
 
 export function useGalleryHomeSlice<T extends GalleryHomeSlice>(slice: T) {
   type Value = GalleryHomeData[T];

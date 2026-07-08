@@ -9,8 +9,13 @@ import {
   buildPlacesGalleryList,
   getPlaceSlugFromTripName,
 } from "@/lib/places-gallery";
+import {
+  buildThingsGalleryList,
+  galleryPhotosForThings,
+} from "@/lib/things-gallery";
 import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
+import type { ThingSummary } from "@/lib/things-gallery";
 import type { GalleryPhoto, Trip } from "@/lib/types";
 
 /** Minimal photo fields needed to build randomized gallery home views. */
@@ -23,6 +28,7 @@ export type GalleryHomeData = {
   trips: Trip[];
   people: PersonSummary[];
   places: PlaceSummary[];
+  things: ThingSummary[];
 };
 
 function applyRandomFavoritesCover(
@@ -75,6 +81,21 @@ function applyRandomPlaceCovers(
   });
 }
 
+function applyRandomThingCovers(
+  things: ThingSummary[],
+  photos: GalleryHomePhoto[],
+): ThingSummary[] {
+  const thingPhotos = galleryPhotosForThings(photos as GalleryPhoto[]);
+
+  return things.map((thing) => {
+    const matches = filterGalleryPhotosByTag(thingPhotos, thing.tag);
+    return {
+      ...thing,
+      coverUrl: pickRandomImageCoverUrl(matches) ?? thing.coverUrl,
+    };
+  });
+}
+
 export function buildGalleryHomeViews(
   trips: Trip[],
   photos: GalleryHomePhoto[],
@@ -88,5 +109,9 @@ export function buildGalleryHomeViews(
       photos,
     ),
     places: applyRandomPlaceCovers(buildPlacesGalleryList(trips), photos),
+    things: applyRandomThingCovers(
+      buildThingsGalleryList(galleryPhotos),
+      photos,
+    ),
   };
 }

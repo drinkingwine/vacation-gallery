@@ -42,6 +42,8 @@ type GalleryInfiniteProps = {
   onSelectedIdChange?: (id: string | number | null) => void;
   showHeader?: boolean;
   onItemRemoved?: (itemId: string) => void;
+  clickToEdit?: boolean;
+  allowCardDelete?: boolean;
 };
 
 export function GalleryInfinite({
@@ -60,6 +62,8 @@ export function GalleryInfinite({
   onSelectedIdChange,
   showHeader = true,
   onItemRemoved,
+  clickToEdit = false,
+  allowCardDelete = false,
 }: GalleryInfiniteProps) {
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [page, setPage] = useState(initialPage);
@@ -144,6 +148,8 @@ export function GalleryInfinite({
         onSelectedIdChange={onSelectedIdChange}
         onItemTagsChange={handleItemTagsChange}
         onItemRemoved={handleItemRemoved}
+        clickToEdit={clickToEdit}
+        allowCardDelete={allowCardDelete}
       />
 
       <div className="mt-10 flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">

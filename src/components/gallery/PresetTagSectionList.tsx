@@ -32,7 +32,7 @@ export function PresetTagSectionList({
         : !hasPhotoTag(activeTags, tag),
     );
     const miscTags =
-      section.label === "Misc" && mode === "assigned" ? extraTags : [];
+      section.label === "Things" && mode === "assigned" ? extraTags : [];
 
     return {
       label: section.label,

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/AuthProvider";
 import { useDebounce } from "@/hooks/use-debounce";
 import { GalleryInfinite } from "@/components/gallery/GalleryInfinite";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
@@ -57,6 +58,7 @@ export function GalleryWithFilter({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { isAdmin } = useAuth();
 
   const [mediaType, setMediaType] = useState<MediaType>(() => {
     const param = searchParams.get("mediaType");
@@ -68,6 +70,7 @@ export function GalleryWithFilter({
   });
   const [keyword, setKeyword] = useState(initialKeyword);
   const isScoped = Boolean(tag || place || trip);
+  const adminClickToEdit = isAdmin && Boolean(tag || place);
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [viewerItems, setViewerItems] = useState<GalleryItem[]>(
     initialViewerItems ?? initialItems,
@@ -298,6 +301,7 @@ export function GalleryWithFilter({
           onSelectedIdChange={handleSelectedIdChange}
           showHeader={!isScoped}
           onItemRemoved={isScoped ? handleItemRemoved : undefined}
+          clickToEdit={adminClickToEdit}
         />
       )}
     </div>

@@ -14,7 +14,7 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
     tags: ["arthur", "shannon"] as const,
   },
   {
-    label: "Misc",
+    label: "Things",
     tags: ["shark bait", "fish", "cigars", "drinks", "pools", "critters", "boats"] as const,
   },
 ] as const;
@@ -23,7 +23,19 @@ export const PRESET_PHOTO_TAGS = PRESET_PHOTO_TAG_SECTIONS.flatMap(
   (section) => section.tags,
 );
 
+export const PEOPLE_PHOTO_TAGS = PRESET_PHOTO_TAG_SECTIONS.filter(
+  (section) => section.label !== "Things",
+).flatMap((section) => section.tags);
+
+export const THING_PHOTO_TAG_SECTION = PRESET_PHOTO_TAG_SECTIONS.find(
+  (section) => section.label === "Things",
+)!;
+
+export const THING_PHOTO_TAGS = THING_PHOTO_TAG_SECTION.tags;
+
 export type PresetPhotoTag = (typeof PRESET_PHOTO_TAGS)[number];
+export type PeoplePhotoTag = (typeof PEOPLE_PHOTO_TAGS)[number];
+export type ThingPhotoTag = (typeof THING_PHOTO_TAGS)[number];
 
 const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
   ralph:
@@ -68,6 +80,14 @@ const FALLBACK_PRESET_TAG_CLASSES =
 
 export function isPresetPhotoTag(tag: string): tag is PresetPhotoTag {
   return PRESET_PHOTO_TAGS.includes(tag.toLowerCase() as PresetPhotoTag);
+}
+
+export function isPeoplePhotoTag(tag: string): tag is PeoplePhotoTag {
+  return PEOPLE_PHOTO_TAGS.includes(tag.toLowerCase() as PeoplePhotoTag);
+}
+
+export function isThingPhotoTag(tag: string): tag is ThingPhotoTag {
+  return THING_PHOTO_TAGS.includes(tag.toLowerCase() as ThingPhotoTag);
 }
 
 export function getPresetTagColorClasses(tag: string) {
