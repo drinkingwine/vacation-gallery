@@ -7,7 +7,7 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
   },
   {
     label: "Dive Buddies",
-    tags: ["tom", "ron", "kirk", "ione", "neil"] as const,
+    tags: ["tom", "ron", "kirk", "ione", "neil", "pete"] as const,
   },
   {
     label: "Pets",
@@ -15,7 +15,7 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
   },
   {
     label: "Misc",
-    tags: ["shark bait", "fish", "cigars", "drinks", "pools"] as const,
+    tags: ["shark bait", "fish", "cigars", "drinks", "pools", "critters", "boats"] as const,
   },
 ] as const;
 
@@ -43,6 +43,7 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
   ione:
     "border-teal-300 bg-teal-100 text-teal-900 dark:border-teal-500/40 dark:bg-teal-500/15 dark:text-teal-100",
   neil: "border-cyan-300 bg-cyan-100 text-cyan-900 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-100",
+  pete: "border-blue-300 bg-blue-100 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-100",
   arthur:
     "border-stone-300 bg-stone-100 text-stone-900 dark:border-stone-500/40 dark:bg-stone-500/15 dark:text-stone-100",
   shannon:
@@ -56,6 +57,10 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-violet-300 bg-violet-100 text-violet-900 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-100",
   pools:
     "border-cyan-300 bg-cyan-100 text-cyan-900 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-100",
+  critters:
+    "border-lime-300 bg-lime-100 text-lime-900 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-100",
+  boats:
+    "border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-100",
 };
 
 const FALLBACK_PRESET_TAG_CLASSES =

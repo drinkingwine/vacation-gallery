@@ -88,6 +88,14 @@ const readStoredNumber = (key: string, fallback: number) => {
   return clampColumnCount(parsed, 10);
 };
 
+const readStoredBoolean = (key: string, fallback = false) => {
+  if (typeof window === "undefined") return fallback;
+  const stored = window.localStorage.getItem(key);
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return fallback;
+};
+
 const createBalancedColumns = (
   items: GalleryItem[],
   columnCount: number,
@@ -196,18 +204,18 @@ export function Gallery25({
   const [uncontrolledSelectedId, setUncontrolledSelectedId] =
     useState<GalleryId | null>(null);
   const [isFullBleed] = useState(false);
-  const [timestampsVisible, setTimestampsVisible] = useState(showTimestamp);
-  const [tagsVisible, setTagsVisible] = useState(false);
+  const [timestampsVisible, setTimestampsVisible] = useState(() =>
+    readStoredBoolean("gallery25-timestamps-visible", showTimestamp),
+  );
+  const [tagsVisible, setTagsVisible] = useState(() =>
+    readStoredBoolean("gallery25-tags-visible", false),
+  );
   const [columnCount, setColumnCount] = useState(() =>
     readStoredNumber("gallery25-columns", 4),
   );
   const [filter, setFilter] = useState<FilterValue>("all");
   const [isChromeVisible, setIsChromeVisible] = useState(true);
   const [ratioMap, setRatioMap] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    setTimestampsVisible(showTimestamp);
-  }, [showTimestamp]);
 
   const selectedId =
     controlledSelectedId === undefined
@@ -351,6 +359,17 @@ export function Gallery25({
   useEffect(() => {
     window.localStorage.setItem("gallery25-columns", String(columnCount));
   }, [columnCount]);
+
+  useEffect(() => {
+    window.localStorage.setItem("gallery25-tags-visible", String(tagsVisible));
+  }, [tagsVisible]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      "gallery25-timestamps-visible",
+      String(timestampsVisible),
+    );
+  }, [timestampsVisible]);
 
   useEffect(() => {
     setColumnCount((current) => clampColumnCount(current, columnSliderMax));

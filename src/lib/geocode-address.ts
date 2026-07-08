@@ -198,6 +198,9 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   greece: "GR",
   jamaica: "JM",
   bahamas: "BS",
+  "cayman islands": "KY",
+  "grand cayman": "KY",
+  cayman: "KY",
   australia: "AU",
   japan: "JP",
 };
@@ -210,9 +213,25 @@ function normalizeCountryName(value: string): string {
     .trim();
 }
 
+export function extractPrimaryLocationHint(query: string): string {
+  const parts = query
+    .split(/[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 1]! : query.trim();
+}
+
 export function inferCountryCodeFromText(text?: string | null): string | null {
   const normalized = normalizeCountryName(normalizePart(text));
   if (!normalized) return null;
+
+  if (
+    /\bcayman islands\b/.test(normalized) ||
+    /\bgrand cayman\b/.test(normalized) ||
+    /\bcayman\b/.test(normalized)
+  ) {
+    return "KY";
+  }
 
   if (
     /\bdominican\b/.test(normalized) ||
@@ -260,6 +279,11 @@ export function resolveCountryCodeForRequest(
 
   const fromQuery = inferCountryCodeFromText(query);
   if (fromQuery) return fromQuery;
+
+  if (mode === "place") {
+    const fromHint = inferCountryCodeFromText(extractPrimaryLocationHint(query));
+    if (fromHint) return fromHint;
+  }
 
   if (mode === "address" && !normalizePart(parts.country)) {
     return "US";
@@ -342,6 +366,46 @@ export function resolveGeocodeRegionForRequest(
   return resolveGeocodeRegion(parts.state, zip);
 }
 
+export function isGeocodeResultCountryMismatch(
+  result: PositionstackResult,
+  query: string,
+): boolean {
+  const locationHint = extractPrimaryLocationHint(query);
+  const inferredCountry =
+    inferCountryCodeFromText(query) ?? inferCountryCodeFromText(locationHint);
+  if (!inferredCountry || inferredCountry === "US") return false;
+  return looksLikeUnitedStates(String(result.label ?? ""));
+}
+
+function extractQueryTokens(query: string): string[] {
+  return query
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !QUERY_STOP_WORDS.has(token));
+}
+
+function tokenMatchScore(token: string, haystack: string): number {
+  if (!haystack.includes(token)) return 0;
+  return Math.min(10, 3 + Math.floor(token.length / 2));
+}
+
+function looksLikeUnitedStates(label: string): boolean {
+  const normalized = label.toLowerCase();
+  if (/\bcayman\b/.test(normalized)) return false;
+
+  return (
+    /\b(united states|usa|u\.s\.a\.)\b/.test(normalized) ||
+    /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming)\b/.test(
+      normalized,
+    ) ||
+    /,\s*(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy)\b/i.test(
+      label,
+    )
+  );
+}
+
 export function pickBestGeocodeResultForQuery(
   results: PositionstackResult[],
   query: string,
@@ -351,12 +415,11 @@ export function pickBestGeocodeResultForQuery(
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return results[0] ?? null;
 
-  const tokens = normalizedQuery
-    .split(/[^a-z0-9]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 3 && !QUERY_STOP_WORDS.has(token));
-
-  if (tokens.length === 0) return results[0] ?? null;
+  const locationHint = extractPrimaryLocationHint(query).toLowerCase();
+  const hintTokens = extractQueryTokens(locationHint);
+  const tokens = extractQueryTokens(query);
+  const inferredCountry =
+    inferCountryCodeFromText(query) ?? inferCountryCodeFromText(locationHint);
 
   let best: PositionstackResult | null = null;
   let bestScore = Number.NEGATIVE_INFINITY;
@@ -369,15 +432,27 @@ export function pickBestGeocodeResultForQuery(
 
     let score = 0;
     if (label.includes(normalizedQuery)) {
-      score += 12;
+      score += 16;
+    }
+
+    if (locationHint && label.includes(locationHint)) {
+      score += 20;
+    }
+
+    for (const token of hintTokens) {
+      score += tokenMatchScore(token, haystack) + 4;
     }
 
     for (const token of tokens) {
-      if (label.includes(token)) {
-        score += 4;
-      } else if (haystack.includes(token)) {
-        score += 2;
-      }
+      score += tokenMatchScore(token, haystack);
+    }
+
+    if (inferredCountry && inferredCountry !== "US" && looksLikeUnitedStates(label)) {
+      score -= 24;
+    }
+
+    if (inferredCountry === "KY" && /\bcayman\b/.test(haystack)) {
+      score += 12;
     }
 
     if (score > bestScore) {

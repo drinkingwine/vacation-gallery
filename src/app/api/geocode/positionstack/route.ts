@@ -4,6 +4,7 @@ import {
   parseGeocodeAddressPartsFromSearchParams,
   pickBestGeocodeResult,
   pickBestGeocodeResultForQuery,
+  isGeocodeResultCountryMismatch,
   resolveCountryCodeForRequest,
   resolveGeocodeRegionForRequest,
   type PositionstackResult,
@@ -57,19 +58,24 @@ async function geocodeWithNominatim(
   const data = (await response.json()) as NominatimResult[];
   if (!Array.isArray(data) || data.length === 0) return null;
 
-  const best = data[0];
-  const latitude = Number(best.lat);
-  const longitude = Number(best.lon);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  const candidates = data.flatMap((entry) => {
+    const latitude = Number(entry.lat);
+    const longitude = Number(entry.lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
 
-  return {
-    latitude,
-    longitude,
-    label: best.display_name,
-    postal_code: best.address?.postcode,
-    region: best.address?.state,
-    region_code: best.address?.state_code,
-  };
+    return [
+      {
+        latitude,
+        longitude,
+        label: entry.display_name,
+        postal_code: entry.address?.postcode,
+        region: entry.address?.state,
+        region_code: entry.address?.state_code,
+      },
+    ];
+  });
+
+  return pickBestGeocodeResultForQuery(candidates, query);
 }
 
 export async function GET(request: NextRequest) {
@@ -133,6 +139,10 @@ export async function GET(request: NextRequest) {
     let bestResult = useQueryScoring
       ? pickBestGeocodeResultForQuery(results, query)
       : pickBestGeocodeResult(results, parts);
+
+    if (bestResult && isGeocodeResultCountryMismatch(bestResult, query)) {
+      bestResult = null;
+    }
 
     if (!bestResult) {
       bestResult = await geocodeWithNominatim(query, countryCode);

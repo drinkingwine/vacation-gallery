@@ -73,3 +73,11 @@ export function coverFrameClass(loaded: boolean) {
     !loaded && "min-h-40 animate-pulse",
   );
 }
+
+export function coverCountBadgeClass() {
+  return cn(
+    "absolute bottom-3 right-3 z-10 rounded-full border border-amber-400/70",
+    "bg-amber-100/95 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-amber-950 shadow-sm",
+    "dark:border-amber-500/50 dark:bg-amber-200/90 dark:text-amber-950",
+  );
+}

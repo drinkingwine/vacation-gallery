@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CoverImage,
+  coverCountBadgeClass,
   coverFrameClass,
 } from "@/components/gallery/CoverImage";
 import { formatDateRange } from "@/lib/trip-meta";
@@ -60,7 +61,7 @@ export function TripCard({
               </svg>
             </div>
           )}
-          <div className="absolute bottom-3 right-3 z-10 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/90 backdrop-blur-md">
+          <div className={coverCountBadgeClass()}>
             {totalMediaCount(trip)}
           </div>
         </div>

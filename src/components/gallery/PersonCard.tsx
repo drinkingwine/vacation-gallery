@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CoverImage,
+  coverCountBadgeClass,
   coverFrameClass,
 } from "@/components/gallery/CoverImage";
 import { personGalleryPath, type PersonSummary } from "@/lib/people-gallery";
@@ -45,7 +46,7 @@ export function PersonCard({ person, priority = false }: PersonCardProps) {
               </svg>
             </div>
           )}
-          <div className="absolute bottom-3 right-3 z-10 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/90 backdrop-blur-md">
+          <div className={coverCountBadgeClass()}>
             {person.photoCount}
           </div>
         </div>
