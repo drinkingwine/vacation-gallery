@@ -1,4 +1,5 @@
 import { filterGalleryPhotosByTag } from "@/lib/gallery-query";
+import { pickRandomImageCoverUrl } from "@/lib/gallery-cover-random";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatTagLabel, PRESET_PHOTO_TAGS } from "@/lib/photo-tags";
 import type { GalleryPhoto } from "@/lib/types";
@@ -14,19 +15,25 @@ export function galleryPhotosForPeople(photos: GalleryPhoto[]) {
   return photos.filter((photo) => !isFavoritesTrip(photo.tripName));
 }
 
-export function buildPeopleGalleryList(photos: GalleryPhoto[]): PersonSummary[] {
+export function buildPeopleGalleryList(
+  photos: GalleryPhoto[],
+  options?: { randomCovers?: boolean },
+): PersonSummary[] {
   const peoplePhotos = galleryPhotosForPeople(photos);
 
   return PRESET_PHOTO_TAGS.map((tag) => {
     const matches = filterGalleryPhotosByTag(peoplePhotos, tag);
-    const coverPhoto =
-      matches.find((photo) => photo.mediaType !== "video") ?? matches[0];
+    const coverUrl = options?.randomCovers
+      ? pickRandomImageCoverUrl(matches)
+      : (matches.find((photo) => photo.mediaType !== "video") ??
+          matches[0])?.downloadUrl ??
+        null;
 
     return {
       tag,
       label: formatTagLabel(tag),
       photoCount: matches.length,
-      coverUrl: coverPhoto?.downloadUrl ?? null,
+      coverUrl,
     };
   })
     .filter((person) => person.photoCount > 0)

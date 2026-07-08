@@ -1,7 +1,8 @@
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { pickRandomImageCoverUrl } from "@/lib/gallery-cover-random";
 import { totalMediaCount } from "@/lib/media-count";
 import { tripLabel } from "@/lib/trip-meta";
-import type { Trip } from "@/lib/types";
+import type { GalleryPhoto, Trip } from "@/lib/types";
 
 export type PlaceSummary = {
   slug: string;
@@ -72,7 +73,20 @@ function placeTitleFromTrips(trips: Trip[]): string {
   return tripLabel(titled ?? bases[0] ?? trips[0].name);
 }
 
-export function buildPlacesGalleryList(trips: Trip[]): PlaceSummary[] {
+function pickRandomPlaceCover(
+  placeSlug: string,
+  photos: GalleryPhoto[],
+): string | null {
+  const placePhotos = photos.filter(
+    (photo) => getPlaceSlugFromTripName(photo.tripName) === placeSlug,
+  );
+  return pickRandomImageCoverUrl(placePhotos);
+}
+
+export function buildPlacesGalleryList(
+  trips: Trip[],
+  options?: { randomCovers?: boolean; photos?: GalleryPhoto[] },
+): PlaceSummary[] {
   const groups = new Map<string, Trip[]>();
 
   for (const trip of trips) {
@@ -110,7 +124,10 @@ export function buildPlacesGalleryList(trips: Trip[]): PlaceSummary[] {
         tripTitles: sortedTrips.map((trip) => trip.title),
         photoCount,
         mediaLabel: tripLabel,
-        coverUrl: pickPlaceCover(sortedTrips),
+        coverUrl:
+          options?.randomCovers && options.photos
+            ? pickRandomPlaceCover(slug, options.photos)
+            : pickPlaceCover(sortedTrips),
       };
     })
     .sort((a, b) => a.title.localeCompare(b.title));

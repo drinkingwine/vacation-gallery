@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { TripCard } from "@/components/TripCard";
+import { withRandomFavoritesCover } from "@/lib/favorites-gallery-cover";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import { getCachedTrips, loadTrips } from "@/lib/trips-data-cache";
@@ -29,7 +30,7 @@ export function GalleryTripSelection() {
     setError(null);
     try {
       const data = await loadTrips(force ? { force: true } : undefined);
-      setTrips(data);
+      setTrips(await withRandomFavoritesCover(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trips");
     } finally {

@@ -5,8 +5,13 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import {
+  DefaultPhotoBadge,
+  MakeDefaultIconButton,
+} from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import { PresetTagSectionList } from "@/components/gallery/PresetTagSectionList";
 import { formFieldClass } from "@/lib/form-styles";
 import { findPhotoByName, getEditablePhotoTags, stripAutoPhotoTags } from "@/lib/gallery";
@@ -50,6 +55,7 @@ export default function EditPhotoPageClient() {
   const [height, setHeight] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [makingDefault, setMakingDefault] = useState(false);
 
   const loadPhoto = useCallback(async () => {
     setLoading(true);
@@ -107,6 +113,12 @@ export default function EditPhotoPageClient() {
 
   const previewUrl = useMemo(() => photo?.downloadUrl ?? null, [photo]);
   const isVideo = photo?.mediaType === "video";
+  const isDefaultPhoto = Boolean(
+    photo && trip?.coverPhoto && trip.coverPhoto === photo.name,
+  );
+  const canSetDefault = Boolean(
+    photo && !isVideo && !isFavoritesTrip(tripName),
+  );
   const displayTitle = caption.trim() || photo?.name || photoName;
   const tripDisplayName = trip?.title ?? tripName;
 
@@ -124,6 +136,45 @@ export default function EditPhotoPageClient() {
 
   const removeTag = (tag: string) => {
     setTags((current) => current.filter((value) => value !== tag));
+  };
+
+  const handleMakeDefault = async () => {
+    if (!photo || !canSetDefault || isDefaultPhoto || makingDefault) return;
+
+    setMakingDefault(true);
+    setSaveError(null);
+
+    try {
+      const res = await fetch(
+        `/api/trips/${encodeURIComponent(tripName)}/cover`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoName: photo.name }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to set default photo");
+      }
+
+      setTrip((current) =>
+        current
+          ? {
+              ...current,
+              coverPhoto: photo.name,
+              coverUrl: photo.downloadUrl,
+            }
+          : current,
+      );
+      window.dispatchEvent(new Event(GALLERY_REFRESH_EVENT));
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to set default photo",
+      );
+    } finally {
+      setMakingDefault(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -156,6 +207,21 @@ export default function EditPhotoPageClient() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Save failed");
+
+      if (isDefaultPhoto && filename !== photo.name) {
+        const coverRes = await fetch(
+          `/api/trips/${encodeURIComponent(tripName)}/cover`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ photoName: filename }),
+          },
+        );
+        const coverData = await coverRes.json();
+        if (!coverRes.ok) {
+          throw new Error(coverData.error ?? "Failed to update default photo");
+        }
+      }
 
       if (favoriteChanged) {
         const favoriteRes = await fetch("/api/photos/favorite", {
@@ -270,6 +336,21 @@ export default function EditPhotoPageClient() {
                       size={photo?.size ?? null}
                       dateShot={photo?.dateTaken ?? trip?.startDate ?? null}
                     />
+
+                    {canSetDefault ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isDefaultPhoto ? (
+                          <DefaultPhotoBadge variant="toolbar" />
+                        ) : (
+                          <MakeDefaultIconButton
+                            variant="toolbar"
+                            busy={makingDefault}
+                            disabled={makingDefault || saving}
+                            onClick={() => void handleMakeDefault()}
+                          />
+                        )}
+                      </div>
+                    ) : null}
 
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">

@@ -67,6 +67,26 @@ async function fetchPlaces(): Promise<PlaceSummary[]> {
 export const peopleListCache = createListCache(fetchPeople);
 export const placesListCache = createListCache(fetchPlaces);
 
+export async function fetchPeopleWithRandomCovers(): Promise<PersonSummary[]> {
+  const res = await fetch("/api/people?randomCovers=1");
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error ?? `HTTP ${res.status}`);
+  }
+  const data = (await res.json()) as { people: PersonSummary[] };
+  return data.people;
+}
+
+export async function fetchPlacesWithRandomCovers(): Promise<PlaceSummary[]> {
+  const res = await fetch("/api/places?randomCovers=1");
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error ?? `HTTP ${res.status}`);
+  }
+  const data = (await res.json()) as { places: PlaceSummary[] };
+  return data.places;
+}
+
 export function invalidateGalleryListCaches(): void {
   peopleListCache.invalidate();
   placesListCache.invalidate();

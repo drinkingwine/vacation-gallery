@@ -3,24 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { PlaceCard } from "@/components/gallery/PlaceCard";
 import { galleryCopy } from "@/lib/gallery-copy";
-import { placesListCache } from "@/lib/gallery-lists-cache";
+import { fetchPlacesWithRandomCovers } from "@/lib/gallery-lists-cache";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import { cn } from "@/lib/utils";
 
 export function GalleryPlacesSelection() {
-  const cached = placesListCache.get();
-  const [places, setPlaces] = useState<PlaceSummary[]>(() => cached ?? []);
-  const [loading, setLoading] = useState(() => !cached);
+  const [places, setPlaces] = useState<PlaceSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlaces = useCallback(async (force = false) => {
-    if (!force && !placesListCache.get()) {
-      setLoading(true);
-    }
+  const fetchPlaces = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
-      const data = await placesListCache.load(force ? { force: true } : undefined);
+      const data = await fetchPlacesWithRandomCovers();
       setPlaces(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load places");
@@ -35,7 +32,7 @@ export function GalleryPlacesSelection() {
 
   useEffect(() => {
     const refresh = () => {
-      void fetchPlaces(true);
+      void fetchPlaces();
     };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
@@ -61,7 +58,7 @@ export function GalleryPlacesSelection() {
                 <p>{error}</p>
                 <button
                   type="button"
-                  onClick={() => void fetchPlaces(true)}
+                  onClick={() => void fetchPlaces()}
                   className="mt-2 underline"
                 >
                   Retry

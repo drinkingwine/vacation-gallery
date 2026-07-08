@@ -4,25 +4,22 @@ import { useCallback, useEffect, useState } from "react";
 import { PersonCard } from "@/components/gallery/PersonCard";
 import { galleryCopy } from "@/lib/gallery-copy";
 import {
-  peopleListCache,
+  fetchPeopleWithRandomCovers,
 } from "@/lib/gallery-lists-cache";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import type { PersonSummary } from "@/lib/people-gallery";
 import { cn } from "@/lib/utils";
 
 export function GalleryPeopleSelection() {
-  const cached = peopleListCache.get();
-  const [people, setPeople] = useState<PersonSummary[]>(() => cached ?? []);
-  const [loading, setLoading] = useState(() => !cached);
+  const [people, setPeople] = useState<PersonSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPeople = useCallback(async (force = false) => {
-    if (!force && !peopleListCache.get()) {
-      setLoading(true);
-    }
+  const fetchPeople = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
-      const data = await peopleListCache.load(force ? { force: true } : undefined);
+      const data = await fetchPeopleWithRandomCovers();
       setPeople(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load people");
@@ -37,7 +34,7 @@ export function GalleryPeopleSelection() {
 
   useEffect(() => {
     const refresh = () => {
-      void fetchPeople(true);
+      void fetchPeople();
     };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
@@ -63,7 +60,7 @@ export function GalleryPeopleSelection() {
                 <p>{error}</p>
                 <button
                   type="button"
-                  onClick={() => void fetchPeople(true)}
+                  onClick={() => void fetchPeople()}
                   className="mt-2 underline"
                 >
                   Retry
