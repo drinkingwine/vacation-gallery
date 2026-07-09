@@ -12,6 +12,7 @@ import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import {
   DefaultPhotoBadge,
   DeleteIconButton,
+  DownloadIconButton,
   PhotoCardEditDeleteBar,
   PhotoCardToolbar,
   PhotoTagBadges,
@@ -20,6 +21,7 @@ import {
   VideoTypeBadge,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { galleryCopy } from "@/lib/gallery-copy";
+import { downloadGalleryItem } from "@/lib/gallery-download";
 import type { GalleryItem } from "@/lib/gallery";
 import { getItemDisplayTags } from "@/lib/gallery";
 import { cn } from "@/lib/utils";
@@ -173,6 +175,7 @@ export function Gallery25({
   const confirm = useConfirm();
   const viewportWidth = useViewportWidth();
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
+  const [downloadingItemId, setDownloadingItemId] = useState<string | null>(null);
 
   const handlePhotoEdit = useCallback((item: GalleryItem) => {
     const returnTo =
@@ -212,6 +215,9 @@ export function Gallery25({
   const [tagsVisible, setTagsVisible] = useState(() =>
     readStoredBoolean("gallery25-tags-visible", false),
   );
+  const [downloadsVisible, setDownloadsVisible] = useState(() =>
+    readStoredBoolean("gallery25-downloads-visible", false),
+  );
   const [columnCount, setColumnCount] = useState(() =>
     readStoredNumber("gallery25-columns", 4),
   );
@@ -230,6 +236,19 @@ export function Gallery25({
     },
     [controlledSelectedId, onSelectedIdChange],
   );
+
+  const handleDownloadItem = useCallback(async (item: GalleryItem) => {
+    if (downloadingItemId) return;
+
+    setDownloadingItemId(String(item.id));
+    try {
+      await downloadGalleryItem(item);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadingItemId(null);
+    }
+  }, [downloadingItemId]);
 
   const handleDeleteItem = useCallback(
     async (item: GalleryItem) => {
@@ -365,6 +384,13 @@ export function Gallery25({
   useEffect(() => {
     window.localStorage.setItem("gallery25-tags-visible", String(tagsVisible));
   }, [tagsVisible]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      "gallery25-downloads-visible",
+      String(downloadsVisible),
+    );
+  }, [downloadsVisible]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -601,6 +627,20 @@ export function Gallery25({
               </button>
               <button
                 type="button"
+                onClick={() => setDownloadsVisible((visible) => !visible)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
+                  downloadsVisible
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {downloadsVisible
+                  ? galleryCopy.grid.downloads.off
+                  : galleryCopy.grid.downloads.on}
+              </button>
+              <button
+                type="button"
                 onClick={() => setTimestampsVisible((visible) => !visible)}
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-1 text-xs transition",
@@ -629,6 +669,7 @@ export function Gallery25({
                 {columnItems.map((item, itemIndex) => {
                   const isDefault = isCoverPhoto(item);
                   const isBusy = busyItemId === String(item.id);
+                  const isDownloading = downloadingItemId === String(item.id);
                   const isVideo = item.type === "video";
                   const displayTags = getItemDisplayTags(item);
                   const showAdminToolbar = isAdmin && !clickToEdit;
@@ -727,6 +768,18 @@ export function Gallery25({
                           ) : null}
                           {timestampsVisible ? (
                             <PhotoTimestampOverlay dateTaken={item.dateTaken} />
+                          ) : null}
+                          {downloadsVisible ? (
+                            <div className="absolute bottom-2 right-2 z-20">
+                              <DownloadIconButton
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDownloadItem(item);
+                                }}
+                                busy={isDownloading}
+                                disabled={Boolean(downloadingItemId)}
+                              />
+                            </div>
                           ) : null}
                         </div>
                       </div>

@@ -3,7 +3,7 @@ export const FAVORITE_TAG = "favorite";
 export const PRESET_PHOTO_TAG_SECTIONS = [
   {
     label: "Family",
-    tags: ["ralph", "robin", "rosemary", "keith", "allison"] as const,
+    tags: ["ralph", "robin", "rosemary", "keith", "allison", "r&r"] as const,
   },
   {
     label: "Dive Buddies",
@@ -14,8 +14,12 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
     tags: ["arthur", "shannon"] as const,
   },
   {
+    label: "Friends",
+    tags: ["claire", "chris", "c&c"] as const,
+  },
+  {
     label: "Things",
-    tags: ["shark bait", "fish", "cigars", "drinks", "pools", "critters", "boats"] as const,
+    tags: ["shark bait", "fish", "cigars", "drinks", "pools", "critters", "boats", "earth", "plants", "food"] as const,
   },
 ] as const;
 
@@ -48,6 +52,8 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100",
   allison:
     "border-purple-300 bg-purple-100 text-purple-900 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-100",
+  "r&r":
+    "border-pink-300 bg-pink-100 text-pink-900 dark:border-pink-500/40 dark:bg-pink-500/15 dark:text-pink-100",
   tom: "border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-100",
   ron: "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100",
   kirk:
@@ -60,6 +66,12 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-stone-300 bg-stone-100 text-stone-900 dark:border-stone-500/40 dark:bg-stone-500/15 dark:text-stone-100",
   shannon:
     "border-yellow-300 bg-yellow-100 text-yellow-900 dark:border-yellow-500/40 dark:bg-yellow-500/15 dark:text-yellow-100",
+  claire:
+    "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900 dark:border-fuchsia-500/40 dark:bg-fuchsia-500/15 dark:text-fuchsia-100",
+  chris:
+    "border-indigo-300 bg-indigo-100 text-indigo-900 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-100",
+  "c&c":
+    "border-sky-400 bg-sky-100 text-sky-950 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-100",
   "shark bait":
     "border-red-300 bg-red-100 text-red-900 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-100",
   fish: "border-sky-300 bg-sky-100 text-sky-900 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-100",
@@ -73,6 +85,12 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-lime-300 bg-lime-100 text-lime-900 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-100",
   boats:
     "border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-100",
+  earth:
+    "border-emerald-400 bg-emerald-100 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100",
+  plants:
+    "border-green-400 bg-green-100 text-green-950 dark:border-green-500/40 dark:bg-green-500/15 dark:text-green-100",
+  food:
+    "border-orange-300 bg-orange-50 text-orange-950 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-100",
 };
 
 const FALLBACK_PRESET_TAG_CLASSES =
@@ -107,8 +125,15 @@ export function hasPhotoTag(tags: string[], tag: string) {
   return tags.some((value) => value.toLowerCase() === lower);
 }
 
+const TAG_LABEL_OVERRIDES: Record<string, string> = {
+  "r&r": "R&R",
+  "c&c": "C&C",
+};
+
 export function formatTagLabel(tag: string) {
   if (tag.toLowerCase() === FAVORITE_TAG) return "Favorite";
+  const lower = tag.toLowerCase();
+  if (TAG_LABEL_OVERRIDES[lower]) return TAG_LABEL_OVERRIDES[lower]!;
   return tag
     .split(/\s+/)
     .filter(Boolean)

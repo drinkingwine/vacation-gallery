@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { buildGalleryItem, getItemDisplayTags } from "@/lib/gallery";
+import { buildGalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-exif";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
@@ -94,21 +94,16 @@ export function TripPhotoGallery({
       return a.filename.localeCompare(b.filename);
     };
 
-    if (!isAdmin) {
-      return [...merged].sort(compareByDateAsc);
-    }
+    const hasAssignedTag = (item: (typeof merged)[number]) =>
+      (item.tags ?? []).some((tag) => tag.toLowerCase() !== FAVORITE_TAG);
 
     return [...merged].sort((a, b) => {
-      const aTagged = getItemDisplayTags(a, 100).some(
-        (tag) => tag.toLowerCase() !== FAVORITE_TAG,
-      );
-      const bTagged = getItemDisplayTags(b, 100).some(
-        (tag) => tag.toLowerCase() !== FAVORITE_TAG,
-      );
+      const aTagged = hasAssignedTag(a);
+      const bTagged = hasAssignedTag(b);
       if (aTagged !== bTagged) return aTagged ? 1 : -1;
       return compareByDateAsc(a, b);
     });
-  }, [baseItems, isAdmin, itemTagPatches, photoDateTakenByPath]);
+  }, [baseItems, itemTagPatches, photoDateTakenByPath]);
 
   const handleItemTagsChange = useCallback((itemId: string, tags: string[]) => {
     setItemTagPatches((prev) => ({ ...prev, [itemId]: tags }));

@@ -60,6 +60,10 @@ export const galleryCopy = {
       on: "Tags",
       off: "Hide tags",
     },
+    downloads: {
+      on: "Download",
+      off: "Hide downloads",
+    },
     modal: {
       closeAria: "Close",
       keyboardShortcuts: "Keyboard Shortcuts",

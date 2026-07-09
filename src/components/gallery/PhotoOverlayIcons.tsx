@@ -1,4 +1,4 @@
-import { Loader2, Pencil, Star, Trash2, Video } from "lucide-react";
+import { Download, Loader2, Pencil, Star, Trash2, Video } from "lucide-react";
 import { formatPhotoTimestamp } from "@/lib/photo-details";
 import { FAVORITE_TAG, formatTagLabel, getPresetTagColorClasses, isPresetPhotoTag } from "@/lib/photo-tags";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ const variantStyles = {
     defaultBadge: "text-amber-300",
     editHover: "hover:bg-indigo-600",
     deleteHover: "hover:bg-red-600",
+    downloadHover: "hover:bg-sky-600",
     makeDefaultHover: "hover:bg-amber-600",
   },
   toolbar: {
@@ -26,6 +27,8 @@ const variantStyles = {
       "hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300",
     deleteHover:
       "hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:hover:border-red-500/40 dark:hover:bg-red-500/10 dark:hover:text-red-300",
+    downloadHover:
+      "hover:border-sky-200 hover:bg-sky-50 hover:text-sky-600 dark:hover:border-sky-500/40 dark:hover:bg-sky-500/10 dark:hover:text-sky-300",
     makeDefaultHover:
       "hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300",
   },
@@ -267,6 +270,35 @@ export function DeleteIconButton({
       className={cn(styles.deleteHover, className)}
     >
       <Trash2 className="h-3.5 w-3.5" />
+    </IconButton>
+  );
+}
+
+export function DownloadIconButton({
+  onClick,
+  disabled,
+  busy,
+  variant = "overlay",
+  className,
+}: {
+  onClick: (e: React.MouseEvent) => void;
+  disabled?: boolean;
+  busy?: boolean;
+  variant?: Variant;
+  className?: string;
+}) {
+  const styles = variantStyles[variant];
+
+  return (
+    <IconButton
+      label="Download"
+      onClick={onClick}
+      disabled={disabled}
+      busy={busy}
+      variant={variant}
+      className={cn(styles.downloadHover, className)}
+    >
+      <Download className="h-3.5 w-3.5" />
     </IconButton>
   );
 }
