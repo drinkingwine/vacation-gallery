@@ -11,10 +11,7 @@ export function TimelineSelection() {
     <div className="gallery-page-shell flex flex-1 flex-col">
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
         <div className="space-y-10">
-          <header className="front-fade-up space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-              Gallery / Timeline
-            </p>
+          <header className="front-fade-up">
             <h1
               className={cn(
                 "font-serif",
@@ -23,10 +20,6 @@ export function TimelineSelection() {
             >
               Timeline
             </h1>
-            <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-300">
-              Trips on a single timeline — earliest first — with chronological
-              cards below.
-            </p>
           </header>
 
           {loading ? (

@@ -11,14 +11,19 @@ import {
 import {
   assignTimelineRows,
   getTimelineBounds,
+  timelineCenterPercent,
   timelineYearTicks,
   type TripTimelineSpan,
 } from "@/lib/timeline";
 import { getTripCountryFlag } from "@/lib/country-flags";
 import { formatDateRange } from "@/lib/trip-meta";
 import { cn } from "@/lib/utils";
+import {
+  timelineSectionLabelClass,
+  timelineSurfaceClass,
+} from "@/components/timeline/timeline-styles";
 
-const ROW_HEIGHT = 72;
+const ROW_HEIGHT = 80;
 const CHART_PADDING = 48;
 const ROW_GAP = 8;
 
@@ -28,7 +33,7 @@ type TimelineSpanChartProps = {
 
 export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
   const sortedSpans = useMemo(
-    () => [...spans].sort((a, b) => a.startMs - b.startMs),
+    () => [...spans].sort((a, b) => b.startMs - a.startMs),
     [spans],
   );
   const bounds = useMemo(() => getTimelineBounds(sortedSpans), [sortedSpans]);
@@ -37,7 +42,10 @@ export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
     [sortedSpans],
   );
   const yearTicks = useMemo(
-    () => (bounds ? timelineYearTicks(bounds.minMs, bounds.maxMs) : []),
+    () =>
+      bounds
+        ? timelineYearTicks(bounds.minMs, bounds.maxMs, "newest-first")
+        : [],
     [bounds],
   );
 
@@ -47,10 +55,15 @@ export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+      <h2 className={timelineSectionLabelClass}>
         Trip spans
       </h2>
-      <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-zinc-200/80 bg-white/60 p-5 shadow-sm backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/60 custom-scrollbar">
+      <div
+        className={cn(
+          timelineSurfaceClass,
+          "overflow-x-auto overflow-y-visible p-5 custom-scrollbar",
+        )}
+      >
         <TooltipProvider delayDuration={150}>
           <div
             className="relative min-w-[960px] px-6"
@@ -72,11 +85,11 @@ export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
           ))}
 
           {sortedSpans.map((span) => {
-            const left =
-              ((span.startMs - bounds.minMs) / bounds.spanMs) * 100;
-            const width = Math.max(
-              ((span.endMs - span.startMs) / bounds.spanMs) * 100,
-              3,
+            const centerPercent = timelineCenterPercent(
+              span.startMs,
+              span.endMs,
+              bounds,
+              "newest-first",
             );
             const row = assignments.get(span.trip.path) ?? 0;
             const dates = formatDateRange(
@@ -84,7 +97,6 @@ export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
               span.trip.endDate,
             );
 
-            const centerPercent = left + width / 2;
             const flag = getTripCountryFlag(span.trip);
             const label = `${span.trip.title}${dates ? ` · ${dates}` : ""}`;
 
@@ -95,8 +107,8 @@ export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
                     href={`/trips/${encodeURIComponent(span.trip.name)}`}
                     aria-label={label}
                     className={cn(
-                      "group absolute flex w-11 -translate-x-1/2 flex-col items-center justify-center gap-0.5 transition",
-                      "hover:z-20 hover:scale-125",
+                      "group absolute flex w-12 -translate-x-1/2 flex-col items-center justify-center gap-1 transition",
+                      "hover:z-20 hover:scale-110",
                     )}
                     style={{
                       left: `${centerPercent}%`,
@@ -104,10 +116,10 @@ export function TimelineSpanChart({ spans }: TimelineSpanChartProps) {
                       height: ROW_HEIGHT - ROW_GAP,
                     }}
                   >
-                    <span className="text-3xl leading-none" aria-hidden>
+                    <span className="text-5xl leading-none" aria-hidden>
                       {flag}
                     </span>
-                    <span className="text-[10px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
+                    <span className="text-xs font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
                       {span.year}
                     </span>
                   </Link>

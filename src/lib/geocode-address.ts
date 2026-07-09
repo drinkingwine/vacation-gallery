@@ -198,6 +198,9 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   greece: "GR",
   jamaica: "JM",
   bahamas: "BS",
+  bonaire: "BQ",
+  aruba: "AW",
+  curacao: "CW",
   "cayman islands": "KY",
   "grand cayman": "KY",
   cayman: "KY",
@@ -231,6 +234,18 @@ export function inferCountryCodeFromText(text?: string | null): string | null {
     /\bcayman\b/.test(normalized)
   ) {
     return "KY";
+  }
+
+  if (/\bbonaire\b/.test(normalized)) {
+    return "BQ";
+  }
+
+  if (/\baruba\b/.test(normalized)) {
+    return "AW";
+  }
+
+  if (/\bcuracao\b/.test(normalized) || /\bcuraçao\b/.test(normalized)) {
+    return "CW";
   }
 
   if (

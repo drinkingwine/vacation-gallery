@@ -11,6 +11,8 @@ import { formatMediaCountFromTrip } from "@/lib/media-count";
 import { formatDateRange } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { TimelineDateBadge } from "@/components/timeline/TimelineDateBadge";
+import { timelineSurfaceClass } from "@/components/timeline/timeline-styles";
 
 type TimelineTripCardProps = {
   trip: Trip;
@@ -34,7 +36,8 @@ export function TimelineTripCard({
   return (
     <article
       className={cn(
-        "relative grid w-full gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center",
+        timelineSurfaceClass,
+        "relative grid w-full gap-4 p-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center",
         align === "right" && "sm:[&>*:first-child]:order-3 sm:[&>*:last-child]:order-1",
       )}
     >
@@ -80,9 +83,11 @@ export function TimelineTripCard({
           align === "right" ? "sm:pr-4 sm:text-right" : "sm:pl-4",
         )}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">
-          {dates ?? "Date unknown"}
-        </p>
+        {dates ? (
+          <TimelineDateBadge>{dates}</TimelineDateBadge>
+        ) : (
+          <TimelineDateBadge>Date unknown</TimelineDateBadge>
+        )}
         <h3 className="font-serif text-2xl font-semibold text-zinc-800 dark:text-zinc-100">
           <Link
             href={`/trips/${encodeURIComponent(trip.name)}`}

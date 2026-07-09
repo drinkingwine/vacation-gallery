@@ -41,6 +41,28 @@ function toIsoDate(value: unknown): string | undefined {
   return undefined;
 }
 
+export function toDatetimeLocalValue(value?: string | null): string {
+  if (!value?.trim()) return "";
+
+  const parsed = parsePhotoTimestamp(value);
+  if (parsed === null) return "";
+
+  const date = new Date(parsed);
+  const pad = (part: number) => String(part).padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function fromDatetimeLocalValue(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+
+  return parsed.toISOString();
+}
+
 export async function extractPhotoExif(
   file: File | Blob,
 ): Promise<PhotoExifData | null> {

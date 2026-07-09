@@ -584,6 +584,14 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
     else delete meta[currentName];
   }
 
+  if (input.dateTaken !== undefined) {
+    const entry = meta[currentName] ?? {};
+    const dateTaken = input.dateTaken?.trim() || undefined;
+    const next = prunePhotoMetaEntry({ ...entry, dateTaken });
+    if (next) meta[currentName] = next;
+    else delete meta[currentName];
+  }
+
   await savePhotosMetadata(input.trip, meta);
 }
 

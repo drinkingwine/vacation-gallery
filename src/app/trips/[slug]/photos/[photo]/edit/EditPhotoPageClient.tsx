@@ -17,6 +17,10 @@ import { formFieldClass } from "@/lib/form-styles";
 import { findPhotoByName, getEditablePhotoTags, stripAutoPhotoTags } from "@/lib/gallery";
 import { galleryCopy } from "@/lib/gallery-copy";
 import {
+  fromDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from "@/lib/photo-exif";
+import {
   FAVORITE_TAG,
   formatTagLabel,
   hasFavoriteTag,
@@ -48,6 +52,7 @@ export default function EditPhotoPageClient() {
 
   const [filename, setFilename] = useState("");
   const [caption, setCaption] = useState("");
+  const [captured, setCaptured] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
   const initialFavoriteRef = useRef(false);
@@ -91,6 +96,7 @@ export default function EditPhotoPageClient() {
       setPhoto(match);
       setFilename(match.name);
       setCaption(match.caption ?? "");
+      setCaptured(toDatetimeLocalValue(match.dateTaken));
       setTags(getEditablePhotoTags(match, tripData));
       setIsFavorite(favorited);
       setWidth(null);
@@ -121,6 +127,8 @@ export default function EditPhotoPageClient() {
   );
   const displayTitle = caption.trim() || photo?.name || photoName;
   const tripDisplayName = trip?.title ?? tripName;
+  const capturedPreview =
+    fromDatetimeLocalValue(captured) ?? photo?.dateTaken ?? trip?.startDate ?? null;
 
   const extraTags = tags.filter((tag) => !isPresetPhotoTag(tag));
   const hasAssignedTags = isFavorite || tags.length > 0;
@@ -191,6 +199,11 @@ export default function EditPhotoPageClient() {
     const favoriteChanged = isFavorite !== initialFavoriteRef.current;
     const finalPath =
       filename !== photo.name ? `${tripName}/${filename}` : photo.path;
+    const initialCaptured = toDatetimeLocalValue(photo.dateTaken);
+    const capturedChanged = captured !== initialCaptured;
+    const nextDateTaken = captured.trim()
+      ? fromDatetimeLocalValue(captured)
+      : undefined;
 
     try {
       const res = await fetch("/api/photos/update", {
@@ -203,6 +216,9 @@ export default function EditPhotoPageClient() {
           newName: filename !== photo.name ? filename : undefined,
           caption,
           tags: tagsToSave,
+          ...(capturedChanged
+            ? { dateTaken: nextDateTaken ?? null }
+            : {}),
         }),
       });
       const data = await res.json();
@@ -334,7 +350,7 @@ export default function EditPhotoPageClient() {
                       width={width}
                       height={height}
                       size={photo?.size ?? null}
-                      dateShot={photo?.dateTaken ?? trip?.startDate ?? null}
+                      dateShot={capturedPreview}
                     />
 
                     {canSetDefault ? (
@@ -373,6 +389,18 @@ export default function EditPhotoPageClient() {
                         onChange={(e) => setCaption(e.target.value)}
                         rows={3}
                         placeholder="Optional description for this photo"
+                        className={formFieldClass}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        {galleryCopy.grid.modal.captured}
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={captured}
+                        onChange={(e) => setCaptured(e.target.value)}
                         className={formFieldClass}
                       />
                     </div>

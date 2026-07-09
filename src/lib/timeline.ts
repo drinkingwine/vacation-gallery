@@ -50,7 +50,7 @@ export function partitionTimelineTrips(trips: Trip[]) {
     });
   }
 
-  dated.sort((a, b) => a.startMs - b.startMs);
+  dated.sort((a, b) => b.startMs - a.startMs);
   undated.sort((a, b) => a.title.localeCompare(b.title));
 
   return { dated, undated };
@@ -66,10 +66,10 @@ export function groupTimelineByYear(spans: TripTimelineSpan[]) {
   }
 
   return [...groups.entries()]
-    .sort(([a], [b]) => a - b)
+    .sort(([a], [b]) => b - a)
     .map(([year, yearSpans]) => [
       year,
-      [...yearSpans].sort((a, b) => a.startMs - b.startMs),
+      [...yearSpans].sort((a, b) => b.startMs - a.startMs),
     ] as const);
 }
 
@@ -93,7 +93,7 @@ export function getTimelineBounds(spans: TripTimelineSpan[]) {
 }
 
 export function assignTimelineRows(spans: TripTimelineSpan[]) {
-  const sorted = [...spans].sort((a, b) => a.startMs - b.startMs);
+  const sorted = [...spans].sort((a, b) => b.startMs - a.startMs);
   const assignments = new Map<string, number>();
 
   for (const span of sorted) {
@@ -103,14 +103,37 @@ export function assignTimelineRows(spans: TripTimelineSpan[]) {
   return { rowCount: sorted.length > 0 ? 1 : 0, assignments };
 }
 
-export function timelineYearTicks(minMs: number, maxMs: number) {
+export function timelineCenterPercent(
+  startMs: number,
+  endMs: number,
+  bounds: { minMs: number; maxMs: number; spanMs: number },
+  order: "newest-first" | "oldest-first" = "newest-first",
+) {
+  const centerMs = (startMs + endMs) / 2;
+
+  if (order === "newest-first") {
+    return ((bounds.maxMs - centerMs) / bounds.spanMs) * 100;
+  }
+
+  return ((centerMs - bounds.minMs) / bounds.spanMs) * 100;
+}
+
+export function timelineYearTicks(
+  minMs: number,
+  maxMs: number,
+  order: "newest-first" | "oldest-first" = "newest-first",
+) {
   const startYear = new Date(minMs).getFullYear();
   const endYear = new Date(maxMs).getFullYear();
+  const spanMs = maxMs - minMs;
   const ticks: { year: number; leftPercent: number }[] = [];
 
   for (let year = startYear; year <= endYear; year++) {
     const yearStart = new Date(year, 0, 1).getTime();
-    const leftPercent = ((yearStart - minMs) / (maxMs - minMs)) * 100;
+    const leftPercent =
+      order === "newest-first"
+        ? ((maxMs - yearStart) / spanMs) * 100
+        : ((yearStart - minMs) / spanMs) * 100;
     if (leftPercent >= 0 && leftPercent <= 100) {
       ticks.push({ year, leftPercent });
     }

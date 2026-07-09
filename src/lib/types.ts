@@ -96,6 +96,7 @@ export type UpdatePhotoInput = {
   addTag?: string;
   removeTag?: string;
   tags?: string[];
+  dateTaken?: string | null;
 };
 
 export type GalleryPhoto = Photo & {

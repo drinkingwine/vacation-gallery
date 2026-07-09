@@ -43,9 +43,53 @@ export function countryCodeFromTrip(
   return null;
 }
 
+export function countryCodeToName(code: string): string {
+  const upper = code.trim().toUpperCase();
+  if (upper === "US") return "US";
+
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(upper) ?? upper;
+  } catch {
+    return upper;
+  }
+}
+
+export function getTripCountryName(
+  trip: Pick<Trip, "location" | "geoLocation">,
+): string | null {
+  const code = countryCodeFromTrip(trip);
+  if (code) return countryCodeToName(code);
+
+  const text = trip.location ?? trip.geoLocation;
+  if (!text) return null;
+
+  const segments = text
+    .split(/[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return segments.at(-1) ?? null;
+}
+
 export function getTripCountryFlag(
   trip: Pick<Trip, "location" | "geoLocation">,
 ): string {
   const code = countryCodeFromTrip(trip);
   return code ? countryCodeToFlagEmoji(code) : "🌐";
+}
+
+export function getUniqueTripFlags(
+  trips: Array<Pick<Trip, "location" | "geoLocation">>,
+): string[] {
+  const flags: string[] = [];
+  const seen = new Set<string>();
+
+  for (const trip of trips) {
+    const code = countryCodeFromTrip(trip) ?? "unknown";
+    if (seen.has(code)) continue;
+    seen.add(code);
+    flags.push(getTripCountryFlag(trip));
+  }
+
+  return flags;
 }

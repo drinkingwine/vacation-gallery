@@ -7,12 +7,54 @@ import { TripCard } from "@/components/TripCard";
 import {
   groupTimelineByYear,
   partitionTimelineTrips,
+  type TripTimelineSpan,
 } from "@/lib/timeline";
+import { getUniqueTripFlags } from "@/lib/country-flags";
+import { TimelineDateBadge } from "@/components/timeline/TimelineDateBadge";
+import { timelineSurfaceClass } from "@/components/timeline/timeline-styles";
 import type { Trip } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type TripTimelineProps = {
   trips: Trip[];
 };
+
+function TimelineYearHeader({
+  label,
+  spans,
+}: {
+  label: string;
+  spans: TripTimelineSpan[];
+}) {
+  const flags = useMemo(
+    () => getUniqueTripFlags(spans.map((span) => span.trip)),
+    [spans],
+  );
+
+  return (
+    <div
+      className={cn(
+        timelineSurfaceClass,
+        "sticky top-28 z-10 flex flex-wrap items-center gap-3 px-5 py-4",
+      )}
+    >
+      <TimelineDateBadge variant="year">{label}</TimelineDateBadge>
+      {flags.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {flags.map((flag) => (
+            <span
+              key={flag}
+              className="text-3xl leading-none"
+              aria-hidden
+            >
+              {flag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function TripTimeline({ trips }: TripTimelineProps) {
   const { dated, undated } = useMemo(
@@ -20,6 +62,7 @@ export function TripTimeline({ trips }: TripTimelineProps) {
     [trips],
   );
   const yearGroups = useMemo(() => groupTimelineByYear(dated), [dated]);
+  const undatedFlags = useMemo(() => getUniqueTripFlags(undated), [undated]);
 
   if (dated.length === 0 && undated.length === 0) {
     return (
@@ -34,15 +77,10 @@ export function TripTimeline({ trips }: TripTimelineProps) {
       {dated.length > 0 ? <TimelineSpanChart spans={dated} /> : null}
 
       {yearGroups.map(([year, spans]) => (
-        <section key={year} className="relative space-y-10">
-          <div className="sticky top-28 z-10 -mx-2 flex items-center gap-4 bg-background/85 px-2 py-2 backdrop-blur-sm">
-            <h2 className="font-serif text-3xl font-semibold text-zinc-800 dark:text-zinc-100">
-              {year}
-            </h2>
-            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-          </div>
+        <section key={year} className="relative space-y-6">
+          <TimelineYearHeader label={String(year)} spans={spans} />
 
-          <div className="relative space-y-12 sm:pl-0">
+          <div className="relative space-y-6 sm:pl-0">
             <div className="absolute bottom-0 left-1/2 top-0 hidden w-px -translate-x-1/2 bg-gradient-to-b from-indigo-300/60 via-zinc-200 to-transparent dark:from-indigo-500/40 dark:via-zinc-700 sm:block" />
 
             {spans.map((span, index) => (
@@ -59,9 +97,27 @@ export function TripTimeline({ trips }: TripTimelineProps) {
 
       {undated.length > 0 ? (
         <section className="space-y-6">
-          <h2 className="font-serif text-2xl font-semibold text-zinc-800 dark:text-zinc-100">
-            Undated trips
-          </h2>
+          <div
+            className={cn(
+              timelineSurfaceClass,
+              "flex flex-wrap items-center gap-3 px-5 py-4",
+            )}
+          >
+            <TimelineDateBadge variant="year">Undated</TimelineDateBadge>
+            {undatedFlags.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {undatedFlags.map((flag) => (
+                  <span
+                    key={flag}
+                    className="text-3xl leading-none"
+                    aria-hidden
+                  >
+                    {flag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {undated.map((trip, index) => (
               <TripCard key={trip.path} trip={trip} priority={index < 4} />
