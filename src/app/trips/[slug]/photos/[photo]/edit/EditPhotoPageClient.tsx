@@ -11,7 +11,9 @@ import {
 } from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
-import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
+import { GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
+import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
+import { patchCachedTripPhoto } from "@/lib/trip-page-cache";
 import { PresetTagSectionList } from "@/components/gallery/PresetTagSectionList";
 import { formFieldClass } from "@/lib/form-styles";
 import { findPhotoByName, getEditablePhotoTags, stripAutoPhotoTags } from "@/lib/gallery";
@@ -254,8 +256,17 @@ export default function EditPhotoPageClient() {
           throw new Error(favoriteData.error ?? "Failed to update favorite");
         }
       }
+
+      patchCachedTripPhoto(tripName, photo.path, {
+        name: filename,
+        path: finalPath,
+        caption,
+        tags: tagsToSave,
+        ...(capturedChanged ? { dateTaken: nextDateTaken } : {}),
+      });
+      invalidateGalleryHomeCache();
+      refreshGallery();
       router.push(cancelHref);
-      router.refresh();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed");
     } finally {

@@ -7,9 +7,12 @@ import {
   deleteMedia,
   deleteMediaPrefix,
   fetchMediaForDownload,
-  listMedia,
   renameMedia,
 } from "./r2";
+import {
+  invalidateMediaListCache,
+  listMediaCached,
+} from "@/lib/media-list-cache";
 import { sortTripsByDateDesc, sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
 import type {
   CreateTripInput,
@@ -171,11 +174,13 @@ async function savePhotosMetadata(
 }
 
 export async function listPhotos(trip = ""): Promise<Photo[]> {
-  const [media, photoMeta]: [Awaited<ReturnType<typeof listMedia>>, PhotosMetadata] =
-    await Promise.all([
-      listMedia(trip),
-      trip ? getPhotosMetadata(trip) : Promise.resolve({} as PhotosMetadata),
-    ]);
+  const [media, photoMeta]: [
+    Awaited<ReturnType<typeof listMediaCached>>,
+    PhotosMetadata,
+  ] = await Promise.all([
+    listMediaCached(trip),
+    trip ? getPhotosMetadata(trip) : Promise.resolve({} as PhotosMetadata),
+  ]);
 
   return media.map((item) => {
     const meta = lookupPhotoMeta(photoMeta, item.name);
@@ -543,6 +548,7 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
       delete meta[filename];
     }
     currentName = input.newName;
+    invalidateMediaListCache(input.trip);
   }
 
   if (input.caption !== undefined) {
@@ -624,6 +630,7 @@ export async function deletePhoto(path: string): Promise<void> {
 
   const trip = path.slice(0, slash);
   const filename = path.slice(slash + 1);
+  invalidateMediaListCache(trip);
   const meta = await getPhotosMetadata(trip);
   if (meta[filename]) {
     delete meta[filename];
@@ -633,6 +640,7 @@ export async function deletePhoto(path: string): Promise<void> {
 
 export async function deleteTrip(tripName: string): Promise<void> {
   await deleteMediaPrefix(tripName);
+  invalidateMediaListCache(tripName);
 
   const items = await listContents(tripName);
   const files = items.filter((item) => item.type === "file");

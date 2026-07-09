@@ -14,6 +14,10 @@ import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
 import { formatMediaCount } from "@/lib/media-count";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
+import {
+  getCachedTripPage,
+  setCachedTripPage,
+} from "@/lib/trip-page-cache";
 import type { Photo, Trip } from "@/lib/types";
 
 export default function TripPage() {
@@ -30,8 +34,20 @@ export default function TripPage() {
   const confirm = useConfirm();
   const router = useRouter();
 
-  const fetchTrip = useCallback(async () => {
-    setLoading(true);
+  const fetchTrip = useCallback(async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
+    const cached = getCachedTripPage(tripName);
+
+    if (!background) {
+      if (cached) {
+        setTrip(cached.trip);
+        setPhotos(cached.photos);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    }
+
     setError(null);
     try {
       const [tripRes, photosRes] = await Promise.all([
@@ -48,8 +64,11 @@ export default function TripPage() {
         throw new Error(data.error ?? `HTTP ${photosRes.status}`);
       }
 
-      setTrip(await tripRes.json());
-      setPhotos(await photosRes.json());
+      const tripData = (await tripRes.json()) as Trip;
+      const photosData = (await photosRes.json()) as Photo[];
+      setTrip(tripData);
+      setPhotos(photosData);
+      setCachedTripPage(tripName, tripData, photosData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load trip");
     } finally {
@@ -58,11 +77,21 @@ export default function TripPage() {
   }, [tripName]);
 
   useEffect(() => {
-    fetchTrip();
-  }, [fetchTrip]);
+    const cached = getCachedTripPage(tripName);
+    if (cached) {
+      setTrip(cached.trip);
+      setPhotos(cached.photos);
+      setLoading(false);
+      void fetchTrip({ background: true });
+      return;
+    }
+    void fetchTrip();
+  }, [fetchTrip, tripName]);
 
   useEffect(() => {
-    const refresh = () => fetchTrip();
+    const refresh = () => {
+      void fetchTrip({ background: true });
+    };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchTrip]);
@@ -160,7 +189,9 @@ export default function TripPage() {
               <p className="text-sm">{error}</p>
               <button
                 type="button"
-                onClick={fetchTrip}
+                onClick={() => {
+                  void fetchTrip();
+                }}
                 className="mt-2 text-sm underline"
               >
                 Retry
@@ -177,7 +208,9 @@ export default function TripPage() {
             isAdmin={isAdmin}
             coverPhoto={trip?.coverPhoto ?? null}
             coverUrl={trip?.coverUrl ?? null}
-            onPhotoChanged={fetchTrip}
+            onPhotoChanged={() => {
+              void fetchTrip({ background: true });
+            }}
           />
         </section>
         </main>

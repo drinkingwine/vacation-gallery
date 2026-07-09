@@ -23,6 +23,7 @@ import {
   loadGalleryHome,
 } from "@/lib/gallery-home-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { invalidateTripPageCache } from "@/lib/trip-page-cache";
 import type { Trip } from "@/lib/types";
 
 const UploadModal = dynamic(
@@ -111,6 +112,7 @@ export function AppShell({ children }: AppShellProps) {
             }}
             onUploadComplete={() => {
               invalidateGalleryHomeCache();
+              invalidateTripPageCache();
               invalidateMapData();
               refreshGallery();
               prefetchMapData();
