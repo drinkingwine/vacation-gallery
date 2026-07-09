@@ -61,8 +61,6 @@ export async function GalleryThingContent({
             label: `${sorted.length} ${sorted.length === 1 ? "photo" : "photos"}`,
           },
         ]}
-        backHref="/things"
-        backLabel="All things"
       />
 
       <GalleryWithFilter

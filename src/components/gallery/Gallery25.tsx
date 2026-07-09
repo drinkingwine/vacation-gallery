@@ -68,7 +68,6 @@ const filters = [
   { value: "all", key: "all" },
   { value: "photo", key: "photo" },
   { value: "video", key: "video" },
-  { value: "timeline", key: "timeline" },
 ] as const;
 
 type FilterValue = (typeof filters)[number]["value"];
@@ -141,14 +140,6 @@ const getImageLayoutSize = (
       ? item.height
       : Math.max(1, Math.round(width / ratio));
   return { width, height };
-};
-
-const resolveTimelineTimestamp = (item: GalleryItem) => {
-  const value = item.dateShot ?? item.createdAt;
-  if (!value) return 0;
-  const parsed = new Date(value).getTime();
-  if (Number.isNaN(parsed)) return 0;
-  return parsed;
 };
 
 export function Gallery25({
@@ -290,26 +281,11 @@ export function Gallery25({
 
   const navigationItems = viewerItems ?? items;
 
-  const timelineItems = useMemo(
-    () =>
-      items
-        .map((item, index) => ({ item, index }))
-        .sort((a, b) => {
-          const timeA = resolveTimelineTimestamp(a.item);
-          const timeB = resolveTimelineTimestamp(b.item);
-          if (timeA === timeB) return a.index - b.index;
-          return timeB - timeA;
-        })
-        .map((entry) => entry.item),
-    [items],
-  );
-
   const visibleItems = useMemo(() => {
-    if (filter === "timeline") return timelineItems;
     if (filter === "all") return items;
     if (filter === "video") return items.filter((item) => item.type === "video");
     return items.filter((item) => item.type === filter);
-  }, [filter, items, timelineItems]);
+  }, [filter, items]);
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
   const displayColumnCount = Math.min(
@@ -341,17 +317,6 @@ export function Gallery25({
       : galleryCopy.grid.summary(count);
   }, [filter, tripTitle, visibleItems.length]);
   const modalVisibleItems = useMemo(() => {
-    if (filter === "timeline") {
-      return navigationItems
-        .map((item, index) => ({ item, index }))
-        .sort((a, b) => {
-          const timeA = resolveTimelineTimestamp(a.item);
-          const timeB = resolveTimelineTimestamp(b.item);
-          if (timeA === timeB) return a.index - b.index;
-          return timeB - timeA;
-        })
-        .map((entry) => entry.item);
-    }
     if (filter === "all") return navigationItems;
     if (filter === "video") {
       return navigationItems.filter((item) => item.type === "video");

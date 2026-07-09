@@ -2,7 +2,7 @@ export const galleryCopy = {
   eyebrow: "Gallery / Archive",
   title: "Gallery",
   description:
-    "Browse the archive by timeline or media type and trace the light of each shoot.",
+    "Browse the archive by media type and trace the light of each shoot.",
   scrollMore: "Scroll to load more",
   loadingMore: "Loading more...",
   allLoaded: "All content loaded",
@@ -39,7 +39,6 @@ export const galleryCopy = {
     all: "All",
     photo: "Photo",
     video: "Video",
-    timeline: "Timeline",
     newest: "Newest First",
     oldest: "Oldest First",
   },

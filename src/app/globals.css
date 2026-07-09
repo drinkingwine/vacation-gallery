@@ -94,25 +94,38 @@
 html {
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
+  min-height: 100%;
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   overflow-x: hidden;
+  min-height: 100%;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background: linear-gradient(
     145deg,
     #ffe4e6 0%,
     #e0f2fe 42%,
     #fef3c7 100%
   );
-  background-attachment: fixed;
-  color: hsl(var(--foreground));
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background-repeat: no-repeat;
 }
 
-.dark body {
+.dark body::before {
   background: linear-gradient(
     145deg,
     #1e1b4b 0%,

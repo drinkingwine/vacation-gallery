@@ -67,8 +67,6 @@ export async function GalleryPlaceContent({
         subtitle={
           place.tripCount > 1 ? place.tripTitles.join(" · ") : undefined
         }
-        backHref="/places"
-        backLabel="All places"
       />
 
       <GalleryWithFilter

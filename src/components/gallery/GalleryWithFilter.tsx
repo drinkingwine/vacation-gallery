@@ -215,66 +215,68 @@ export function GalleryWithFilter({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <Tabs
-          value={mediaType}
-          onValueChange={(value) => setMediaType(value as MediaType)}
-        >
-          <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-full border border-zinc-200 bg-white/50 p-1 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50 sm:w-auto">
-            {mediaTypeFilters.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="shrink-0 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-white/10 sm:px-4 sm:text-xs sm:tracking-[0.3em]"
-              >
-                {galleryCopy.filters[tab.key]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-          <div className="relative w-full md:w-[320px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder={galleryCopy.searchPlaceholder}
-              aria-label={galleryCopy.searchAria}
-              className="h-9 rounded-full border-zinc-200 bg-white/70 pl-9 pr-9 text-sm dark:border-zinc-800 dark:bg-zinc-900/70"
-            />
-            {keyword ? (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="absolute right-1 top-1 h-7 w-7 rounded-full"
-                aria-label={galleryCopy.clearSearch}
-                onClick={() => setKeyword("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            ) : null}
-          </div>
-
-          <Select
-            value={sortOrder}
-            onValueChange={(value) => setSortOrder(value as SortOrder)}
+      {!isScoped ? (
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <Tabs
+            value={mediaType}
+            onValueChange={(value) => setMediaType(value as MediaType)}
           >
-            <SelectTrigger className="h-9 w-auto min-w-[120px] rounded-full border border-zinc-200 bg-white/50 px-4 text-xs backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest" className="text-xs">
-                {galleryCopy.filters.newest}
-              </SelectItem>
-              <SelectItem value="oldest" className="text-xs">
-                {galleryCopy.filters.oldest}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-full border border-zinc-200 bg-white/50 p-1 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50 sm:w-auto">
+              {mediaTypeFilters.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="shrink-0 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-white/10 sm:px-4 sm:text-xs sm:tracking-[0.3em]"
+                >
+                  {galleryCopy.filters[tab.key]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-[320px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Input
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder={galleryCopy.searchPlaceholder}
+                aria-label={galleryCopy.searchAria}
+                className="h-9 rounded-full border-zinc-200 bg-white/70 pl-9 pr-9 text-sm dark:border-zinc-800 dark:bg-zinc-900/70"
+              />
+              {keyword ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-1 top-1 h-7 w-7 rounded-full"
+                  aria-label={galleryCopy.clearSearch}
+                  onClick={() => setKeyword("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              ) : null}
+            </div>
+
+            <Select
+              value={sortOrder}
+              onValueChange={(value) => setSortOrder(value as SortOrder)}
+            >
+              <SelectTrigger className="h-9 w-auto min-w-[120px] rounded-full border border-zinc-200 bg-white/50 px-4 text-xs backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest" className="text-xs">
+                  {galleryCopy.filters.newest}
+                </SelectItem>
+                <SelectItem value="oldest" className="text-xs">
+                  {galleryCopy.filters.oldest}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {isFiltering ? (
         <GallerySkeleton />
