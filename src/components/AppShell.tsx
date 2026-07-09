@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   createContext,
   useCallback,
@@ -14,7 +15,6 @@ import { AppFooter } from "@/components/AppFooter";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { FooterConfigProvider } from "@/components/footer-config";
 import { NavbarConfigProvider } from "@/components/navbar-config";
-import { UploadModal } from "@/components/UploadModal";
 import { GALLERY_HOME_READY_EVENT, GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
 import { invalidateMapData, prefetchMapData } from "@/lib/map-data-cache";
 import {
@@ -24,6 +24,12 @@ import {
 } from "@/lib/gallery-home-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import type { Trip } from "@/lib/types";
+
+const UploadModal = dynamic(
+  () =>
+    import("@/components/UploadModal").then((mod) => mod.UploadModal),
+  { ssr: false },
+);
 
 type UploadControlContextValue = {
   openUpload: (defaultTrip?: string) => void;

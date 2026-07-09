@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { buildGalleryItem } from "@/lib/gallery";
-import { parsePhotoTimestamp } from "@/lib/photo-exif";
+import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
 

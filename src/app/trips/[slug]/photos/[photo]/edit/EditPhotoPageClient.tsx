@@ -19,7 +19,7 @@ import { galleryCopy } from "@/lib/gallery-copy";
 import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
-} from "@/lib/photo-exif";
+} from "@/lib/photo-timestamp";
 import {
   FAVORITE_TAG,
   formatTagLabel,

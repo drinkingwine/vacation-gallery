@@ -9,7 +9,7 @@ import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import type { ThingSummary } from "@/lib/things-gallery";
 
-const STORAGE_KEY = "gallery-home-cache-v2";
+const STORAGE_KEY = "gallery-home-cache-v3";
 
 let cache: GalleryHomeData | null = null;
 let inflight: Promise<GalleryHomeData> | null = null;

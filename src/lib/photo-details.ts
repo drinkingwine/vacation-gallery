@@ -1,4 +1,4 @@
-import { parsePhotoTimestamp } from "@/lib/photo-exif";
+import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
 
 export function formatPhotoFileSize(bytes?: number | null) {
   if (typeof bytes !== "number") return null;
