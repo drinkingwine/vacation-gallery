@@ -23,7 +23,7 @@ import {
 import { galleryCopy } from "@/lib/gallery-copy";
 import { downloadGalleryItem } from "@/lib/gallery-download";
 import type { GalleryItem } from "@/lib/gallery";
-import { getItemDisplayTags } from "@/lib/gallery";
+import { getItemDisplayTags, itemHasAssignedTags } from "@/lib/gallery";
 import { cn } from "@/lib/utils";
 
 const PhotoDetailModal = dynamic(
@@ -96,6 +96,17 @@ const readStoredBoolean = (key: string, fallback = false) => {
   if (stored === "true") return true;
   if (stored === "false") return false;
   return fallback;
+};
+
+const UNTAGGED_ONLY_STORAGE = "gallery25-untagged-only";
+
+const readStoredUntaggedOnly = () => {
+  if (typeof window === "undefined") return false;
+  const stored = window.localStorage.getItem(UNTAGGED_ONLY_STORAGE);
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  const legacy = window.localStorage.getItem("gallery25-untagged-filter");
+  return legacy === "untagged";
 };
 
 const createBalancedColumns = (
@@ -209,6 +220,7 @@ export function Gallery25({
   const [downloadsVisible, setDownloadsVisible] = useState(() =>
     readStoredBoolean("gallery25-downloads-visible", false),
   );
+  const [untaggedOnly, setUntaggedOnly] = useState(() => readStoredUntaggedOnly());
   const [columnCount, setColumnCount] = useState(() =>
     readStoredNumber("gallery25-columns", 4),
   );
@@ -282,10 +294,16 @@ export function Gallery25({
   const navigationItems = viewerItems ?? items;
 
   const visibleItems = useMemo(() => {
-    if (filter === "all") return items;
-    if (filter === "video") return items.filter((item) => item.type === "video");
-    return items.filter((item) => item.type === filter);
-  }, [filter, items]);
+    let filtered = items;
+    if (filter === "video") {
+      filtered = items.filter((item) => item.type === "video");
+    } else     if (filter !== "all") {
+      filtered = items.filter((item) => item.type === filter);
+    }
+    return untaggedOnly
+      ? filtered.filter((item) => !itemHasAssignedTags(item))
+      : filtered;
+  }, [filter, untaggedOnly, items]);
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
   const displayColumnCount = Math.min(
@@ -317,12 +335,16 @@ export function Gallery25({
       : galleryCopy.grid.summary(count);
   }, [filter, tripTitle, visibleItems.length]);
   const modalVisibleItems = useMemo(() => {
-    if (filter === "all") return navigationItems;
+    let filtered = navigationItems;
     if (filter === "video") {
-      return navigationItems.filter((item) => item.type === "video");
+      filtered = navigationItems.filter((item) => item.type === "video");
+    } else     if (filter !== "all") {
+      filtered = navigationItems.filter((item) => item.type === filter);
     }
-    return navigationItems.filter((item) => item.type === filter);
-  }, [filter, navigationItems]);
+    return untaggedOnly
+      ? filtered.filter((item) => !itemHasAssignedTags(item))
+      : filtered;
+  }, [filter, untaggedOnly, navigationItems]);
 
   const modalSelectedIndex = useMemo(() => {
     if (!selectedId) return -1;
@@ -356,6 +378,10 @@ export function Gallery25({
       String(downloadsVisible),
     );
   }, [downloadsVisible]);
+
+  useEffect(() => {
+    window.localStorage.setItem(UNTAGGED_ONLY_STORAGE, String(untaggedOnly));
+  }, [untaggedOnly]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -589,6 +615,20 @@ export function Gallery25({
                 {tagsVisible
                   ? galleryCopy.grid.tags.off
                   : galleryCopy.grid.tags.on}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUntaggedOnly((active) => !active)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
+                  untaggedOnly
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {untaggedOnly
+                  ? galleryCopy.grid.untagged.all
+                  : galleryCopy.grid.untagged.only}
               </button>
               <button
                 type="button"

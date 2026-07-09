@@ -31,9 +31,15 @@ import {
   PRESET_PHOTO_TAGS,
 } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const editCardClass =
-  "overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
+  "rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
+
+const editPhotoCardClass = `${editCardClass} overflow-hidden`;
+
+const editTagsCardClass =
+  "lg:sticky lg:top-28 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto custom-scrollbar";
 
 export default function EditPhotoPageClient() {
   const params = useParams();
@@ -281,7 +287,7 @@ export default function EditPhotoPageClient() {
   return (
     <div className="trip-page-shell flex flex-1 flex-col">
         <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-6xl space-y-6">
           <header className="space-y-1">
             <h1 className="font-serif text-3xl font-semibold text-zinc-900 dark:text-white">
               Edit photo
@@ -314,8 +320,8 @@ export default function EditPhotoPageClient() {
                 </div>
               )}
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className={editCardClass}>
+              <div className="grid items-start gap-6 lg:grid-cols-3">
+                <div className={editPhotoCardClass}>
                   <div className="space-y-6 p-5">
                     {previewUrl && (
                       <div className="overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-950">
@@ -418,8 +424,14 @@ export default function EditPhotoPageClient() {
                   </div>
                 </div>
 
-                <div className={editCardClass}>
-                  <div className="space-y-5 p-5">
+                <div
+                  className={cn(
+                    editCardClass,
+                    editTagsCardClass,
+                    "lg:col-span-2",
+                  )}
+                >
+                  <div className="space-y-5 p-5 sm:p-6">
                     <header className="space-y-1">
                       <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
                         Tags

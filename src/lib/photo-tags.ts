@@ -19,7 +19,7 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
   },
   {
     label: "Things",
-    tags: ["shark bait", "fish", "cigars", "drinks", "pools", "critters", "boats", "earth", "plants", "food"] as const,
+    tags: ["shark bait", "fish", "marine life", "cigars", "drinks", "pools", "critters", "birds", "boats", "earth", "plants", "food"] as const,
   },
 ] as const;
 
@@ -85,6 +85,8 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-cyan-300 bg-cyan-100 text-cyan-900 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-100",
   critters:
     "border-lime-300 bg-lime-100 text-lime-900 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-100",
+  birds:
+    "border-yellow-400 bg-yellow-100 text-yellow-950 dark:border-yellow-500/40 dark:bg-yellow-500/15 dark:text-yellow-100",
   boats:
     "border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-100",
   earth:
@@ -93,6 +95,8 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-green-400 bg-green-100 text-green-950 dark:border-green-500/40 dark:bg-green-500/15 dark:text-green-100",
   food:
     "border-orange-300 bg-orange-50 text-orange-950 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-100",
+  "marine life":
+    "border-blue-400 bg-blue-100 text-blue-950 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-100",
 };
 
 const FALLBACK_PRESET_TAG_CLASSES =

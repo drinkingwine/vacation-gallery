@@ -73,6 +73,12 @@ export function getItemDisplayTags(item: GalleryItem, max = 4) {
     .slice(0, max);
 }
 
+export function itemHasAssignedTags(item: GalleryItem) {
+  return (item.tags ?? []).some(
+    (tag) => tag.toLowerCase() !== FAVORITE_TAG,
+  );
+}
+
 export function findPhotoByName(photos: Photo[], photoName: string) {
   const decoded = decodeURIComponent(photoName);
   return (

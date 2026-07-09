@@ -11,7 +11,8 @@ import type { GalleryHomeData } from "@/lib/gallery-home-data";
 export type GalleryHomeSlice = "trips" | "people" | "places" | "things";
 
 type UseGalleryHomeSliceOptions = {
-  fresh?: boolean;
+  /** When true, bypass cache and refetch from the API. */
+  force?: boolean;
 };
 
 export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
@@ -20,10 +21,13 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
 ) {
   type Value = GalleryHomeData[T];
 
+  const force = options?.force ?? false;
   const [hydrated, setHydrated] = useState(false);
-  const [value, setValue] = useState<Value>(() => [] as Value);
-  const [ready, setReady] = useState(false);
-  const fresh = options?.fresh ?? false;
+  const [value, setValue] = useState<Value>(() => {
+    const cached = getCachedGalleryHome();
+    return (cached?.[slice] ?? []) as Value;
+  });
+  const [ready, setReady] = useState(() => Boolean(getCachedGalleryHome()));
 
   const sync = useCallback(() => {
     const cached = getCachedGalleryHome();
@@ -37,14 +41,15 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
 
   useEffect(() => {
     setHydrated(true);
-    void loadGalleryHome({ force: fresh }).finally(() => sync());
+    sync();
+    void loadGalleryHome({ force }).finally(() => sync());
     window.addEventListener(GALLERY_HOME_READY_EVENT, sync);
     window.addEventListener(GALLERY_REFRESH_EVENT, sync);
     return () => {
       window.removeEventListener(GALLERY_HOME_READY_EVENT, sync);
       window.removeEventListener(GALLERY_REFRESH_EVENT, sync);
     };
-  }, [fresh, sync]);
+  }, [force, sync]);
 
   return {
     value: hydrated && ready ? value : ([] as Value),

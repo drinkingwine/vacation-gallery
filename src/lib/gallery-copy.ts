@@ -63,6 +63,10 @@ export const galleryCopy = {
       on: "Download",
       off: "Hide downloads",
     },
+    untagged: {
+      only: "Untagged only",
+      all: "Show all",
+    },
     modal: {
       closeAria: "Close",
       keyboardShortcuts: "Keyboard Shortcuts",

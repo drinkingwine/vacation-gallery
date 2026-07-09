@@ -6,7 +6,7 @@ import { galleryCopy } from "@/lib/gallery-copy";
 import { cn } from "@/lib/utils";
 
 export function GalleryPeopleSelection() {
-  const { value: people, loading } = useGalleryHomeSlice("people", { fresh: true });
+  const { value: people, loading } = useGalleryHomeSlice("people");
 
   return (
     <div className="gallery-page-shell flex flex-1 flex-col">

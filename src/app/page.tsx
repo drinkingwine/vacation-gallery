@@ -43,7 +43,6 @@ export default function Home() {
 
   useEffect(() => {
     const refresh = () => {
-      invalidateGalleryHomeCache();
       void loadHome();
     };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);

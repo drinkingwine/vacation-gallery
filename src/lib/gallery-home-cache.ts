@@ -5,30 +5,33 @@ import {
 } from "@/lib/gallery-home-data";
 import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
-import type { PersonSummary } from "@/lib/people-gallery";
-import type { PlaceSummary } from "@/lib/places-gallery";
-import type { ThingSummary } from "@/lib/things-gallery";
 
-const STORAGE_KEY = "gallery-home-cache-v3";
+const STORAGE_KEY = "gallery-home-cache-v4";
 
-let cache: GalleryHomeData | null = null;
+type GalleryHomeCacheEntry = {
+  trips: Trip[];
+  photos: GalleryHomePhoto[];
+  views: GalleryHomeData;
+};
+
+let cache: GalleryHomeCacheEntry | null = null;
 let inflight: Promise<GalleryHomeData> | null = null;
 
-function readStoredCache(): GalleryHomeData | null {
+function readStoredCache(): GalleryHomeCacheEntry | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as GalleryHomeData;
+    return JSON.parse(raw) as GalleryHomeCacheEntry;
   } catch {
     return null;
   }
 }
 
-function writeStoredCache(data: GalleryHomeData): void {
+function writeStoredCache(entry: GalleryHomeCacheEntry): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(entry));
   } catch {
     // Ignore quota or serialization errors.
   }
@@ -39,36 +42,60 @@ function clearStoredCache(): void {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
-function hydrateCacheFromStorage(): GalleryHomeData | null {
+function hydrateCacheFromStorage(): GalleryHomeCacheEntry | null {
   if (cache) return cache;
   cache = readStoredCache();
   return cache;
 }
 
+function buildCacheEntry(
+  trips: Trip[],
+  photos: GalleryHomePhoto[],
+): GalleryHomeCacheEntry {
+  return {
+    trips,
+    photos,
+    views: buildGalleryHomeViews(trips, photos),
+  };
+}
+
+function commitCache(entry: GalleryHomeCacheEntry): GalleryHomeData {
+  cache = entry;
+  writeStoredCache(entry);
+  notifyGalleryHomeReady();
+  return entry.views;
+}
+
 export function getCachedGalleryHome(): GalleryHomeData | null {
-  return hydrateCacheFromStorage();
+  return hydrateCacheFromStorage()?.views ?? null;
 }
 
 export function getCachedTrips(): Trip[] | null {
-  return cache?.trips ?? null;
+  return getCachedGalleryHome()?.trips ?? null;
 }
 
-export function getCachedPeople(): PersonSummary[] | null {
-  return cache?.people ?? null;
+export function getCachedPeople() {
+  return getCachedGalleryHome()?.people ?? null;
 }
 
-export function getCachedPlaces(): PlaceSummary[] | null {
-  return cache?.places ?? null;
+export function getCachedPlaces() {
+  return getCachedGalleryHome()?.places ?? null;
 }
 
-export function getCachedThings(): ThingSummary[] | null {
-  return cache?.things ?? null;
+export function getCachedThings() {
+  return getCachedGalleryHome()?.things ?? null;
 }
 
 export function invalidateGalleryHomeCache(): void {
   cache = null;
   inflight = null;
   clearStoredCache();
+}
+
+export function rerandomizeGalleryHomeCovers(): GalleryHomeData | null {
+  const entry = hydrateCacheFromStorage();
+  if (!entry) return null;
+  return commitCache(buildCacheEntry(entry.trips, entry.photos));
 }
 
 async function fetchGalleryHome(): Promise<GalleryHomeData> {
@@ -83,11 +110,7 @@ async function fetchGalleryHome(): Promise<GalleryHomeData> {
     photos: GalleryHomePhoto[];
   };
 
-  const data = buildGalleryHomeViews(payload.trips, payload.photos);
-  cache = data;
-  writeStoredCache(data);
-  notifyGalleryHomeReady();
-  return data;
+  return commitCache(buildCacheEntry(payload.trips, payload.photos));
 }
 
 export async function loadGalleryHome(options?: {
@@ -99,7 +122,7 @@ export async function loadGalleryHome(options?: {
     clearStoredCache();
   } else {
     const existing = hydrateCacheFromStorage();
-    if (existing) return existing;
+    if (existing) return existing.views;
   }
 
   if (inflight) return inflight;
@@ -116,33 +139,30 @@ export async function loadTrips(options?: { force?: boolean }): Promise<Trip[]> 
   return data.trips;
 }
 
-export async function loadPeople(options?: {
-  force?: boolean;
-}): Promise<PersonSummary[]> {
+export async function loadPeople(options?: { force?: boolean }) {
   const data = await loadGalleryHome(options);
   return data.people;
 }
 
-export async function loadPlaces(options?: {
-  force?: boolean;
-}): Promise<PlaceSummary[]> {
+export async function loadPlaces(options?: { force?: boolean }) {
   const data = await loadGalleryHome(options);
   return data.places;
 }
 
-export async function loadThings(options?: {
-  force?: boolean;
-}): Promise<ThingSummary[]> {
+export async function loadThings(options?: { force?: boolean }) {
   const data = await loadGalleryHome(options);
   return data.things;
 }
 
+/** Re-roll cover images from cached photos, or fetch if no cache yet. */
 export async function refreshGalleryHomeRandomized(): Promise<GalleryHomeData> {
-  return loadGalleryHome({ force: true });
+  const rerandomized = rerandomizeGalleryHomeCovers();
+  if (rerandomized) return rerandomized;
+  return loadGalleryHome();
 }
 
 export function prefetchGalleryHome(): void {
-  if (cache || inflight) return;
+  if (hydrateCacheFromStorage() || inflight) return;
   void loadGalleryHome();
 }
 
