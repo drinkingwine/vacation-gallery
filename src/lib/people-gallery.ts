@@ -28,7 +28,9 @@ export function buildPeopleGalleryList(photos: GalleryPhoto[]): PersonSummary[] 
       photoCount: matches.length,
       coverUrl: coverPhoto?.downloadUrl ?? null,
     };
-  }).sort((a, b) => a.label.localeCompare(b.label));
+  })
+    .filter((person) => person.photoCount > 0)
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export function personGalleryPath(tag: string) {
