@@ -82,9 +82,15 @@ export function GalleryWithFilter({
   const [isFiltering, startTransition] = useTransition();
 
   const debouncedKeyword = useDebounce(keyword, 280);
-  const lastFilterKeyRef = useRef(
-    `all|newest|${initialKeyword.trim()}|${tag}|${place}|${trip}`,
-  );
+  const lastFilterKeyRef = useRef<string | null>(null);
+  if (lastFilterKeyRef.current === null) {
+    const mediaParam = searchParams.get("mediaType");
+    const initialMediaType =
+      mediaParam === "photo" || mediaParam === "video" ? mediaParam : "all";
+    const initialSortOrder =
+      searchParams.get("sortOrder") === "oldest" ? "oldest" : "newest";
+    lastFilterKeyRef.current = `${initialMediaType}|${initialSortOrder}|${initialKeyword.trim()}|${tag}|${place}|${trip}`;
+  }
 
   const replaceQuery = useCallback(
     (patch: Record<string, string | null>) => {
@@ -110,6 +116,12 @@ export function GalleryWithFilter({
     () => debouncedKeyword.trim(),
     [debouncedKeyword],
   );
+
+  useEffect(() => {
+    setItems(initialItems);
+    setViewerItems(initialViewerItems ?? initialItems);
+    setHasNext(initialHasNext);
+  }, [initialHasNext, initialItems, initialViewerItems, tag, place, trip]);
 
   const applyFilter = useCallback(
     async (
@@ -184,7 +196,7 @@ export function GalleryWithFilter({
     if (lastFilterKeyRef.current === filterKey) return;
     lastFilterKeyRef.current = filterKey;
     void applyFilter(mediaType, sortOrder, normalizedKeyword);
-  }, [applyFilter, mediaType, normalizedKeyword, sortOrder]);
+  }, [applyFilter, mediaType, normalizedKeyword, place, sortOrder, tag, trip]);
 
   useEffect(() => {
     const refresh = () => {
@@ -192,7 +204,7 @@ export function GalleryWithFilter({
     };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [applyFilter, mediaType, normalizedKeyword, sortOrder]);
+  }, [applyFilter, mediaType, normalizedKeyword, place, sortOrder, tag, trip]);
 
   useEffect(() => {
     setSelectedId(searchParams.get("media"));

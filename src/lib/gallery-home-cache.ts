@@ -6,7 +6,7 @@ import {
 import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
 
-const STORAGE_KEY = "gallery-home-cache-v4";
+const STORAGE_KEY = "gallery-home-cache-v5";
 
 type GalleryHomeCacheEntry = {
   trips: Trip[];
@@ -68,6 +68,10 @@ function commitCache(entry: GalleryHomeCacheEntry): GalleryHomeData {
 
 export function getCachedGalleryHome(): GalleryHomeData | null {
   return hydrateCacheFromStorage()?.views ?? null;
+}
+
+export function getCachedGalleryHomePhotos(): GalleryHomePhoto[] | null {
+  return hydrateCacheFromStorage()?.photos ?? null;
 }
 
 export function getCachedTrips(): Trip[] | null {

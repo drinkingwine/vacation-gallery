@@ -91,7 +91,7 @@ export default function Home() {
   return (
     <>
       <main className="flex-1 overflow-x-hidden">
-        <HomeHero primaryHref="/gallery" />
+        <HomeHero />
 
         {error && (
           <div className="mx-auto page-container px-0 pt-8">

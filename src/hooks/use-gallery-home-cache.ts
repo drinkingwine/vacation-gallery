@@ -22,7 +22,6 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   type Value = GalleryHomeData[T];
 
   const force = options?.force ?? false;
-  const [hydrated, setHydrated] = useState(false);
   const [value, setValue] = useState<Value>(() => {
     const cached = getCachedGalleryHome();
     return (cached?.[slice] ?? []) as Value;
@@ -40,9 +39,11 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   }, [slice]);
 
   useEffect(() => {
-    setHydrated(true);
     sync();
-    void loadGalleryHome({ force }).finally(() => sync());
+    void loadGalleryHome({ force }).finally(() => {
+      sync();
+      setReady(true);
+    });
     window.addEventListener(GALLERY_HOME_READY_EVENT, sync);
     window.addEventListener(GALLERY_REFRESH_EVENT, sync);
     return () => {
@@ -52,7 +53,7 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   }, [force, sync]);
 
   return {
-    value: hydrated && ready ? value : ([] as Value),
-    loading: !hydrated || !ready,
+    value,
+    loading: !ready && value.length === 0,
   };
 }

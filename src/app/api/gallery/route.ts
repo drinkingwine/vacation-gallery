@@ -21,9 +21,11 @@ export async function GET(req: NextRequest) {
   try {
     const params = req.nextUrl.searchParams;
     const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1);
+    const requestedPageSize =
+      Number.parseInt(params.get("pageSize") ?? "24", 10) || 24;
     const pageSize = Math.min(
-      48,
-      Math.max(1, Number.parseInt(params.get("pageSize") ?? "24", 10) || 24),
+      10_000,
+      Math.max(1, requestedPageSize),
     );
     const keyword = params.get("q") ?? "";
     const tag = params.get("tag") ?? "";

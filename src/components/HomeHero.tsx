@@ -1,86 +1,109 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useViewportWidth } from "@/hooks/use-viewport-width";
+import { useCallback, useEffect, useState } from "react";
+import {
+  GALLERY_HOME_READY_EVENT,
+  GALLERY_REFRESH_EVENT,
+} from "@/lib/gallery-admin";
+import {
+  getCachedGalleryHomePhotos,
+  loadGalleryHome,
+} from "@/lib/gallery-home-cache";
+import { buildTaggedHeroSlides, type HomeHeroSlide } from "@/lib/hero-images";
 import { cn } from "@/lib/utils";
 
-const HERO_IMAGES_DESKTOP = [
-  "/hero-desktop.png",
-  "/hero1.jpg",
-  "/hero2.jpg",
-  "/hero3.jpg",
-  "/hero4.jpg",
-];
-
-const HERO_IMAGES_MOBILE = [
-  "/hero-mobile.png",
-  "/hero1.jpg",
-  "/hero2.jpg",
-  "/hero3.jpg",
-  "/hero4.jpg",
-];
-
-type HomeHeroProps = {
-  primaryHref?: string;
-};
-
-export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
+export function HomeHero() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const viewportWidth = useViewportWidth();
+  const [heroSlides, setHeroSlides] = useState<HomeHeroSlide[]>([]);
 
-  const heroImages = useMemo(() => {
-    if (viewportWidth > 0 && viewportWidth < 640) {
-      return HERO_IMAGES_MOBILE;
-    }
-    return HERO_IMAGES_DESKTOP;
-  }, [viewportWidth]);
+  const syncHeroSlides = useCallback(() => {
+    const photos = getCachedGalleryHomePhotos() ?? [];
+    setHeroSlides(buildTaggedHeroSlides(photos));
+  }, []);
 
-  const safeIndex = heroImages.length ? activeIndex % heroImages.length : 0;
-  const canNavigate = heroImages.length > 1;
+  useEffect(() => {
+    syncHeroSlides();
+    void loadGalleryHome().finally(syncHeroSlides);
+    window.addEventListener(GALLERY_HOME_READY_EVENT, syncHeroSlides);
+    window.addEventListener(GALLERY_REFRESH_EVENT, syncHeroSlides);
+    return () => {
+      window.removeEventListener(GALLERY_HOME_READY_EVENT, syncHeroSlides);
+      window.removeEventListener(GALLERY_REFRESH_EVENT, syncHeroSlides);
+    };
+  }, [syncHeroSlides]);
+
+  const safeIndex = heroSlides.length ? activeIndex % heroSlides.length : 0;
+  const activeSlide = heroSlides[safeIndex] ?? null;
+  const canNavigate = heroSlides.length > 1;
+  const metaLine = [activeSlide?.location, activeSlide?.date]
+    .filter(Boolean)
+    .join(" · ");
 
   const scrollPrev = () => {
-    setActiveIndex((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+    setActiveIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
   };
 
   const scrollNext = () => {
-    setActiveIndex((prev) => (prev + 1) % heroImages.length);
+    setActiveIndex((prev) => (prev + 1) % heroSlides.length);
   };
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [heroImages]);
+  }, [heroSlides]);
 
   useEffect(() => {
-    if (heroImages.length <= 1) return;
+    if (heroSlides.length <= 1) return;
     const timer = window.setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % heroImages.length);
+      setActiveIndex((prev) => (prev + 1) % heroSlides.length);
     }, 6500);
     return () => window.clearInterval(timer);
-  }, [heroImages.length]);
-
-  const heroPrimaryClass =
-    "inline-flex h-11 items-center rounded-full border border-white/20 bg-white/10 px-8 text-sm font-medium text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20";
+  }, [heroSlides.length]);
 
   return (
-    <section className="front-fade-up group relative w-full overflow-hidden bg-zinc-950">
+    <section className="front-fade-up group relative w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
       <div className="relative min-h-[100svh] w-full">
-        {heroImages.map((src, index) => (
+        {heroSlides.map((slide, index) => (
           <div
-            key={src}
+            key={`${slide.src}-${index}`}
             className={cn(
-              "absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity md:bg-fixed",
+              "absolute inset-0 transition-opacity",
               index === safeIndex ? "opacity-100" : "opacity-0",
             )}
-            style={{
-              backgroundImage: `url(${src})`,
-              transitionDuration: "1200ms",
-            }}
-          />
+            style={{ transitionDuration: "1200ms" }}
+          >
+            <div
+              aria-hidden
+              className="absolute inset-0 scale-110 bg-cover bg-center blur-3xl brightness-75"
+              style={{ backgroundImage: `url(${slide.src})` }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slide.src}
+              alt=""
+              className="absolute inset-0 h-full w-full object-contain object-center"
+              loading={index === 0 ? "eager" : "lazy"}
+              decoding="async"
+            />
+          </div>
         ))}
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-black/45" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent" />
+        {activeSlide ? (
+          <>
+            <div className="pointer-events-none absolute inset-0 z-[15] bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 z-20 flex items-end px-4 pb-20 pt-24 sm:px-8 sm:pb-24 md:px-12">
+              <div className="max-w-3xl space-y-2 text-white">
+                <h2 className="font-serif text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
+                  {activeSlide.tripTitle}
+                </h2>
+                {metaLine ? (
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/70 sm:text-sm">
+                    {metaLine}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </>
+        ) : null}
 
         {canNavigate && (
           <div className="pointer-events-none absolute inset-0 z-10">
@@ -113,7 +136,7 @@ export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
 
         {canNavigate && (
           <div className="absolute bottom-6 right-4 z-20 flex gap-2 sm:bottom-10 sm:right-10">
-            {heroImages.map((_, index) => (
+            {heroSlides.map((_, index) => (
               <button
                 key={index}
                 type="button"
@@ -127,14 +150,6 @@ export function HomeHero({ primaryHref = "/gallery" }: HomeHeroProps) {
             ))}
           </div>
         )}
-
-        <div
-          className="relative z-20 flex min-h-[100svh] flex-col items-center justify-center px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[var(--home-header-offset)] sm:px-8"
-        >
-          <Link href={primaryHref} className={heroPrimaryClass}>
-            Enter gallery
-          </Link>
-        </div>
       </div>
     </section>
   );

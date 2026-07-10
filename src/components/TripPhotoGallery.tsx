@@ -162,6 +162,7 @@ export function TripPhotoGallery({
     <Gallery25
       items={items}
       showHeader={false}
+      showUntaggedFilter
       tripTitle={trip?.title ?? tripName.replace(/-/g, " ")}
       clickToEdit={isAdmin}
       allowCardDelete={isAdmin}

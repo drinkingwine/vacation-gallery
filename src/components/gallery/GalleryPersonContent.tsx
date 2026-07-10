@@ -64,6 +64,7 @@ export async function GalleryPersonContent({
       />
 
       <GalleryWithFilter
+        key={normalizedTag}
         initialItems={items}
         initialViewerItems={viewerItems}
         initialHasNext={hasNext}

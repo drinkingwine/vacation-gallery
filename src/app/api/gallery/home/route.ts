@@ -16,6 +16,10 @@ export async function GET() {
       mediaType: photo.mediaType,
       tags: photo.tags,
       tripName: photo.tripName,
+      tripTitle: photo.tripTitle,
+      tripLocation: photo.tripLocation,
+      location: photo.location,
+      dateTaken: photo.dateTaken,
     }));
 
     return NextResponse.json({ trips, photos: slimPhotos });

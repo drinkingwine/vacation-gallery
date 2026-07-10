@@ -62,6 +62,7 @@ type Gallery25Props = {
   allowCardDelete?: boolean;
   showTimestamp?: boolean;
   tripTitle?: string | null;
+  showUntaggedFilter?: boolean;
 };
 
 const filters = [
@@ -172,6 +173,7 @@ export function Gallery25({
   allowCardDelete = false,
   showTimestamp = false,
   tripTitle = null,
+  showUntaggedFilter = false,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -220,7 +222,10 @@ export function Gallery25({
   const [downloadsVisible, setDownloadsVisible] = useState(() =>
     readStoredBoolean("gallery25-downloads-visible", false),
   );
-  const [untaggedOnly, setUntaggedOnly] = useState(() => readStoredUntaggedOnly());
+  const [untaggedOnly, setUntaggedOnly] = useState(() =>
+    showUntaggedFilter ? readStoredUntaggedOnly() : false,
+  );
+  const effectiveUntaggedOnly = showUntaggedFilter && untaggedOnly;
   const [columnCount, setColumnCount] = useState(() =>
     readStoredNumber("gallery25-columns", 4),
   );
@@ -300,10 +305,10 @@ export function Gallery25({
     } else     if (filter !== "all") {
       filtered = items.filter((item) => item.type === filter);
     }
-    return untaggedOnly
+    return effectiveUntaggedOnly
       ? filtered.filter((item) => !itemHasAssignedTags(item))
       : filtered;
-  }, [filter, untaggedOnly, items]);
+  }, [filter, effectiveUntaggedOnly, items]);
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
   const displayColumnCount = Math.min(
@@ -341,10 +346,10 @@ export function Gallery25({
     } else     if (filter !== "all") {
       filtered = navigationItems.filter((item) => item.type === filter);
     }
-    return untaggedOnly
+    return effectiveUntaggedOnly
       ? filtered.filter((item) => !itemHasAssignedTags(item))
       : filtered;
-  }, [filter, untaggedOnly, navigationItems]);
+  }, [filter, effectiveUntaggedOnly, navigationItems]);
 
   const modalSelectedIndex = useMemo(() => {
     if (!selectedId) return -1;
@@ -380,8 +385,9 @@ export function Gallery25({
   }, [downloadsVisible]);
 
   useEffect(() => {
+    if (!showUntaggedFilter) return;
     window.localStorage.setItem(UNTAGGED_ONLY_STORAGE, String(untaggedOnly));
-  }, [untaggedOnly]);
+  }, [showUntaggedFilter, untaggedOnly]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -616,20 +622,22 @@ export function Gallery25({
                   ? galleryCopy.grid.tags.off
                   : galleryCopy.grid.tags.on}
               </button>
-              <button
-                type="button"
-                onClick={() => setUntaggedOnly((active) => !active)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
-                  untaggedOnly
-                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
-                    : "border-border text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {untaggedOnly
-                  ? galleryCopy.grid.untagged.all
-                  : galleryCopy.grid.untagged.only}
-              </button>
+              {showUntaggedFilter ? (
+                <button
+                  type="button"
+                  onClick={() => setUntaggedOnly((active) => !active)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1 text-xs transition",
+                    untaggedOnly
+                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {untaggedOnly
+                    ? galleryCopy.grid.untagged.all
+                    : galleryCopy.grid.untagged.only}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setDownloadsVisible((visible) => !visible)}

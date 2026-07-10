@@ -21,7 +21,14 @@ import type { GalleryPhoto, Trip } from "@/lib/types";
 /** Minimal photo fields needed to build randomized gallery home views. */
 export type GalleryHomePhoto = Pick<
   GalleryPhoto,
-  "downloadUrl" | "mediaType" | "tags" | "tripName"
+  | "downloadUrl"
+  | "mediaType"
+  | "tags"
+  | "tripName"
+  | "tripTitle"
+  | "tripLocation"
+  | "location"
+  | "dateTaken"
 >;
 
 export type GalleryHomeData = {

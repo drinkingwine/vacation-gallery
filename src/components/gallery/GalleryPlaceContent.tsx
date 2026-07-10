@@ -70,6 +70,7 @@ export async function GalleryPlaceContent({
       />
 
       <GalleryWithFilter
+        key={normalizedSlug}
         initialItems={items}
         initialViewerItems={viewerItems}
         initialHasNext={hasNext}
