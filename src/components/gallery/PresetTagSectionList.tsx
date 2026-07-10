@@ -26,13 +26,19 @@ export function PresetTagSectionList({
   onRemove,
 }: PresetTagSectionListProps) {
   const sections = PRESET_PHOTO_TAG_SECTIONS.map((section) => {
-    const presetTags = section.tags.filter((tag) =>
-      mode === "assigned"
-        ? hasPhotoTag(activeTags, tag)
-        : !hasPhotoTag(activeTags, tag),
-    );
+    const presetTags = section.tags
+      .filter((tag) =>
+        mode === "assigned"
+          ? hasPhotoTag(activeTags, tag)
+          : !hasPhotoTag(activeTags, tag),
+      )
+      .sort((a, b) => formatTagLabel(a).localeCompare(formatTagLabel(b)));
     const miscTags =
-      section.label === "Things" && mode === "assigned" ? extraTags : [];
+      section.label === "Things" && mode === "assigned"
+        ? [...extraTags].sort((a, b) =>
+            formatTagLabel(a).localeCompare(formatTagLabel(b)),
+          )
+        : [];
 
     return {
       label: section.label,

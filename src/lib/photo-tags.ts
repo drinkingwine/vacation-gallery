@@ -3,11 +3,11 @@ export const FAVORITE_TAG = "favorite";
 export const PRESET_PHOTO_TAG_SECTIONS = [
   {
     label: "Family",
-    tags: ["ralph", "robin", "rosemary", "keith", "allison", "r&r"] as const,
+    tags: ["allison", "keith", "r&r", "ralph", "robin", "rosemary"] as const,
   },
   {
     label: "Dive Buddies",
-    tags: ["tom", "ron", "kirk", "ione", "neil", "pete", "can't remember name"] as const,
+    tags: ["can't remember name", "ione", "kirk", "neil", "pete", "ron", "tom"] as const,
   },
   {
     label: "Pets",
@@ -15,11 +15,24 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
   },
   {
     label: "Friends",
-    tags: ["claire", "chris", "c&c"] as const,
+    tags: ["c&c", "chris", "claire"] as const,
   },
   {
     label: "Things",
-    tags: ["shark bait", "fish", "marine life", "cigars", "drinks", "pools", "critters", "birds", "boats", "earth", "plants", "food"] as const,
+    tags: [
+      "birds",
+      "boats",
+      "cigars",
+      "critters",
+      "drinks",
+      "earth",
+      "fish",
+      "food",
+      "marine life",
+      "plants",
+      "pools",
+      "shark bait",
+    ] as const,
   },
 ] as const;
 

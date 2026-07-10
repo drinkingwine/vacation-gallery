@@ -22,11 +22,10 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   type Value = GalleryHomeData[T];
 
   const force = options?.force ?? false;
-  const [value, setValue] = useState<Value>(() => {
-    const cached = getCachedGalleryHome();
-    return (cached?.[slice] ?? []) as Value;
-  });
-  const [ready, setReady] = useState(() => Boolean(getCachedGalleryHome()));
+  // Defer sessionStorage reads until after mount so SSR and the first client
+  // render both start empty (avoids hydration mismatch with cached trips).
+  const [value, setValue] = useState<Value>(() => [] as Value);
+  const [ready, setReady] = useState(false);
 
   const sync = useCallback(() => {
     const cached = getCachedGalleryHome();
