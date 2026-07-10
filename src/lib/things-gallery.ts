@@ -28,7 +28,9 @@ export function buildThingsGalleryList(photos: GalleryPhoto[]): ThingSummary[] {
       photoCount: matches.length,
       coverUrl: coverPhoto?.downloadUrl ?? null,
     };
-  }).sort((a, b) => a.label.localeCompare(b.label));
+  })
+    .filter((thing) => thing.photoCount > 0)
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export function thingGalleryPath(tag: string) {
