@@ -160,6 +160,10 @@ export async function loadThings(options?: { force?: boolean }) {
 
 /** Re-roll cover images from cached photos, or fetch if no cache yet. */
 export async function refreshGalleryHomeRandomized(): Promise<GalleryHomeData> {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+
   const rerandomized = rerandomizeGalleryHomeCovers();
   if (rerandomized) return rerandomized;
   return loadGalleryHome();

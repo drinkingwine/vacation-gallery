@@ -1,63 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { FeaturedTripCard } from "@/components/FeaturedTripCard";
 import { HomeHero } from "@/components/HomeHero";
 import { SectionHeader } from "@/components/SectionHeader";
+import { Spinner } from "@/components/gallery/Spinner";
 import { useFooterConfig } from "@/components/footer-config";
 import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
+import { useGalleryHomeInit } from "@/hooks/use-gallery-home-init";
 import type { Trip } from "@/lib/types";
 import { totalMediaCount } from "@/lib/media-count";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
-import { GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
-import {
-  invalidateGalleryHomeCache,
-  refreshGalleryHomeRandomized,
-} from "@/lib/gallery-home-cache";
+import { refreshGallery } from "@/lib/gallery-admin";
+import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { prefetchMapDataWhenIdle } from "@/lib/map-data-cache";
 
 export default function Home() {
-  const { value: trips, loading } = useGalleryHomeSlice("trips");
-  const [error, setError] = useState<string | null>(null);
+  const { loading: homeLoading, error, retry: retryHome } = useGalleryHomeInit();
+  const { value: trips, loading: tripsLoading } = useGalleryHomeSlice("trips");
+  const showLoading = homeLoading || tripsLoading;
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
   const confirm = useConfirm();
 
-  const loadHome = useCallback(async () => {
-    setError(null);
-    try {
-      await refreshGalleryHomeRandomized();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load trips");
-    }
-  }, []);
-
   useEffect(() => {
-    void loadHome();
-  }, [loadHome]);
-
-  useEffect(() => {
-    const refresh = () => {
-      void loadHome();
-    };
-    window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
-    return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [loadHome]);
-
-  useEffect(() => {
-    if (loading) return;
+    if (showLoading) return;
     prefetchMapDataWhenIdle();
-  }, [loading]);
+  }, [showLoading]);
 
   const totalMedia = trips.reduce((sum, t) => sum + totalMediaCount(t), 0);
 
   useFooterConfig({
-    stats: loading
+    stats: showLoading
       ? "Loading…"
       : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`,
   });
@@ -90,7 +69,23 @@ export default function Home() {
 
   return (
     <>
-      <main className="flex-1 overflow-x-hidden">
+      <main className="relative flex-1 overflow-x-hidden">
+        {showLoading ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-50/85 backdrop-blur-sm dark:bg-zinc-950/85"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading gallery"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <Spinner size="lg" />
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Loading gallery…
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <HomeHero />
 
         {error && (
@@ -107,7 +102,7 @@ export default function Home() {
               )}
               <button
                 type="button"
-                onClick={() => void loadHome()}
+                onClick={() => void retryHome()}
                 className="mt-2 text-sm underline"
               >
                 Retry
@@ -127,16 +122,7 @@ export default function Home() {
             actionHref="/gallery"
           />
 
-          {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="min-h-[280px] animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
-                />
-              ))}
-            </div>
-          ) : trips.length === 0 ? (
+          {trips.length === 0 ? (
             <div className="flex flex-col items-center py-20 text-zinc-400">
               <p className="text-lg text-zinc-600 dark:text-zinc-300">No trips yet</p>
               <p className="mt-2 text-sm text-zinc-500">

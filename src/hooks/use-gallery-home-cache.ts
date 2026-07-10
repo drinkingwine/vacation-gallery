@@ -10,6 +10,12 @@ import type { GalleryHomeData } from "@/lib/gallery-home-data";
 
 export type GalleryHomeSlice = "trips" | "people" | "places" | "things";
 
+function waitForPaint() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
 type UseGalleryHomeSliceOptions = {
   /** When true, bypass cache and refetch from the API. */
   force?: boolean;
@@ -25,27 +31,30 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   // Defer sessionStorage reads until after mount so SSR and the first client
   // render both start empty (avoids hydration mismatch with cached trips).
   const [value, setValue] = useState<Value>(() => [] as Value);
-  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const sync = useCallback(() => {
     const cached = getCachedGalleryHome();
-    if (!cached) {
-      setReady(false);
-      return;
-    }
+    if (!cached) return;
     setValue(cached[slice] as Value);
-    setReady(true);
   }, [slice]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    setLoading(true);
     sync();
-    void loadGalleryHome({ force }).finally(() => {
+    void loadGalleryHome({ force }).finally(async () => {
+      if (cancelled) return;
       sync();
-      setReady(true);
+      await waitForPaint();
+      if (cancelled) return;
+      setLoading(false);
     });
     window.addEventListener(GALLERY_HOME_READY_EVENT, sync);
     window.addEventListener(GALLERY_REFRESH_EVENT, sync);
     return () => {
+      cancelled = true;
       window.removeEventListener(GALLERY_HOME_READY_EVENT, sync);
       window.removeEventListener(GALLERY_REFRESH_EVENT, sync);
     };
@@ -53,6 +62,6 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
 
   return {
     value,
-    loading: !ready && value.length === 0,
+    loading,
   };
 }
