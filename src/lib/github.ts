@@ -95,7 +95,9 @@ export async function listContents(path = ""): Promise<GHItem[]> {
   return Array.isArray(data) ? data : [data];
 }
 
-async function getFileContent(path: string): Promise<string | null> {
+async function getGithubFile(
+  path: string,
+): Promise<{ content: string | null; sha: string | undefined }> {
   const { token, owner, repo, branch } = getConfig();
   const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
   const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodedPath}?ref=${branch}`;
@@ -105,16 +107,24 @@ async function getFileContent(path: string): Promise<string | null> {
     cache: "no-store",
   });
 
-  if (res.status === 404) return null;
+  if (res.status === 404) return { content: null, sha: undefined };
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`GitHub API error ${res.status}: ${text}`);
   }
 
   const data = (await res.json()) as GHItem;
-  if (!data.content) return null;
+  if (!data.content) return { content: null, sha: data.sha };
 
-  return Buffer.from(data.content, "base64").toString("utf-8");
+  return {
+    content: Buffer.from(data.content, "base64").toString("utf-8"),
+    sha: data.sha,
+  };
+}
+
+async function getFileContent(path: string): Promise<string | null> {
+  const file = await getGithubFile(path);
+  return file.content;
 }
 
 export async function getTripMetadata(tripPath: string): Promise<TripMetadata> {
@@ -141,18 +151,106 @@ export function lookupPhotoMeta(
   photoMeta: PhotosMetadata,
   filename: string,
 ): PhotoMetaEntry | undefined {
-  if (photoMeta[filename]) return photoMeta[filename];
+  const key = resolvePhotoMetaKey(photoMeta, filename);
+  return key ? photoMeta[key] : undefined;
+}
+
+function resolvePhotoMetaKey(
+  photoMeta: PhotosMetadata,
+  filename: string,
+): string | undefined {
+  if (photoMeta[filename]) return filename;
 
   const lower = filename.toLowerCase();
-  const key = Object.keys(photoMeta).find(
+  return Object.keys(photoMeta).find(
     (candidate) => candidate.toLowerCase() === lower,
   );
-  return key ? photoMeta[key] : undefined;
+}
+
+function hasPhotoGeo(entry: PhotoMetaEntry | undefined): boolean {
+  return (
+    typeof entry?.latitude === "number" &&
+    typeof entry?.longitude === "number" &&
+    !Number.isNaN(entry.latitude) &&
+    !Number.isNaN(entry.longitude)
+  );
+}
+
+function mergePhotoMetaPatch(
+  entry: PhotoMetaEntry,
+  patch: Partial<PhotoMetaEntry>,
+  options?: { preserveExistingGeo?: boolean },
+): PhotoMetaEntry {
+  if (!options?.preserveExistingGeo || !hasPhotoGeo(entry)) {
+    return { ...entry, ...patch };
+  }
+
+  const { latitude: _lat, longitude: _lng, location: _loc, ...rest } = patch;
+  return { ...entry, ...rest };
+}
+
+const photosMetadataLocks = new Map<string, Promise<void>>();
+
+async function withPhotosMetadataLock<T>(
+  tripPath: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const prior = photosMetadataLocks.get(tripPath) ?? Promise.resolve();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  photosMetadataLocks.set(
+    tripPath,
+    prior.then(() => gate).then(
+      () => {},
+      () => {},
+    ),
+  );
+
+  await prior;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
+function isGithubConflict(err: unknown): boolean {
+  return err instanceof Error && /\((409|422)\)/.test(err.message);
+}
+
+async function mutatePhotosMetadata(
+  tripPath: string,
+  mutator: (meta: PhotosMetadata) => void,
+): Promise<void> {
+  await withPhotosMetadataLock(tripPath, async () => {
+    const path = `${tripPath}/${PHOTOS_META_FILE}`;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const file = await getGithubFile(path);
+      const meta: PhotosMetadata = file.content
+        ? (JSON.parse(file.content) as PhotosMetadata)
+        : {};
+
+      mutator(meta);
+
+      try {
+        await savePhotosMetadata(tripPath, meta, file.sha);
+        invalidateGalleryCaches(tripPath);
+        return;
+      } catch (err) {
+        if (isGithubConflict(err) && attempt < 4) continue;
+        throw err;
+      }
+    }
+  });
 }
 
 async function savePhotosMetadata(
   tripPath: string,
   metadata: PhotosMetadata,
+  existingSha?: string,
 ): Promise<void> {
   const path = `${tripPath}/${PHOTOS_META_FILE}`;
   const hasEntries = Object.keys(metadata).length > 0;
@@ -171,7 +269,12 @@ async function savePhotosMetadata(
   const content = Buffer.from(JSON.stringify(metadata, null, 2)).toString(
     "base64",
   );
-  await uploadFile(path, content, `Update photo metadata: ${tripPath}`);
+  await uploadFile(
+    path,
+    content,
+    `Update photo metadata: ${tripPath}`,
+    existingSha,
+  );
 }
 
 export async function listPhotos(trip = ""): Promise<Photo[]> {
@@ -397,22 +500,25 @@ export async function uploadFile(
   path: string,
   contentBase64: string,
   message: string,
+  existingSha?: string,
 ): Promise<void> {
   const { token, owner, repo, branch } = getConfig();
   const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
   const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodedPath}`;
 
-  let sha: string | undefined;
-  try {
-    const check = await fetch(`${url}?ref=${branch}`, {
-      headers: ghHeaders(token),
-    });
-    if (check.ok) {
-      const data = await check.json();
-      sha = data.sha;
+  let sha = existingSha;
+  if (sha === undefined) {
+    try {
+      const check = await fetch(`${url}?ref=${branch}`, {
+        headers: ghHeaders(token),
+      });
+      if (check.ok) {
+        const data = (await check.json()) as GHItem;
+        sha = data.sha;
+      }
+    } catch {
+      // File doesn't exist yet
     }
-  } catch {
-    // File doesn't exist yet
   }
 
   const body: Record<string, string> = {
@@ -561,80 +667,84 @@ export async function upsertPhotoMetadata(
   tripPath: string,
   filename: string,
   patch: Partial<PhotoMetaEntry>,
+  options?: { preserveExistingGeo?: boolean },
 ): Promise<void> {
-  const meta = await getPhotosMetadata(tripPath);
-  const entry = meta[filename] ?? {};
-  const next = prunePhotoMetaEntry({ ...entry, ...patch });
-  if (next) meta[filename] = next;
-  else delete meta[filename];
-  await savePhotosMetadata(tripPath, meta);
-  invalidateGalleryCaches(tripPath);
+  await mutatePhotosMetadata(tripPath, (meta) => {
+    const key = resolvePhotoMetaKey(meta, filename) ?? filename;
+    const entry = meta[key] ?? {};
+    const merged = mergePhotoMetaPatch(entry, patch, options);
+    const next = prunePhotoMetaEntry(merged);
+    if (next) meta[key] = next;
+    else delete meta[key];
+  });
 }
 
 export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
   const filename = input.path.split("/").pop()!;
-  let currentName = filename;
-  const meta = await getPhotosMetadata(input.trip);
 
   if (input.newName && input.newName !== filename) {
     await renamePhoto(input.trip, input.path, input.sha, input.newName);
-    if (meta[filename]) {
-      meta[input.newName] = meta[filename];
-      delete meta[filename];
+  }
+
+  await mutatePhotosMetadata(input.trip, (meta) => {
+    const initialName = resolvePhotoMetaKey(meta, filename) ?? filename;
+    let currentName = initialName;
+
+    if (input.newName && input.newName !== filename) {
+      if (meta[initialName]) {
+        meta[input.newName] = meta[initialName];
+        delete meta[initialName];
+      }
+      currentName = input.newName;
     }
-    currentName = input.newName;
-    invalidateGalleryCaches(input.trip);
-  }
 
-  if (input.caption !== undefined) {
-    const entry = meta[currentName] ?? {};
-    const caption = input.caption.trim();
-    const next = prunePhotoMetaEntry({ ...entry, caption: caption || undefined });
-    if (next) meta[currentName] = next;
-    else delete meta[currentName];
-  }
-
-  if (input.addTag) {
-    const tag = input.addTag.trim().toLowerCase();
-    if (tag) {
+    if (input.caption !== undefined) {
       const entry = meta[currentName] ?? {};
-      const tags = normalizePhotoTags([...(entry.tags ?? []), tag]);
-      meta[currentName] = prunePhotoMetaEntry({ ...entry, tags })!;
-    }
-  }
-
-  if (input.removeTag) {
-    const tag = input.removeTag.trim().toLowerCase();
-    const entry = meta[currentName];
-    if (entry?.tags?.length) {
-      const tags = entry.tags.filter((value) => value.toLowerCase() !== tag);
-      const next = prunePhotoMetaEntry({ ...entry, tags });
+      const caption = input.caption.trim();
+      const next = prunePhotoMetaEntry({ ...entry, caption: caption || undefined });
       if (next) meta[currentName] = next;
       else delete meta[currentName];
     }
-  }
 
-  if (input.tags !== undefined) {
-    const entry = meta[currentName] ?? {};
-    const tags = normalizePhotoTags(input.tags);
-    const next = prunePhotoMetaEntry({
-      ...entry,
-      tags: tags.length ? tags : undefined,
-    });
-    if (next) meta[currentName] = next;
-    else delete meta[currentName];
-  }
+    if (input.addTag) {
+      const tag = input.addTag.trim().toLowerCase();
+      if (tag) {
+        const entry = meta[currentName] ?? {};
+        const tags = normalizePhotoTags([...(entry.tags ?? []), tag]);
+        meta[currentName] = prunePhotoMetaEntry({ ...entry, tags })!;
+      }
+    }
 
-  if (input.dateTaken !== undefined) {
-    const entry = meta[currentName] ?? {};
-    const dateTaken = input.dateTaken?.trim() || undefined;
-    const next = prunePhotoMetaEntry({ ...entry, dateTaken });
-    if (next) meta[currentName] = next;
-    else delete meta[currentName];
-  }
+    if (input.removeTag) {
+      const tag = input.removeTag.trim().toLowerCase();
+      const entry = meta[currentName];
+      if (entry?.tags?.length) {
+        const tags = entry.tags.filter((value) => value.toLowerCase() !== tag);
+        const next = prunePhotoMetaEntry({ ...entry, tags });
+        if (next) meta[currentName] = next;
+        else delete meta[currentName];
+      }
+    }
 
-  await savePhotosMetadata(input.trip, meta);
-  invalidateGalleryCaches(input.trip);
+    if (input.tags !== undefined) {
+      const entry = meta[currentName] ?? {};
+      const tags = normalizePhotoTags(input.tags);
+      const next = prunePhotoMetaEntry({
+        ...entry,
+        tags: tags.length ? tags : undefined,
+      });
+      if (next) meta[currentName] = next;
+      else delete meta[currentName];
+    }
+
+    if (input.dateTaken !== undefined) {
+      const entry = meta[currentName] ?? {};
+      const dateTaken = input.dateTaken?.trim() || undefined;
+      const next = prunePhotoMetaEntry({ ...entry, dateTaken });
+      if (next) meta[currentName] = next;
+      else delete meta[currentName];
+    }
+  });
 }
 
 export async function deleteFile(path: string, sha: string): Promise<void> {
@@ -666,12 +776,11 @@ export async function deletePhoto(path: string): Promise<void> {
 
   const trip = path.slice(0, slash);
   const filename = path.slice(slash + 1);
-  invalidateGalleryCaches(trip);
-  const meta = await getPhotosMetadata(trip);
-  if (meta[filename]) {
-    delete meta[filename];
-    await savePhotosMetadata(trip, meta);
-  }
+
+  await mutatePhotosMetadata(trip, (meta) => {
+    const key = resolvePhotoMetaKey(meta, filename);
+    if (key) delete meta[key];
+  });
 }
 
 export async function deleteTrip(tripName: string): Promise<void> {
