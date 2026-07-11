@@ -18,6 +18,10 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
     tags: ["c&c", "chris", "claire"] as const,
   },
   {
+    label: "Old Friends",
+    tags: ["baby", "izzy"] as const,
+  },
+  {
     label: "Things",
     tags: [
       "birds",
@@ -87,6 +91,10 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-indigo-300 bg-indigo-100 text-indigo-900 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-100",
   "c&c":
     "border-sky-400 bg-sky-100 text-sky-950 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-100",
+  baby:
+    "border-rose-400 bg-rose-100 text-rose-950 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100",
+  izzy:
+    "border-lime-400 bg-lime-100 text-lime-950 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-100",
   "shark bait":
     "border-red-300 bg-red-100 text-red-900 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-100",
   fish: "border-sky-300 bg-sky-100 text-sky-900 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-100",

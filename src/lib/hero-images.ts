@@ -14,6 +14,15 @@ export type HomeHeroSlide = {
   date: string | null;
 };
 
+function shuffleSlides<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export function pickHeroImages(
   imageUrls: string[],
   preferredCover?: string | null,
@@ -35,7 +44,7 @@ export function buildTaggedHeroSlides(
   photos: GalleryHomePhoto[],
   tag: string = HOME_HERO_TAG,
 ): HomeHeroSlide[] {
-  return filterGalleryPhotosByTag(photos as GalleryPhoto[], tag)
+  const slides = filterGalleryPhotosByTag(photos as GalleryPhoto[], tag)
     .filter((photo) => photo.mediaType !== "video")
     .map((photo) => ({
       src: photo.downloadUrl,
@@ -44,4 +53,6 @@ export function buildTaggedHeroSlides(
       date: formatPhotoTimestamp(photo.dateTaken) ?? null,
     }))
     .filter((slide) => slide.src);
+
+  return shuffleSlides(slides).slice(0, MAX_HERO_IMAGES);
 }
