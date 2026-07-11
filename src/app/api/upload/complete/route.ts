@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTripMetadata, upsertPhotoMetadata } from "@/lib/github";
 import { isMedia, sanitizeMediaFilename } from "@/lib/media";
-import { invalidateMediaListCache } from "@/lib/media-list-cache";
+import { invalidateGalleryCaches } from "@/lib/github";
 import { headMedia } from "@/lib/r2";
 import {
   formatCoordinates,
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     const tripPath =
       trip ?? (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
-    invalidateMediaListCache(tripPath || undefined);
+    invalidateGalleryCaches(tripPath || undefined);
 
     if (tripPath) {
       const locationMeta = await resolveUploadLocation(latitude, longitude, tripPath);

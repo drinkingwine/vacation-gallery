@@ -10,12 +10,6 @@ import type { GalleryHomeData } from "@/lib/gallery-home-data";
 
 export type GalleryHomeSlice = "trips" | "people" | "places" | "things";
 
-function waitForPaint() {
-  return new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-}
-
 type UseGalleryHomeSliceOptions = {
   /** When true, bypass cache and refetch from the API. */
   force?: boolean;
@@ -44,11 +38,9 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
 
     setLoading(true);
     sync();
-    void loadGalleryHome({ force }).finally(async () => {
+    void loadGalleryHome({ force }).finally(() => {
       if (cancelled) return;
       sync();
-      await waitForPaint();
-      if (cancelled) return;
       setLoading(false);
     });
     window.addEventListener(GALLERY_HOME_READY_EVENT, sync);

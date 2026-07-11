@@ -2,13 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
-import { refreshGalleryHomeRandomized } from "@/lib/gallery-home-cache";
-
-function waitForPaint() {
-  return new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-}
+import {
+  loadGalleryHome,
+  rerandomizeGalleryHomeCoversInBackground,
+} from "@/lib/gallery-home-cache";
 
 export function useGalleryHomeInit() {
   const [loading, setLoading] = useState(true);
@@ -17,16 +14,14 @@ export function useGalleryHomeInit() {
   const init = useCallback(async () => {
     setLoading(true);
     setError(null);
-    // Yield so React can paint the loading state before sync cache work finishes.
-    await waitForPaint();
     try {
-      await refreshGalleryHomeRandomized();
+      await loadGalleryHome();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load gallery");
     } finally {
-      await waitForPaint();
       setLoading(false);
     }
+    rerandomizeGalleryHomeCoversInBackground();
   }, []);
 
   useEffect(() => {

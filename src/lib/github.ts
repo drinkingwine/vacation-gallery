@@ -9,6 +9,7 @@ import {
   fetchMediaForDownload,
   renameMedia,
 } from "./r2";
+import { invalidateGalleryHomeServerCache } from "@/lib/gallery-home-server-cache";
 import {
   invalidateMediaListCache,
   listMediaCached,
@@ -204,6 +205,11 @@ export async function listPhotos(trip = ""): Promise<Photo[]> {
   });
 }
 
+export function invalidateGalleryCaches(trip?: string): void {
+  invalidateMediaListCache(trip);
+  invalidateGalleryHomeServerCache();
+}
+
 function resolveCoverUrl(
   photos: Photo[],
   coverPhoto?: string,
@@ -246,12 +252,17 @@ function buildTrip(
   };
 }
 
-export async function listTrips(): Promise<Trip[]> {
+type TripWithPhotos = {
+  trip: Trip;
+  photos: Photo[];
+};
+
+async function listTripsWithPhotos(): Promise<TripWithPhotos[]> {
   const items = await listContents("");
   const dirs = items.filter((item) => item.type === "dir");
 
-  const trips = await Promise.all(
-    dirs.map(async (dir): Promise<Trip> => {
+  const entries = await Promise.all(
+    dirs.map(async (dir): Promise<TripWithPhotos> => {
       const metadata = await getTripMetadata(dir.path);
       let photos: Photo[] = [];
       try {
@@ -262,33 +273,54 @@ export async function listTrips(): Promise<Trip[]> {
           err instanceof Error ? err.message : err,
         );
       }
-      return buildTrip(dir, photos, metadata);
+      return { trip: buildTrip(dir, photos, metadata), photos };
     }),
   );
 
-  return sortTripsWithFavoritesFirst(trips);
+  const photosByTrip = new Map(entries.map((entry) => [entry.trip.name, entry.photos]));
+  return sortTripsWithFavoritesFirst(entries.map((entry) => entry.trip)).map(
+    (trip) => ({
+      trip,
+      photos: photosByTrip.get(trip.name) ?? [],
+    }),
+  );
+}
+
+function toGalleryPhoto(trip: Trip, photo: Photo): GalleryPhoto {
+  return {
+    ...photo,
+    id: photo.path,
+    trip: trip.name,
+    tripName: trip.name,
+    tripTitle: trip.title,
+    tripLocation: trip.location,
+    tripStartDate: trip.startDate,
+  };
+}
+
+export async function loadGalleryHomeData(): Promise<{
+  trips: Trip[];
+  photos: GalleryPhoto[];
+}> {
+  const entries = await listTripsWithPhotos();
+  return {
+    trips: entries.map((entry) => entry.trip),
+    photos: entries.flatMap((entry) =>
+      entry.photos.map((photo) => toGalleryPhoto(entry.trip, photo)),
+    ),
+  };
+}
+
+export async function listTrips(): Promise<Trip[]> {
+  const entries = await listTripsWithPhotos();
+  return entries.map((entry) => entry.trip);
 }
 
 export async function listAllGalleryPhotos(): Promise<GalleryPhoto[]> {
-  const trips = await listTrips();
-  const photos: GalleryPhoto[] = [];
-
-  for (const trip of trips) {
-    const tripPhotos = await listPhotos(trip.path);
-    for (const photo of tripPhotos) {
-      photos.push({
-        ...photo,
-        id: photo.path,
-        trip: trip.name,
-        tripName: trip.name,
-        tripTitle: trip.title,
-        tripLocation: trip.location,
-        tripStartDate: trip.startDate,
-      });
-    }
-  }
-
-  return photos;
+  const entries = await listTripsWithPhotos();
+  return entries.flatMap((entry) =>
+    entry.photos.map((photo) => toGalleryPhoto(entry.trip, photo)),
+  );
 }
 
 export async function listFavoriteGalleryPhotos(): Promise<GalleryPhoto[]> {
@@ -425,6 +457,7 @@ export async function createTrip(input: CreateTripInput): Promise<void> {
     content,
     `Create trip: ${input.name}`,
   );
+  invalidateGalleryCaches();
 }
 
 export async function updateTripMetadata(
@@ -438,6 +471,7 @@ export async function updateTripMetadata(
     content,
     `Update trip: ${tripName}`,
   );
+  invalidateGalleryCaches(tripName);
 }
 
 export async function patchTripMetadata(
@@ -534,6 +568,7 @@ export async function upsertPhotoMetadata(
   if (next) meta[filename] = next;
   else delete meta[filename];
   await savePhotosMetadata(tripPath, meta);
+  invalidateGalleryCaches(tripPath);
 }
 
 export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
@@ -548,7 +583,7 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
       delete meta[filename];
     }
     currentName = input.newName;
-    invalidateMediaListCache(input.trip);
+    invalidateGalleryCaches(input.trip);
   }
 
   if (input.caption !== undefined) {
@@ -599,6 +634,7 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
   }
 
   await savePhotosMetadata(input.trip, meta);
+  invalidateGalleryCaches(input.trip);
 }
 
 export async function deleteFile(path: string, sha: string): Promise<void> {
@@ -630,7 +666,7 @@ export async function deletePhoto(path: string): Promise<void> {
 
   const trip = path.slice(0, slash);
   const filename = path.slice(slash + 1);
-  invalidateMediaListCache(trip);
+  invalidateGalleryCaches(trip);
   const meta = await getPhotosMetadata(trip);
   if (meta[filename]) {
     delete meta[filename];
@@ -640,7 +676,7 @@ export async function deletePhoto(path: string): Promise<void> {
 
 export async function deleteTrip(tripName: string): Promise<void> {
   await deleteMediaPrefix(tripName);
-  invalidateMediaListCache(tripName);
+  invalidateGalleryCaches(tripName);
 
   const items = await listContents(tripName);
   const files = items.filter((item) => item.type === "file");
