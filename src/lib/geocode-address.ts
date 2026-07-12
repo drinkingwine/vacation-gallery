@@ -198,6 +198,7 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   greece: "GR",
   jamaica: "JM",
   bahamas: "BS",
+  belize: "BZ",
   bonaire: "BQ",
   aruba: "AW",
   curacao: "CW",
