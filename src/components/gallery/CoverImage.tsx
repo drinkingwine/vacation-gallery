@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image, { type ImageProps } from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,10 @@ type CoverImageProps = Omit<
   forceLoaded?: boolean;
 };
 
+function isImageReady(image: HTMLImageElement | null | undefined) {
+  return Boolean(image?.complete && image.naturalWidth > 0);
+}
+
 export function CoverImage({
   onCoverLoad,
   onDimensions,
@@ -22,23 +26,46 @@ export function CoverImage({
   alt,
   ...props
 }: CoverImageProps) {
+  const imgRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
   const isVisible = loaded || forceLoaded;
 
+  const markLoaded = useCallback(
+    (image?: HTMLImageElement | null) => {
+      setLoaded(true);
+      onCoverLoad?.();
+      const el = image ?? imgRef.current;
+      if (el?.naturalWidth && el.naturalHeight) {
+        onDimensions?.(el.naturalWidth, el.naturalHeight);
+      }
+    },
+    [onCoverLoad, onDimensions],
+  );
+
+  const syncLoadedFromCache = useCallback(() => {
+    if (isImageReady(imgRef.current)) {
+      markLoaded(imgRef.current);
+    }
+  }, [markLoaded]);
+
   useEffect(() => {
     setLoaded(false);
-  }, [src]);
+    syncLoadedFromCache();
+  }, [src, syncLoadedFromCache]);
 
-  const markLoaded = (image?: HTMLImageElement) => {
-    setLoaded(true);
-    onCoverLoad?.();
-    if (image?.naturalWidth && image.naturalHeight) {
-      onDimensions?.(image.naturalWidth, image.naturalHeight);
-    }
-  };
+  const handleRef = useCallback(
+    (node: HTMLImageElement | null) => {
+      imgRef.current = node;
+      if (isImageReady(node)) {
+        markLoaded(node);
+      }
+    },
+    [markLoaded],
+  );
 
   return (
     <Image
+      ref={handleRef}
       src={src}
       alt={alt}
       fill
