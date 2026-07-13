@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +35,7 @@ type GalleryWithFilterProps = {
   place?: string;
   trip?: string;
   emptyMessage?: string;
+  gridEngine?: "cards" | "lightgallery";
 };
 
 const mediaTypeFilters = [
@@ -54,6 +56,7 @@ export function GalleryWithFilter({
   place = "",
   trip = "",
   emptyMessage,
+  gridEngine = "cards",
 }: GalleryWithFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -228,6 +231,23 @@ export function GalleryWithFilter({
   return (
     <div className="space-y-8">
       {!isScoped ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+                {galleryCopy.eyebrow}
+              </p>
+              <h1 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">
+                {galleryCopy.title}
+              </h1>
+            </div>
+            <Link
+              href="/gallery"
+              className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
+            >
+              ← Trips
+            </Link>
+          </div>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <Tabs
             value={mediaType}
@@ -288,6 +308,7 @@ export function GalleryWithFilter({
             </Select>
           </div>
         </div>
+        </div>
       ) : null}
 
       {isFiltering ? (
@@ -316,6 +337,7 @@ export function GalleryWithFilter({
           showHeader={!isScoped}
           onItemRemoved={isScoped ? handleItemRemoved : undefined}
           clickToEdit={adminClickToEdit}
+          gridEngine={gridEngine}
         />
       )}
     </div>

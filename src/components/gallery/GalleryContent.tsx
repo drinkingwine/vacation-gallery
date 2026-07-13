@@ -37,6 +37,7 @@ export async function GalleryContent({
       initialHasNext={hasNext}
       pageSize={PAGE_SIZE}
       initialKeyword={keyword}
+      gridEngine="lightgallery"
     />
   );
 }

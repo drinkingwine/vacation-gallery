@@ -1,3 +1,6 @@
+import type { GalleryItem as LgGalleryItem } from "lightgallery/lg-utils";
+import { contentTypeForFilename } from "@/lib/media";
+import { formatPhotoTimestamp } from "@/lib/photo-details";
 import type { GalleryPhoto, Photo, Trip } from "@/lib/types";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
 
@@ -115,3 +118,141 @@ export function stripAutoPhotoTags(
 
   return tags.filter((tag) => !auto.has(tag.toLowerCase()));
 }
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function buildLightGallerySubHtml(parts: {
+  title?: string | null;
+  tripTitle?: string | null;
+  locationName?: string | null;
+  dateTaken?: string | null;
+  dateShot?: string | null;
+}) {
+  const rawTitle = parts.title?.trim() || "";
+  const date = formatPhotoTimestamp(parts.dateTaken ?? parts.dateShot);
+  const location = parts.locationName?.trim() || "";
+  const trip = parts.tripTitle?.trim() || "";
+  const tripDistinct =
+    trip &&
+    (!location || trip.toLowerCase() !== location.toLowerCase())
+      ? trip
+      : "";
+
+  const meta = [location, tripDistinct].filter(Boolean);
+
+  const titleHtml = rawTitle
+    ? `<h4 class="lg-caption-title">${escapeHtml(rawTitle)}</h4>`
+    : "";
+  const dateHtml = date
+    ? `<time class="lg-caption-date">${escapeHtml(date)}</time>`
+    : "";
+  const row =
+    titleHtml || dateHtml
+      ? `<div class="vc-lg-caption-row">${titleHtml}${dateHtml}</div>`
+      : "";
+  const metaHtml =
+    meta.length > 0
+      ? `<p class="lg-caption-meta">${meta
+          .map((part) => escapeHtml(part))
+          .join(" · ")}</p>`
+      : "";
+
+  if (!row && !metaHtml) return "";
+  return `<div class="vc-lg-caption">${row}${metaHtml}</div>`;
+}
+
+function videoContentType(filename: string) {
+  return contentTypeForFilename(filename) || "video/mp4";
+}
+
+/** Map app gallery items to lightGallery dynamicEl slides. */
+export function toLightGalleryElements(items: GalleryItem[]): LgGalleryItem[] {
+  return items.map((item) => {
+    // Prefer real captions only — never fall back to the filename.
+    const caption = item.description?.trim() || "";
+    const subHtml = buildLightGallerySubHtml({
+      title: caption,
+      tripTitle: item.tripTitle,
+      locationName: item.locationName,
+      dateTaken: item.dateTaken,
+      dateShot: item.dateShot,
+    });
+
+    if (item.type === "video") {
+      return {
+        thumb: item.src,
+        subHtml,
+        downloadUrl: item.src,
+        video: {
+          source: [{ src: item.src, type: videoContentType(item.filename) }],
+          tracks: [],
+          attributes: {
+            preload: "none",
+            controls: true,
+            playsInline: true,
+          } as unknown as HTMLVideoElement,
+        },
+      };
+    }
+
+    return {
+      src: item.src,
+      thumb: item.src,
+      alt: caption || item.title,
+      subHtml,
+      downloadUrl: item.src,
+      ...(item.width ? { width: String(item.width) } : {}),
+    };
+  });
+}
+
+/** Map trip Photo[] records to lightGallery dynamicEl slides. */
+export function photosToLightGalleryElements(photos: Photo[]): LgGalleryItem[] {
+  return photos.map((photo) => {
+    const caption = photo.caption?.trim() || "";
+    const subHtml = buildLightGallerySubHtml({
+      title: caption,
+      locationName: photo.location,
+      dateTaken: photo.dateTaken,
+    });
+    const isVideoFile = photo.mediaType === "video";
+
+    if (isVideoFile) {
+      return {
+        thumb: photo.downloadUrl,
+        subHtml,
+        downloadUrl: photo.downloadUrl,
+        video: {
+          source: [
+            {
+              src: photo.downloadUrl,
+              type: videoContentType(photo.name),
+            },
+          ],
+          tracks: [],
+          attributes: {
+            preload: "none",
+            controls: true,
+            playsInline: true,
+          } as unknown as HTMLVideoElement,
+        },
+      };
+    }
+
+    return {
+      src: photo.downloadUrl,
+      thumb: photo.downloadUrl,
+      alt: caption || photo.name,
+      subHtml,
+      downloadUrl: photo.downloadUrl,
+      ...(photo.width ? { width: String(photo.width) } : {}),
+    };
+  });
+}
+

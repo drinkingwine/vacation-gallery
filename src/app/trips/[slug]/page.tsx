@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
-import { GalleryAlbumHero } from "@/components/gallery/GalleryAlbumHero";
-import { pickHeroImages } from "@/lib/hero-images";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
@@ -96,18 +94,8 @@ export default function TripPage() {
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
   }, [fetchTrip]);
 
-  const heroImages = useMemo(
-    () =>
-      pickHeroImages(
-        photos
-          .filter((photo) => photo.mediaType !== "video")
-          .map((photo) => photo.downloadUrl),
-        trip?.coverUrl,
-      ),
-    [photos, trip?.coverUrl],
-  );
   const dates = trip ? formatDateRange(trip.startDate, trip.endDate) : null;
-
+  const title = trip?.title ?? tripName.replace(/-/g, " ");
   const isFavorites = isFavoritesTrip(tripName);
 
   const handleDeleteTrip = async () => {
@@ -137,23 +125,24 @@ export default function TripPage() {
 
   return (
     <div className="trip-page-shell flex flex-1 flex-col">
-        <main className="main-offset relative z-0 flex-1 pb-16">
-        {!isAdmin ? (
-          <div className="page-container mx-auto">
-            <GalleryAlbumHero
-              images={heroImages}
-              title={trip?.title ?? tripName.replace(/-/g, " ")}
-              badges={[
-                ...(trip?.location ? [{ label: trip.location }] : []),
-                { label: formatMediaCount(photos) },
-              ]}
-              description={trip?.description}
-              subtitle={dates ?? undefined}
-            />
-          </div>
-        ) : null}
-
+      <main className="main-offset relative z-0 flex-1 pb-16">
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
+          <header className="space-y-2 px-1">
+            <h1 className="font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
+              {title}
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {[trip?.location, dates, formatMediaCount(photos)]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            {trip?.description ? (
+              <p className="max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                {trip.description}
+              </p>
+            ) : null}
+          </header>
+
           {isAdmin && (
             <div className="flex flex-wrap justify-end gap-2">
               {!isFavorites ? (
@@ -204,7 +193,7 @@ export default function TripPage() {
             trip={trip}
             tripName={tripName}
             loading={loading}
-            emptyMessage={`No photos in "${trip?.title ?? tripName}" yet. Upload some!`}
+            emptyMessage={`No photos in "${title}" yet. Upload some!`}
             isAdmin={isAdmin}
             coverPhoto={trip?.coverPhoto ?? null}
             coverUrl={trip?.coverUrl ?? null}
@@ -213,7 +202,7 @@ export default function TripPage() {
             }}
           />
         </section>
-        </main>
-      </div>
+      </main>
+    </div>
   );
 }

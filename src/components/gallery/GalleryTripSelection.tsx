@@ -5,12 +5,13 @@ import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
-import { TripCard } from "@/components/TripCard";
+import { GallerySelectionShell } from "@/components/gallery/GallerySelectionShell";
+import { LightGalleryTripPicker } from "@/components/gallery/LightGalleryTripPicker";
 import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { refreshGallery } from "@/lib/gallery-admin";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
-import { cn } from "@/lib/utils";
+import { galleryCopy } from "@/lib/gallery-copy";
 import type { Trip } from "@/lib/types";
 
 export function GalleryTripSelection() {
@@ -47,75 +48,57 @@ export function GalleryTripSelection() {
   };
 
   return (
-    <>
-      <div className="gallery-page-shell flex flex-1 flex-col">
-        <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
-        <div className="space-y-10">
-          <header className="front-fade-up space-y-4">
-            <h1
-              className={cn(
-                "font-serif",
-                "text-4xl font-semibold text-zinc-800/90 dark:text-white/85 md:text-5xl",
-              )}
-            >
-              Gallery
-            </h1>
-          </header>
-
-          {loading ? (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-video animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-600"
-                />
-              ))}
+    <GallerySelectionShell
+      title={galleryCopy.title}
+      description="Pick a trip to browse its photos."
+      count={trips.length}
+      countLabel={trips.length === 1 ? "trip" : "trips"}
+      loading={loading}
+      empty={!loading && trips.length === 0}
+      contentClassName="contents"
+      emptyMessage={
+        <div>
+          <p className="font-serif text-xl text-zinc-800 dark:text-zinc-100">
+            No trips yet
+          </p>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            {isAdmin
+              ? "Create a trip folder, then upload photos."
+              : "Sign in as admin to add trips and photos."}
+          </p>
+          {isAdmin ? (
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/trips/new"
+                className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+              >
+                New trip
+              </Link>
+              <button
+                type="button"
+                onClick={() => openUpload()}
+                className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
+              >
+                Upload photos
+              </button>
             </div>
-          ) : trips.length === 0 ? (
-            <div className="rounded-2xl border border-zinc-200 bg-white/60 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
-              <p className="text-lg text-zinc-700 dark:text-zinc-200">
-                No trips yet
-              </p>
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                {isAdmin
-                  ? "Create a trip folder, then upload photos."
-                  : "Sign in as admin to add trips and photos."}
-              </p>
-              {isAdmin ? (
-                <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <Link
-                    href="/trips/new"
-                    className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-                  >
-                    New trip
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => openUpload()}
-                    className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
-                  >
-                    Upload photos
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-              {trips.map((trip, index) => (
-                <TripCard
-                  key={trip.path}
-                  trip={trip}
-                  priority={index < 6}
-                  isAdmin={isAdmin && !isFavoritesTrip(trip.name)}
-                  onDelete={handleDeleteTrip}
-                  deleting={deletingTrip === trip.name}
-                />
-              ))}
-            </div>
-          )}
+          ) : null}
         </div>
-        </main>
-      </div>
-    </>
+      }
+    >
+      <LightGalleryTripPicker
+        trips={trips}
+        isAdmin={isAdmin}
+        onDelete={
+          isAdmin
+            ? (trip) => {
+                if (isFavoritesTrip(trip.name)) return;
+                void handleDeleteTrip(trip);
+              }
+            : undefined
+        }
+        deletingName={deletingTrip}
+      />
+    </GallerySelectionShell>
   );
 }

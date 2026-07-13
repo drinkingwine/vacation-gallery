@@ -20,6 +20,17 @@ const Gallery25 = dynamic(
   },
 );
 
+const LightGalleryAlbum = dynamic(
+  () =>
+    import("@/components/gallery/LightGalleryAlbum").then((mod) => ({
+      default: mod.LightGalleryAlbum,
+    })),
+  {
+    ssr: false,
+    loading: () => <GallerySkeleton />,
+  },
+);
+
 type GalleryResponse = {
   items: GalleryItem[];
   hasNext: boolean;
@@ -44,6 +55,7 @@ type GalleryInfiniteProps = {
   onItemRemoved?: (itemId: string) => void;
   clickToEdit?: boolean;
   allowCardDelete?: boolean;
+  gridEngine?: "cards" | "lightgallery";
 };
 
 export function GalleryInfinite({
@@ -64,6 +76,7 @@ export function GalleryInfinite({
   onItemRemoved,
   clickToEdit = false,
   allowCardDelete = false,
+  gridEngine = "cards",
 }: GalleryInfiniteProps) {
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [page, setPage] = useState(initialPage);
@@ -77,7 +90,17 @@ export function GalleryInfinite({
     setPage(initialPage);
     setHasNext(initialHasNext);
     setLoadError(false);
-  }, [initialItems, initialPage, initialHasNext, mediaType, sortOrder, keyword, tag, trip, place]);
+  }, [
+    initialItems,
+    initialPage,
+    initialHasNext,
+    mediaType,
+    sortOrder,
+    keyword,
+    tag,
+    trip,
+    place,
+  ]);
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasNext) return;
@@ -110,7 +133,18 @@ export function GalleryInfinite({
     } finally {
       setIsLoading(false);
     }
-  }, [hasNext, isLoading, keyword, mediaType, page, pageSize, sortOrder, tag, trip, place]);
+  }, [
+    hasNext,
+    isLoading,
+    keyword,
+    mediaType,
+    page,
+    pageSize,
+    sortOrder,
+    tag,
+    trip,
+    place,
+  ]);
 
   useEffect(() => {
     if (!hasNext || loadError) return;
@@ -133,24 +167,35 @@ export function GalleryInfinite({
     );
   }, []);
 
-  const handleItemRemoved = useCallback((itemId: string) => {
-    setItems((prev) => prev.filter((item) => String(item.id) !== itemId));
-    onItemRemoved?.(itemId);
-  }, [onItemRemoved]);
+  const handleItemRemoved = useCallback(
+    (itemId: string) => {
+      setItems((prev) => prev.filter((item) => String(item.id) !== itemId));
+      onItemRemoved?.(itemId);
+    },
+    [onItemRemoved],
+  );
 
   return (
     <>
-      <Gallery25
-        items={items}
-        viewerItems={viewerItems}
-        showHeader={showHeader}
-        selectedId={selectedId ?? null}
-        onSelectedIdChange={onSelectedIdChange}
-        onItemTagsChange={handleItemTagsChange}
-        onItemRemoved={handleItemRemoved}
-        clickToEdit={clickToEdit}
-        allowCardDelete={allowCardDelete}
-      />
+      {gridEngine === "lightgallery" ? (
+        <LightGalleryAlbum
+          items={items}
+          selectedId={selectedId ?? null}
+          onSelectedIdChange={onSelectedIdChange}
+        />
+      ) : (
+        <Gallery25
+          items={items}
+          viewerItems={viewerItems}
+          showHeader={showHeader}
+          selectedId={selectedId ?? null}
+          onSelectedIdChange={onSelectedIdChange}
+          onItemTagsChange={handleItemTagsChange}
+          onItemRemoved={handleItemRemoved}
+          clickToEdit={clickToEdit}
+          allowCardDelete={allowCardDelete}
+        />
+      )}
 
       <div className="mt-10 flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
         {loadError ? (

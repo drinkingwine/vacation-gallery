@@ -70,8 +70,9 @@ export function CoverImage({
       alt={alt}
       fill
       className={cn(
-        "object-cover",
-        "transition-opacity duration-500",
+        "object-contain object-center",
+        "transition-all duration-500 ease-out",
+        "group-hover:scale-[1.03]",
         isVisible ? "opacity-100" : "opacity-0",
         className,
       )}
@@ -84,16 +85,32 @@ export function CoverImage({
 
 export function coverFrameClass(loaded: boolean) {
   return cn(
-    "relative mb-4 aspect-video w-full overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-200 shadow-lg",
-    "dark:border-white/10 dark:bg-white/10",
+    "relative mb-3 aspect-square w-full overflow-hidden rounded-2xl",
+    "border border-white/70 bg-zinc-100/90 shadow-[0_10px_30px_-12px_rgba(24,24,27,0.35)]",
+    "ring-1 ring-zinc-900/5 transition duration-500 ease-out",
+    "group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_-14px_rgba(24,24,27,0.4)]",
+    "dark:border-white/10 dark:bg-zinc-900/70 dark:ring-white/10",
     !loaded && "animate-pulse",
   );
 }
 
 export function coverCountBadgeClass() {
   return cn(
-    "absolute bottom-3 right-3 z-10 rounded-full border border-amber-400/70",
-    "bg-amber-100/95 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-amber-950 shadow-sm",
-    "dark:border-amber-500/50 dark:bg-amber-200/90 dark:text-amber-950",
+    "absolute bottom-2.5 right-2.5 z-10 rounded-full",
+    "border border-white/50 bg-zinc-950/55 px-2.5 py-1",
+    "text-[10px] font-semibold tabular-nums tracking-wide text-white backdrop-blur-md",
+    "shadow-sm dark:border-white/20 dark:bg-black/55",
   );
+}
+
+export function coverCardLabelClass() {
+  return cn(
+    "mt-0.5 line-clamp-2 font-serif text-sm font-medium leading-snug tracking-tight",
+    "text-zinc-800 transition-colors duration-300",
+    "group-hover:text-zinc-950 dark:text-zinc-100 dark:group-hover:text-white",
+  );
+}
+
+export function coverCardMetaClass() {
+  return "mt-0.5 line-clamp-1 text-[11px] tracking-wide text-zinc-500 dark:text-zinc-400";
 }

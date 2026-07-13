@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CoverImage,
+  coverCardLabelClass,
   coverCountBadgeClass,
   coverFrameClass,
 } from "@/components/gallery/CoverImage";
@@ -12,9 +13,14 @@ import { personGalleryPath, type PersonSummary } from "@/lib/people-gallery";
 type PersonCardProps = {
   person: PersonSummary;
   priority?: boolean;
+  index?: number;
 };
 
-export function PersonCard({ person, priority = false }: PersonCardProps) {
+export function PersonCard({
+  person,
+  priority = false,
+  index = 0,
+}: PersonCardProps) {
   const cover = person.coverUrl;
   const [coverLoaded, setCoverLoaded] = useState(false);
 
@@ -23,7 +29,10 @@ export function PersonCard({ person, priority = false }: PersonCardProps) {
   }, [cover]);
 
   return (
-    <div className="group relative mt-2 block">
+    <div
+      className="gallery-card-enter group relative block"
+      style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}
+    >
       <Link href={personGalleryPath(person.tag)} className="block">
         <div className={coverFrameClass(coverLoaded)}>
           {cover ? (
@@ -32,29 +41,21 @@ export function PersonCard({ person, priority = false }: PersonCardProps) {
               alt={person.label}
               unoptimized
               priority={priority}
-              sizes="(max-width: 768px) 100vw, 33vw"
+              sizes="(max-width: 768px) 50vw, 16vw"
               onCoverLoad={() => setCoverLoaded(true)}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200/80 bg-zinc-100 shadow-lg dark:border-white/10 dark:bg-white/10">
-              <svg
-                className="h-10 w-10 text-zinc-400 dark:text-zinc-500"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M21 3H3a2 2 0 00-2 2v14a2 2 0 002 2h18a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H3V5h18v14zm-5-7l-3 3.72L10 13l-4 5h12l-3-3z" />
-              </svg>
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+              <span className="font-serif text-2xl text-zinc-400">
+                {person.label.slice(0, 1)}
+              </span>
             </div>
           )}
-          <div className={coverCountBadgeClass()}>
-            {person.photoCount}
-          </div>
+          <div className={coverCountBadgeClass()}>{person.photoCount}</div>
         </div>
 
-        <div className="px-2">
-          <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-zinc-800 transition-colors group-hover:text-indigo-600 dark:text-zinc-200 dark:group-hover:text-indigo-400">
-            {person.label}
-          </h2>
+        <div className="px-1">
+          <h2 className={coverCardLabelClass()}>{person.label}</h2>
         </div>
       </Link>
     </div>

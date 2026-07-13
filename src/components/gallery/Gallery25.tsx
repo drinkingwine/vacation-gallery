@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
 import { GalleryHeader } from "@/components/gallery/GalleryHeader";
+import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import {
@@ -23,23 +23,12 @@ import {
 import { galleryCopy } from "@/lib/gallery-copy";
 import { downloadGalleryItem } from "@/lib/gallery-download";
 import type { GalleryItem } from "@/lib/gallery";
-import { getItemDisplayTags, itemHasAssignedTags } from "@/lib/gallery";
+import {
+  getItemDisplayTags,
+  itemHasAssignedTags,
+  toLightGalleryElements,
+} from "@/lib/gallery";
 import { cn } from "@/lib/utils";
-
-const PhotoDetailModal = dynamic(
-  () =>
-    import("@/components/gallery/PhotoDetailModal").then((mod) => ({
-      default: mod.PhotoDetailModal,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-300 border-t-indigo-500" />
-      </div>
-    ),
-  },
-);
 
 type GalleryId = string | number;
 
@@ -168,7 +157,7 @@ export function Gallery25({
   onMakeDefault,
   onPhotoChanged,
   onItemRemoved,
-  onItemTagsChange,
+  onItemTagsChange: _onItemTagsChange,
   clickToEdit = false,
   allowCardDelete = false,
   showTimestamp = false,
@@ -358,13 +347,13 @@ export function Gallery25({
     );
   }, [modalVisibleItems, selectedId]);
 
-  const modalSelected = useMemo(() => {
-    if (!selectedId) return null;
-    return (
-      modalVisibleItems.find((item) => String(item.id) === String(selectedId)) ??
-      null
-    );
-  }, [modalVisibleItems, selectedId]);
+  const lightGalleryElements = useMemo(
+    () => toLightGalleryElements(modalVisibleItems),
+    [modalVisibleItems],
+  );
+
+  const lightGalleryOpenIndex =
+    modalSelectedIndex >= 0 ? modalSelectedIndex : null;
 
   const chromeVisible = showChrome && (!isFullBleed || isChromeVisible);
   const gridControlsVisible = showChrome;
@@ -456,81 +445,21 @@ export function Gallery25({
     };
   }, [isFullBleed]);
 
-  useEffect(() => {
-    if (!modalSelected) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSelectedId(null);
-        return;
-      }
-      if (modalVisibleItems.length < 2) return;
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        const prevIndex =
-          modalSelectedIndex <= 0
-            ? modalVisibleItems.length - 1
-            : modalSelectedIndex - 1;
-        setSelectedId(modalVisibleItems[prevIndex]?.id ?? null);
-      }
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        const nextIndex =
-          modalSelectedIndex >= modalVisibleItems.length - 1
-            ? 0
-            : modalSelectedIndex + 1;
-        setSelectedId(modalVisibleItems[nextIndex]?.id ?? null);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [modalSelected, modalSelectedIndex, modalVisibleItems, setSelectedId]);
-
-  useEffect(() => {
-    if (modalSelected) {
-      document.body.style.overflow = "hidden";
-      document.body.classList.add("gallery-modal-open");
-    } else {
-      document.body.style.overflow = "";
-      document.body.classList.remove("gallery-modal-open");
-    }
-    return () => {
-      document.body.style.overflow = "";
-      document.body.classList.remove("gallery-modal-open");
-    };
-  }, [modalSelected]);
-
-  const canNavigate =
-    modalVisibleItems.length > 1 && modalSelectedIndex !== -1;
-  const handleNavigate = (direction: "prev" | "next") => {
-    if (!canNavigate) return;
-    const nextIndex =
-      direction === "prev"
-        ? modalSelectedIndex <= 0
-          ? modalVisibleItems.length - 1
-          : modalSelectedIndex - 1
-        : modalSelectedIndex >= modalVisibleItems.length - 1
-          ? 0
-          : modalSelectedIndex + 1;
-    setSelectedId(modalVisibleItems[nextIndex]?.id ?? null);
-  };
+  const handleLightGallerySlide = useCallback(
+    (index: number) => {
+      const nextId = modalVisibleItems[index]?.id ?? null;
+      if (nextId !== null) setSelectedId(nextId);
+    },
+    [modalVisibleItems, setSelectedId],
+  );
 
   if (!showGrid) {
     return (
-      <PhotoDetailModal
-        selectedItem={modalSelected}
-        items={modalVisibleItems}
-        onSelect={(id) => setSelectedId(id)}
+      <LightGalleryViewer
+        elements={lightGalleryElements}
+        openIndex={lightGalleryOpenIndex}
         onClose={() => setSelectedId(null)}
-        onPrev={() => handleNavigate("prev")}
-        onNext={() => handleNavigate("next")}
-        hasPrev={canNavigate}
-        hasNext={canNavigate}
-        isAdmin={isAdmin}
-        onEdit={handlePhotoEdit}
-        onMakeDefault={onMakeDefault}
-        isCoverPhoto={isCoverPhoto}
-        onPhotoChanged={onPhotoChanged}
-        onItemTagsChange={onItemTagsChange}
+        onSlideChange={handleLightGallerySlide}
       />
     );
   }
@@ -830,21 +759,11 @@ export function Gallery25({
           })}
         </div>
       </div>
-      <PhotoDetailModal
-        selectedItem={modalSelected}
-        items={modalVisibleItems}
-        onSelect={(id) => setSelectedId(id)}
+      <LightGalleryViewer
+        elements={lightGalleryElements}
+        openIndex={lightGalleryOpenIndex}
         onClose={() => setSelectedId(null)}
-        onPrev={() => handleNavigate("prev")}
-        onNext={() => handleNavigate("next")}
-        hasPrev={canNavigate}
-        hasNext={canNavigate}
-        isAdmin={isAdmin}
-        onEdit={handlePhotoEdit}
-        onMakeDefault={onMakeDefault}
-        isCoverPhoto={isCoverPhoto}
-        onPhotoChanged={onPhotoChanged}
-        onItemTagsChange={onItemTagsChange}
+        onSlideChange={handleLightGallerySlide}
       />
     </section>
   );

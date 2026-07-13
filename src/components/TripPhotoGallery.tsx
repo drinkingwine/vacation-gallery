@@ -1,28 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
-import { buildGalleryItem } from "@/lib/gallery";
+import { buildGalleryItem, toLightGalleryElements } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
 
-const Gallery25 = dynamic(
+const LightGalleryInlineCarousel = dynamic(
   () =>
-    import("@/components/gallery/Gallery25").then((mod) => ({
-      default: mod.Gallery25,
+    import("@/components/gallery/LightGalleryInlineCarousel").then((mod) => ({
+      default: mod.LightGalleryInlineCarousel,
     })),
   {
     ssr: false,
     loading: () => (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="aspect-[4/5] animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
-          />
-        ))}
-      </div>
+      <div className="vc-lg-inline-container animate-pulse rounded-2xl bg-zinc-200/80 dark:bg-zinc-800/80" />
     ),
   },
 );
@@ -45,108 +38,46 @@ export function TripPhotoGallery({
   tripName,
   loading,
   emptyMessage,
-  isAdmin = false,
-  coverPhoto = null,
-  coverUrl = null,
-  onPhotoChanged,
 }: TripPhotoGalleryProps) {
-  const baseItems = useMemo(
-    () =>
-      photos.map((photo) =>
-        buildGalleryItem({
-          ...photo,
-          id: photo.path,
-          tripName,
-          tripTitle: trip?.title ?? tripName.replace(/-/g, " "),
-          tripLocation: trip?.location,
-          tripStartDate: trip?.startDate,
-        }),
-      ),
-    [photos, trip?.location, trip?.startDate, trip?.title, tripName],
-  );
-  const photoDateTakenByPath = useMemo(
-    () => new Map(photos.map((photo) => [photo.path, photo.dateTaken])),
-    [photos],
-  );
-  const [itemTagPatches, setItemTagPatches] = useState<Record<string, string[]>>(
-    {},
-  );
-
-  useEffect(() => {
-    setItemTagPatches({});
-  }, [photos]);
-
   const items = useMemo(() => {
-    const merged = baseItems.map((item) =>
-      itemTagPatches[item.id]
-        ? { ...item, tags: itemTagPatches[item.id] }
-        : item,
+    const built = photos.map((photo) =>
+      buildGalleryItem({
+        ...photo,
+        id: photo.path,
+        tripName,
+        tripTitle: trip?.title ?? tripName.replace(/-/g, " "),
+        tripLocation: trip?.location,
+        tripStartDate: trip?.startDate,
+      }),
     );
 
-    const compareByDateAsc = (a: (typeof merged)[number], b: (typeof merged)[number]) => {
+    const dateByPath = new Map(photos.map((photo) => [photo.path, photo.dateTaken]));
+
+    const compareByDateAsc = (a: (typeof built)[number], b: (typeof built)[number]) => {
       const timeA =
-        parsePhotoTimestamp(photoDateTakenByPath.get(a.path)) ??
-        Number.POSITIVE_INFINITY;
+        parsePhotoTimestamp(dateByPath.get(a.path)) ?? Number.POSITIVE_INFINITY;
       const timeB =
-        parsePhotoTimestamp(photoDateTakenByPath.get(b.path)) ??
-        Number.POSITIVE_INFINITY;
+        parsePhotoTimestamp(dateByPath.get(b.path)) ?? Number.POSITIVE_INFINITY;
       if (timeA !== timeB) return timeA - timeB;
       return a.filename.localeCompare(b.filename);
     };
 
-    const hasAssignedTag = (item: (typeof merged)[number]) =>
+    const hasAssignedTag = (item: (typeof built)[number]) =>
       (item.tags ?? []).some((tag) => tag.toLowerCase() !== FAVORITE_TAG);
 
-    return [...merged].sort((a, b) => {
+    return [...built].sort((a, b) => {
       const aTagged = hasAssignedTag(a);
       const bTagged = hasAssignedTag(b);
       if (aTagged !== bTagged) return aTagged ? 1 : -1;
       return compareByDateAsc(a, b);
     });
-  }, [baseItems, itemTagPatches, photoDateTakenByPath]);
+  }, [photos, trip?.location, trip?.startDate, trip?.title, tripName]);
 
-  const handleItemTagsChange = useCallback((itemId: string, tags: string[]) => {
-    setItemTagPatches((prev) => ({ ...prev, [itemId]: tags }));
-  }, []);
-
-  const makeDefault = useCallback(
-    async (photoName: string) => {
-      const res = await fetch(
-        `/api/trips/${encodeURIComponent(tripName)}/cover`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photoName }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Failed to set default photo");
-      }
-      onPhotoChanged?.();
-    },
-    [onPhotoChanged, tripName],
-  );
-
-  const handleMakeDefault = useCallback(
-    (item: { filename: string }) => {
-      void makeDefault(item.filename).catch((err) => {
-        alert(err instanceof Error ? err.message : "Failed to set default photo");
-      });
-    },
-    [makeDefault],
-  );
+  const elements = useMemo(() => toLightGalleryElements(items), [items]);
 
   if (loading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="aspect-[4/5] animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
-          />
-        ))}
-      </div>
+      <div className="vc-lg-inline-container animate-pulse rounded-2xl bg-zinc-200/80 dark:bg-zinc-800/80" />
     );
   }
 
@@ -158,19 +89,5 @@ export function TripPhotoGallery({
     );
   }
 
-  return (
-    <Gallery25
-      items={items}
-      showHeader={false}
-      showUntaggedFilter
-      tripTitle={trip?.title ?? tripName.replace(/-/g, " ")}
-      clickToEdit={isAdmin}
-      allowCardDelete={isAdmin}
-      coverPhoto={coverPhoto}
-      coverUrl={coverUrl}
-      onMakeDefault={isAdmin ? handleMakeDefault : undefined}
-      onPhotoChanged={onPhotoChanged}
-      onItemTagsChange={handleItemTagsChange}
-    />
-  );
+  return <LightGalleryInlineCarousel elements={elements} />;
 }

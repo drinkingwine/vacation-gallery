@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FilterBar } from "@/components/FilterBar";
-import { Lightbox } from "@/components/Lightbox";
+import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
 import {
   DefaultPhotoBadge,
   MakeDefaultIconButton,
@@ -12,6 +12,7 @@ import {
 } from "@/components/gallery/PhotoOverlayIcons";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { photoEditPath } from "@/lib/edit-paths";
+import { photosToLightGalleryElements } from "@/lib/gallery";
 import type { Photo, SortField, SortOrder } from "@/lib/types";
 
 type PhotoGridProps = {
@@ -63,6 +64,11 @@ export function PhotoGrid({
 
     return result;
   }, [photos, sortField, sortOrder, search]);
+
+  const lightGalleryElements = useMemo(
+    () => photosToLightGalleryElements(filtered),
+    [filtered],
+  );
 
   const openPhotoEdit = (photo: Photo) => {
     if (!tripName) return;
@@ -238,20 +244,12 @@ export function PhotoGrid({
         </div>
       )}
 
-      {lightboxIndex !== null && (
-        <Lightbox
-          photos={filtered}
-          currentIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
-          isAdmin={isAdmin}
-          onDelete={deletePhoto}
-          onEdit={isAdmin && tripName ? openPhotoEdit : undefined}
-          onMakeDefault={isAdmin && tripName ? makeDefault : undefined}
-          isCoverPhoto={isCoverPhoto}
-          busy={busyPath !== null}
-        />
-      )}
+      <LightGalleryViewer
+        elements={lightGalleryElements}
+        openIndex={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onSlideChange={setLightboxIndex}
+      />
     </>
   );
 }
