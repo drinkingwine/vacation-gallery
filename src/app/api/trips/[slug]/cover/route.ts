@@ -17,22 +17,23 @@ export async function POST(
     }
 
     const body = await req.json();
+    const clear = body?.clear === true || body?.photoName === null;
     const photoName =
       typeof body.photoName === "string" ? body.photoName.trim() : "";
 
-    if (!photoName) {
+    if (!clear && !photoName) {
       return NextResponse.json(
         { error: "photoName is required" },
         { status: 400 },
       );
     }
 
-    await setTripCoverPhoto(tripName, photoName);
+    await setTripCoverPhoto(tripName, clear ? null : photoName);
     const updated = await getTrip(tripName);
 
     return NextResponse.json({
       success: true,
-      coverPhoto: photoName,
+      coverPhoto: clear ? null : photoName,
       coverUrl: updated?.coverUrl ?? null,
     });
   } catch (err) {

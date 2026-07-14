@@ -14,7 +14,7 @@ import {
   invalidateMediaListCache,
   listMediaCached,
 } from "@/lib/media-list-cache";
-import { sortTripsByDateDesc, sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
+import { sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
 import type {
   CreateTripInput,
   GalleryPhoto,
@@ -343,7 +343,8 @@ function buildTrip(
     photoCount,
     videoCount,
     coverUrl: cover.coverUrl,
-    coverPhoto: metadata.coverPhoto ?? cover.coverPhoto,
+    // Only the explicitly chosen cover — never the auto-fallback name.
+    coverPhoto: metadata.coverPhoto,
     title: metadata.title ?? tripLabel(dir.name),
     location: metadata.location,
     geoLocation: metadata.geoLocation,
@@ -596,8 +597,18 @@ export async function patchTripMetadata(
 
 export async function setTripCoverPhoto(
   tripName: string,
-  photoName: string,
+  photoName: string | null,
 ): Promise<void> {
+  if (photoName === null) {
+    const existing = await getTripMetadata(tripName);
+    const { coverPhoto: _removed, ...rest } = existing;
+    await updateTripMetadata(tripName, {
+      ...rest,
+      title: rest.title ?? tripLabel(tripName),
+    });
+    return;
+  }
+
   const photos = await listPhotos(tripName);
   if (!photos.some((p) => p.name === photoName)) {
     throw new Error("Photo not found in this trip");

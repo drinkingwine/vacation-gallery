@@ -13,6 +13,8 @@ type LightGalleryAlbumProps = {
   items: GalleryItem[];
   selectedId?: GalleryId | null;
   onSelectedIdChange?: (id: GalleryId | null) => void;
+  /** Videos use a dedicated watch page — keep lightGallery photo-only. */
+  onVideoOpen?: (item: GalleryItem) => void;
   className?: string;
   isAdmin?: boolean;
   onEdit?: (item: GalleryItem) => void;
@@ -31,6 +33,7 @@ export function LightGalleryAlbum({
   items,
   selectedId = null,
   onSelectedIdChange,
+  onVideoOpen,
   className,
   isAdmin = false,
   onEdit,
@@ -39,25 +42,34 @@ export function LightGalleryAlbum({
   onItemTagsChange,
 }: LightGalleryAlbumProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const elements = useMemo(() => toLightGalleryElements(items), [items]);
+
+  // lightGallery only handles photos; videos route to a dedicated page.
+  const photoItems = useMemo(
+    () => items.filter((item) => item.type !== "video"),
+    [items],
+  );
+  const elements = useMemo(
+    () => toLightGalleryElements(photoItems),
+    [photoItems],
+  );
   const openIndex = useMemo(() => {
-    const index = findItemIndex(items, selectedId);
+    const index = findItemIndex(photoItems, selectedId);
     return index >= 0 ? index : null;
-  }, [items, selectedId]);
+  }, [photoItems, selectedId]);
 
   const selectedItem = useMemo(() => {
-    const index = findItemIndex(items, selectedId);
-    return index >= 0 ? items[index] : null;
-  }, [items, selectedId]);
+    const index = findItemIndex(photoItems, selectedId);
+    return index >= 0 ? photoItems[index] : null;
+  }, [photoItems, selectedId]);
 
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const photoItemsRef = useRef(photoItems);
+  photoItemsRef.current = photoItems;
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
   const handleSlideChange = useCallback(
     (index: number) => {
-      const item = itemsRef.current[index];
+      const item = photoItemsRef.current[index];
       if (!item) return;
       if (String(item.id) === String(selectedIdRef.current)) return;
       setDetailsOpen(false);
@@ -72,13 +84,28 @@ export function LightGalleryAlbum({
   }, [onSelectedIdChange]);
 
   const handleMediaClick = useCallback((index: number) => {
-    const item = itemsRef.current[index];
+    const item = photoItemsRef.current[index];
     if (!item) return;
     if (String(item.id) !== String(selectedIdRef.current)) {
       onSelectedIdChange?.(item.id);
     }
     setDetailsOpen(true);
   }, [onSelectedIdChange]);
+
+  const handleThumbClick = useCallback(
+    (item: GalleryItem) => {
+      if (item.type === "video") {
+        onVideoOpen?.(item);
+        return;
+      }
+      if (isAdmin && onEdit) {
+        onEdit(item);
+        return;
+      }
+      onSelectedIdChange?.(item.id);
+    },
+    [isAdmin, onEdit, onSelectedIdChange, onVideoOpen],
+  );
 
   if (items.length === 0) return null;
 
@@ -93,8 +120,14 @@ export function LightGalleryAlbum({
               type="button"
               className="vc-lg-album-item"
               data-media-type={item.type}
-              aria-label={item.title}
-              onClick={() => onSelectedIdChange?.(item.id)}
+              aria-label={
+                isVideo
+                  ? `Play ${item.title}`
+                  : isAdmin && onEdit
+                    ? `Edit ${item.title}`
+                    : item.title
+              }
+              onClick={() => handleThumbClick(item)}
             >
               {isVideo ? (
                 <video

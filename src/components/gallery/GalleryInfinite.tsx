@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BackToTop } from "@/components/gallery/BackToTop";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
 import { Spinner } from "@/components/gallery/Spinner";
+import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
 
@@ -78,6 +80,7 @@ export function GalleryInfinite({
   allowCardDelete = false,
   gridEngine = "cards",
 }: GalleryInfiniteProps) {
+  const router = useRouter();
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [page, setPage] = useState(initialPage);
   const [hasNext, setHasNext] = useState(initialHasNext);
@@ -182,6 +185,15 @@ export function GalleryInfinite({
           items={items}
           selectedId={selectedId ?? null}
           onSelectedIdChange={onSelectedIdChange}
+          onVideoOpen={(item) => {
+            const href = galleryVideoWatchPath(
+              item,
+              item.tripName
+                ? `/trips/${encodeURIComponent(item.tripName)}`
+                : "/gallery/all",
+            );
+            if (href) router.push(href);
+          }}
         />
       ) : (
         <Gallery25

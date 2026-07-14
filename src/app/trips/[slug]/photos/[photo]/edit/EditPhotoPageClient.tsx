@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import {
-  DefaultPhotoBadge,
   MakeDefaultIconButton,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
@@ -154,11 +153,13 @@ export default function EditPhotoPageClient() {
     setTags((current) => current.filter((value) => value !== tag));
   };
 
-  const handleMakeDefault = async () => {
-    if (!photo || !canSetDefault || isDefaultPhoto || makingDefault) return;
+  const handleToggleDefault = async () => {
+    if (!photo || !canSetDefault || makingDefault) return;
 
     setMakingDefault(true);
     setSaveError(null);
+
+    const nextIsDefault = !isDefaultPhoto;
 
     try {
       const res = await fetch(
@@ -166,27 +167,38 @@ export default function EditPhotoPageClient() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photoName: photo.name }),
+          body: JSON.stringify(
+            nextIsDefault
+              ? { photoName: photo.name }
+              : { photoName: null, clear: true },
+          ),
         },
       );
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to set default photo");
+        throw new Error(
+          data.error ??
+            (nextIsDefault
+              ? "Failed to set default photo"
+              : "Failed to clear default photo"),
+        );
       }
 
       setTrip((current) =>
         current
           ? {
               ...current,
-              coverPhoto: photo.name,
-              coverUrl: photo.downloadUrl,
+              coverPhoto: nextIsDefault ? photo.name : undefined,
+              coverUrl: nextIsDefault
+                ? photo.downloadUrl
+                : (data.coverUrl ?? current.coverUrl),
             }
           : current,
       );
       window.dispatchEvent(new Event(GALLERY_REFRESH_EVENT));
     } catch (err) {
       setSaveError(
-        err instanceof Error ? err.message : "Failed to set default photo",
+        err instanceof Error ? err.message : "Failed to update default photo",
       );
     } finally {
       setMakingDefault(false);
@@ -372,16 +384,18 @@ export default function EditPhotoPageClient() {
 
                     {canSetDefault ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        {isDefaultPhoto ? (
-                          <DefaultPhotoBadge variant="toolbar" />
-                        ) : (
-                          <MakeDefaultIconButton
-                            variant="toolbar"
-                            busy={makingDefault}
-                            disabled={makingDefault || saving}
-                            onClick={() => void handleMakeDefault()}
-                          />
-                        )}
+                        <MakeDefaultIconButton
+                          variant="toolbar"
+                          active={isDefaultPhoto}
+                          busy={makingDefault}
+                          disabled={makingDefault || saving}
+                          onClick={() => void handleToggleDefault()}
+                        />
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {isDefaultPhoto
+                            ? "Default trip cover"
+                            : "Set as default trip cover"}
+                        </span>
                       </div>
                     ) : null}
 

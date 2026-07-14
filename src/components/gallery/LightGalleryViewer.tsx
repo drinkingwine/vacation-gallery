@@ -86,6 +86,7 @@ const LG_OPTIONS = {
   rotateRight: true,
   flipHorizontal: true,
   flipVertical: true,
+  autoplayFirstVideo: true,
   autoplayVideoOnSlide: false,
   mobileSettings: {
     controls: true,

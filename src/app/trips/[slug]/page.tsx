@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
+import {
+  TripMediaFilter,
+  type TripMediaFilterValue,
+} from "@/components/TripMediaFilter";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
-import { formatMediaCount } from "@/lib/media-count";
+import { countMedia, formatMediaCount } from "@/lib/media-count";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import {
   getCachedTripPage,
@@ -27,10 +31,15 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<TripMediaFilterValue>("all");
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
   const confirm = useConfirm();
   const router = useRouter();
+
+  const mediaCounts = useMemo(() => countMedia(photos), [photos]);
+  const showMediaFilter =
+    !loading && mediaCounts.photos > 0 && mediaCounts.videos > 0;
 
   const fetchTrip = useCallback(async (options?: { background?: boolean }) => {
     const background = options?.background ?? false;
@@ -128,9 +137,20 @@ export default function TripPage() {
       <main className="main-offset relative z-0 flex-1 pb-16">
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           <header className="space-y-2 px-1">
-            <h1 className="font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-              {title}
-            </h1>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <h1 className="min-w-0 font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
+                {title}
+              </h1>
+              {showMediaFilter ? (
+                <TripMediaFilter
+                  value={mediaFilter}
+                  onChange={setMediaFilter}
+                  photos={mediaCounts.photos}
+                  videos={mediaCounts.videos}
+                  total={mediaCounts.total}
+                />
+              ) : null}
+            </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               {[trip?.location, dates, formatMediaCount(photos)]
                 .filter(Boolean)
@@ -197,6 +217,8 @@ export default function TripPage() {
             isAdmin={isAdmin}
             coverPhoto={trip?.coverPhoto ?? null}
             coverUrl={trip?.coverUrl ?? null}
+            mediaFilter={mediaFilter}
+            onMediaFilterChange={setMediaFilter}
             onPhotoChanged={() => {
               void fetchTrip({ background: true });
             }}

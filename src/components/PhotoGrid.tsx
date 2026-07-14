@@ -77,13 +77,13 @@ export function PhotoGrid({
 
   const isCoverPhoto = (photo: Photo) => {
     if (coverPhoto) return photo.name === coverPhoto;
-    if (coverUrl) return photo.downloadUrl === coverUrl;
     return false;
   };
 
   const makeDefault = async (photo: Photo) => {
     if (!tripName || busyPath) return;
 
+    const isDefault = isCoverPhoto(photo);
     setBusyPath(photo.path);
     try {
       const res = await fetch(
@@ -91,14 +91,25 @@ export function PhotoGrid({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photoName: photo.name }),
+          body: JSON.stringify(
+            isDefault
+              ? { photoName: null, clear: true }
+              : { photoName: photo.name },
+          ),
         },
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to set default photo");
+      if (!res.ok) {
+        throw new Error(
+          data.error ??
+            (isDefault
+              ? "Failed to clear default photo"
+              : "Failed to set default photo"),
+        );
+      }
       onPhotoChanged?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to set default photo");
+      alert(err instanceof Error ? err.message : "Failed to update default photo");
     } finally {
       setBusyPath(null);
     }
@@ -204,20 +215,21 @@ export function PhotoGrid({
                     </h3>
                   </div>
                 </button>
-                {isDefault ? (
-                  <div className="pointer-events-none absolute left-2 top-2 z-20">
-                    <DefaultPhotoBadge variant="overlay" />
-                  </div>
-                ) : isAdmin ? (
+                {isAdmin ? (
                   <div className="absolute left-2 top-2 z-20">
                     <MakeDefaultIconButton
                       variant="overlay"
+                      active={isDefault}
                       onClick={(e) => {
                         e.stopPropagation();
                         void makeDefault(photo);
                       }}
                       busy={busyPath === photo.path}
                     />
+                  </div>
+                ) : isDefault ? (
+                  <div className="pointer-events-none absolute left-2 top-2 z-20">
+                    <DefaultPhotoBadge variant="overlay" />
                   </div>
                 ) : null}
               </SpotlightCard>

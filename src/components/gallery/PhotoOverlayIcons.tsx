@@ -191,12 +191,15 @@ export function MakeDefaultIconButton({
   onClick,
   disabled,
   busy,
+  active = false,
   variant = "overlay",
   className,
 }: {
   onClick: (e: React.MouseEvent) => void;
   disabled?: boolean;
   busy?: boolean;
+  /** When true, this photo is the trip default — click clears it. */
+  active?: boolean;
   variant?: Variant;
   className?: string;
 }) {
@@ -204,14 +207,18 @@ export function MakeDefaultIconButton({
 
   return (
     <IconButton
-      label="Make default"
+      label={active ? "Remove default" : "Make default"}
       onClick={onClick}
       disabled={disabled}
       busy={busy}
       variant={variant}
-      className={cn(styles.makeDefaultHover, className)}
+      className={cn(
+        styles.makeDefaultHover,
+        active && styles.defaultBadge,
+        className,
+      )}
     >
-      <Star className="h-3.5 w-3.5" />
+      <Star className={cn("h-3.5 w-3.5", active && "fill-current")} />
     </IconButton>
   );
 }

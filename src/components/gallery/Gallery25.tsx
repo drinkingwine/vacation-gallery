@@ -194,10 +194,9 @@ export function Gallery25({
   const isCoverPhoto = useCallback(
     (item: GalleryItem) => {
       if (coverPhoto) return item.filename === coverPhoto;
-      if (coverUrl) return item.src === coverUrl;
       return false;
     },
-    [coverPhoto, coverUrl],
+    [coverPhoto],
   );
   const [uncontrolledSelectedId, setUncontrolledSelectedId] =
     useState<GalleryId | null>(null);

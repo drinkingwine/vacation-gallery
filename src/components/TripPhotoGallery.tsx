@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import type { TripMediaFilterValue } from "@/components/TripMediaFilter";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
+import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { buildGalleryItem } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
@@ -40,6 +43,8 @@ type TripPhotoGalleryProps = {
   coverPhoto?: string | null;
   coverUrl?: string | null;
   onPhotoChanged?: () => void;
+  mediaFilter?: TripMediaFilterValue;
+  onMediaFilterChange?: (value: TripMediaFilterValue) => void;
 };
 
 export function TripPhotoGallery({
@@ -52,10 +57,18 @@ export function TripPhotoGallery({
   coverPhoto = null,
   coverUrl = null,
   onPhotoChanged,
+  mediaFilter: mediaFilterProp,
+  onMediaFilterChange,
 }: TripPhotoGalleryProps) {
   const { isAdmin: authIsAdmin } = useAuth();
   const isAdmin = isAdminProp ?? authIsAdmin;
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
+  const [internalMediaFilter, setInternalMediaFilter] =
+    useState<TripMediaFilterValue>("all");
+
+  const mediaFilter = mediaFilterProp ?? internalMediaFilter;
+  const setMediaFilter = onMediaFilterChange ?? setInternalMediaFilter;
 
   const items = useMemo(() => {
     const built = photos.map((photo) =>
@@ -91,33 +104,64 @@ export function TripPhotoGallery({
     });
   }, [photos, trip?.location, trip?.startDate, trip?.title, tripName]);
 
+  const filteredItems = useMemo(() => {
+    if (mediaFilter === "photo") {
+      return items.filter((item) => item.type !== "video");
+    }
+    if (mediaFilter === "video") {
+      return items.filter((item) => item.type === "video");
+    }
+    return items;
+  }, [items, mediaFilter]);
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [mediaFilter]);
+
+  // If current filter has no items left (e.g. last video deleted), fall back to All.
+  useEffect(() => {
+    if (mediaFilter === "all") return;
+    if (filteredItems.length > 0) return;
+    if (items.length > 0) setMediaFilter("all");
+  }, [filteredItems.length, items.length, mediaFilter, setMediaFilter]);
+
   const isCoverPhoto = useCallback(
     (item: GalleryItem) => {
       if (coverPhoto && item.filename === coverPhoto) return true;
-      if (coverUrl && item.src === coverUrl) return true;
       return false;
     },
-    [coverPhoto, coverUrl],
+    [coverPhoto],
   );
 
-  const handleMakeDefault = useCallback(
+  const handleToggleDefault = useCallback(
     async (item: GalleryItem) => {
+      const isDefault =
+        Boolean(coverPhoto && item.filename === coverPhoto);
       const res = await fetch(
         `/api/trips/${encodeURIComponent(tripName)}/cover`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photoName: item.filename }),
+          body: JSON.stringify(
+            isDefault
+              ? { photoName: null, clear: true }
+              : { photoName: item.filename },
+          ),
         },
       );
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error ?? "Failed to set default photo");
+        alert(
+          data.error ??
+            (isDefault
+              ? "Failed to clear default photo"
+              : "Failed to set default photo"),
+        );
         return;
       }
       onPhotoChanged?.();
     },
-    [onPhotoChanged, tripName],
+    [coverPhoto, onPhotoChanged, tripName],
   );
 
   if (loading) {
@@ -141,11 +185,32 @@ export function TripPhotoGallery({
     );
   }
 
+  if (filteredItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-zinc-400">
+        <p className="text-sm">
+          {mediaFilter === "video"
+            ? "No videos in this trip"
+            : mediaFilter === "photo"
+              ? "No photos in this trip"
+              : (emptyMessage ?? "No media found")}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <LightGalleryAlbum
-      items={items}
+      items={filteredItems}
       selectedId={selectedId}
       onSelectedIdChange={setSelectedId}
+      onVideoOpen={(item) => {
+        const href = galleryVideoWatchPath(
+          item,
+          `/trips/${encodeURIComponent(tripName)}`,
+        );
+        if (href) router.push(href);
+      }}
       isAdmin={isAdmin}
       onEdit={(item) =>
         requestGalleryPhotoEdit(
@@ -153,7 +218,9 @@ export function TripPhotoGallery({
           `/trips/${encodeURIComponent(tripName)}`,
         )
       }
-      onMakeDefault={isAdmin ? (item) => void handleMakeDefault(item) : undefined}
+      onMakeDefault={
+        isAdmin ? (item) => void handleToggleDefault(item) : undefined
+      }
       isCoverPhoto={isCoverPhoto}
     />
   );

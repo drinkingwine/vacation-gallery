@@ -119,6 +119,7 @@ export function LightGalleryInlineCarousel({
         rotateRight: true,
         flipHorizontal: true,
         flipVertical: true,
+        autoplayFirstVideo: true,
         autoplayVideoOnSlide: false,
         mobileSettings: {
           controls: true,

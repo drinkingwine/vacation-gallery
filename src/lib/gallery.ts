@@ -1,5 +1,5 @@
 import type { GalleryItem as LgGalleryItem } from "lightgallery/lg-utils";
-import { contentTypeForFilename } from "@/lib/media";
+import { contentTypeForFilename, isVideo as isVideoFilename } from "@/lib/media";
 import { formatPhotoTimestamp } from "@/lib/photo-details";
 import type { GalleryPhoto, Photo, Trip } from "@/lib/types";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
@@ -171,6 +171,34 @@ function videoContentType(filename: string) {
   return contentTypeForFilename(filename) || "video/mp4";
 }
 
+function isGalleryVideoItem(item: Pick<GalleryItem, "type" | "filename" | "src">) {
+  return (
+    item.type === "video" ||
+    isVideoFilename(item.filename) ||
+    isVideoFilename(item.src.split("?")[0] ?? "")
+  );
+}
+
+function html5VideoSlide(src: string, filename: string, subHtml: string) {
+  return {
+    // Omit `src` so lightGallery treats this as HTML5 video (not an <img>).
+    thumb: src,
+    subHtml,
+    downloadUrl: src,
+    video: {
+      source: [{ src, type: videoContentType(filename) }],
+      tracks: [],
+      attributes: {
+        preload: "metadata",
+        controls: true,
+        playsInline: true,
+        // Required for autoplay-on-open under browser media policies.
+        muted: true,
+      } as unknown as HTMLVideoElement,
+    },
+  };
+}
+
 /** Map app gallery items to lightGallery dynamicEl slides. */
 export function toLightGalleryElements(items: GalleryItem[]): LgGalleryItem[] {
   return items.map((item) => {
@@ -184,21 +212,8 @@ export function toLightGalleryElements(items: GalleryItem[]): LgGalleryItem[] {
       dateShot: item.dateShot,
     });
 
-    if (item.type === "video") {
-      return {
-        thumb: item.src,
-        subHtml,
-        downloadUrl: item.src,
-        video: {
-          source: [{ src: item.src, type: videoContentType(item.filename) }],
-          tracks: [],
-          attributes: {
-            preload: "none",
-            controls: true,
-            playsInline: true,
-          } as unknown as HTMLVideoElement,
-        },
-      };
+    if (isGalleryVideoItem(item)) {
+      return html5VideoSlide(item.src, item.filename, subHtml);
     }
 
     return {
@@ -221,28 +236,11 @@ export function photosToLightGalleryElements(photos: Photo[]): LgGalleryItem[] {
       locationName: photo.location,
       dateTaken: photo.dateTaken,
     });
-    const isVideoFile = photo.mediaType === "video";
+    const isVideoFile =
+      photo.mediaType === "video" || isVideoFilename(photo.name);
 
     if (isVideoFile) {
-      return {
-        thumb: photo.downloadUrl,
-        subHtml,
-        downloadUrl: photo.downloadUrl,
-        video: {
-          source: [
-            {
-              src: photo.downloadUrl,
-              type: videoContentType(photo.name),
-            },
-          ],
-          tracks: [],
-          attributes: {
-            preload: "none",
-            controls: true,
-            playsInline: true,
-          } as unknown as HTMLVideoElement,
-        },
-      };
+      return html5VideoSlide(photo.downloadUrl, photo.name, subHtml);
     }
 
     return {

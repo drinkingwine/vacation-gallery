@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, Pencil, Share2, Star } from "lucide-react";
-import { DefaultPhotoBadge, MakeDefaultIconButton } from "@/components/gallery/PhotoOverlayIcons";
+import { MakeDefaultIconButton } from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
 import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
 import { downloadGalleryItem } from "@/lib/gallery-download";
@@ -212,14 +212,12 @@ export function PhotoInfoSidebar({
           )}
           {isAdmin ? (
             <div className="flex flex-col items-start gap-2">
-              {onMakeDefault && !isDefaultPhoto ? (
+              {onMakeDefault ? (
                 <MakeDefaultIconButton
                   variant="toolbar"
+                  active={isDefaultPhoto}
                   onClick={onMakeDefault}
                 />
-              ) : null}
-              {isDefaultPhoto ? (
-                <DefaultPhotoBadge variant="toolbar" />
               ) : null}
               <button
                 type="button"

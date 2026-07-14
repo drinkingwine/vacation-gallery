@@ -65,9 +65,9 @@ export function getTripSortTime(trip: {
   startDate?: string;
   endDate?: string;
 }): number | null {
-  const end = trip.endDate ? parseTripDateValue(trip.endDate)?.getTime() : null;
   const start = trip.startDate ? parseTripDateValue(trip.startDate)?.getTime() : null;
-  return end ?? start ?? null;
+  const end = trip.endDate ? parseTripDateValue(trip.endDate)?.getTime() : null;
+  return start ?? end ?? null;
 }
 
 export function sortTripsByDateDesc<
@@ -87,11 +87,28 @@ export function sortTripsByDateDesc<
   });
 }
 
+export function sortTripsByDateAsc<
+  T extends { startDate?: string; endDate?: string; title: string },
+>(trips: T[]): T[] {
+  return [...trips].sort((a, b) => {
+    const aTime = getTripSortTime(a);
+    const bTime = getTripSortTime(b);
+
+    if (aTime === null && bTime === null) {
+      return a.title.localeCompare(b.title);
+    }
+    if (aTime === null) return 1;
+    if (bTime === null) return -1;
+    if (aTime !== bTime) return aTime - bTime;
+    return a.title.localeCompare(b.title);
+  });
+}
+
 export function sortTripsWithFavoritesFirst<
   T extends { name: string; startDate?: string; endDate?: string; title: string },
 >(trips: T[]): T[] {
   const favorites = trips.filter((trip) => trip.name === "Favorites");
-  const rest = sortTripsByDateDesc(
+  const rest = sortTripsByDateAsc(
     trips.filter((trip) => trip.name !== "Favorites"),
   );
   return [...favorites, ...rest];
