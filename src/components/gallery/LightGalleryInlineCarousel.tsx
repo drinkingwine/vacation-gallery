@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import lightGallery from "lightgallery";
 import type { LightGallery as LightGalleryInstance } from "lightgallery/lightgallery";
 import type { GalleryItem as LgGalleryItem } from "lightgallery/lg-utils";
 import lgFullscreen from "lightgallery/plugins/fullscreen";
@@ -17,6 +16,7 @@ import "lightgallery/css/lg-video.css";
 import "lightgallery/css/lg-fullscreen.css";
 import "lightgallery/css/lg-rotate.css";
 
+import { createLightGallery } from "@/lib/lightgallery";
 import { cn } from "@/lib/utils";
 
 type LightGalleryInlineCarouselProps = {
@@ -50,10 +50,6 @@ export function LightGalleryInlineCarousel({
   onSlideChangeRef.current = onSlideChange;
   startIndexRef.current = startIndex;
 
-  const licenseKey =
-    process.env.NEXT_PUBLIC_LIGHTGALLERY_LICENSE_KEY?.trim() ||
-    "0000-0000-000-0000";
-
   const key = useMemo(() => slidesKey(elements), [elements]);
 
   useEffect(() => {
@@ -77,7 +73,7 @@ export function LightGalleryInlineCarousel({
 
     let instance: LightGalleryInstance;
     try {
-      instance = lightGallery(mount, {
+      instance = createLightGallery(mount, {
         container: mount,
         dynamic: true,
         dynamicEl: slides,
@@ -90,7 +86,6 @@ export function LightGalleryInlineCarousel({
         appendSubHtmlTo: ".lg-item",
         slideDelay: 400,
         plugins: PLUGINS,
-        licenseKey,
         addClass: "vc-lightgallery vc-lg-inline",
         mode: "lg-fade",
         easing: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -175,7 +170,7 @@ export function LightGalleryInlineCarousel({
         // parent already gone
       }
     };
-  }, [key, licenseKey]);
+  }, [key]);
 
   if (elements.length === 0) return null;
 

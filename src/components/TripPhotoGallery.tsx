@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useAuth } from "@/components/AuthProvider";
+import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import { buildGalleryItem } from "@/lib/gallery";
+import type { GalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
@@ -45,7 +48,13 @@ export function TripPhotoGallery({
   tripName,
   loading,
   emptyMessage,
+  isAdmin: isAdminProp,
+  coverPhoto = null,
+  coverUrl = null,
+  onPhotoChanged,
 }: TripPhotoGalleryProps) {
+  const { isAdmin: authIsAdmin } = useAuth();
+  const isAdmin = isAdminProp ?? authIsAdmin;
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
   const items = useMemo(() => {
@@ -82,6 +91,35 @@ export function TripPhotoGallery({
     });
   }, [photos, trip?.location, trip?.startDate, trip?.title, tripName]);
 
+  const isCoverPhoto = useCallback(
+    (item: GalleryItem) => {
+      if (coverPhoto && item.filename === coverPhoto) return true;
+      if (coverUrl && item.src === coverUrl) return true;
+      return false;
+    },
+    [coverPhoto, coverUrl],
+  );
+
+  const handleMakeDefault = useCallback(
+    async (item: GalleryItem) => {
+      const res = await fetch(
+        `/api/trips/${encodeURIComponent(tripName)}/cover`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoName: item.filename }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? "Failed to set default photo");
+        return;
+      }
+      onPhotoChanged?.();
+    },
+    [onPhotoChanged, tripName],
+  );
+
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -108,6 +146,15 @@ export function TripPhotoGallery({
       items={items}
       selectedId={selectedId}
       onSelectedIdChange={setSelectedId}
+      isAdmin={isAdmin}
+      onEdit={(item) =>
+        requestGalleryPhotoEdit(
+          item,
+          `/trips/${encodeURIComponent(tripName)}`,
+        )
+      }
+      onMakeDefault={isAdmin ? (item) => void handleMakeDefault(item) : undefined}
+      isCoverPhoto={isCoverPhoto}
     />
   );
 }

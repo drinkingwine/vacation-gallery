@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
+import { PhotoDetailsModal } from "@/components/gallery/PhotoDetailsModal";
 import type { GalleryItem } from "@/lib/gallery";
 import { toLightGalleryElements } from "@/lib/gallery";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,11 @@ type LightGalleryAlbumProps = {
   selectedId?: GalleryId | null;
   onSelectedIdChange?: (id: GalleryId | null) => void;
   className?: string;
+  isAdmin?: boolean;
+  onEdit?: (item: GalleryItem) => void;
+  onMakeDefault?: (item: GalleryItem) => void;
+  isCoverPhoto?: (item: GalleryItem) => boolean;
+  onItemTagsChange?: (itemId: string, tags: string[]) => void;
 };
 
 function findItemIndex(items: GalleryItem[], id: GalleryId | null | undefined) {
@@ -26,28 +32,52 @@ export function LightGalleryAlbum({
   selectedId = null,
   onSelectedIdChange,
   className,
+  isAdmin = false,
+  onEdit,
+  onMakeDefault,
+  isCoverPhoto,
+  onItemTagsChange,
 }: LightGalleryAlbumProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const elements = useMemo(() => toLightGalleryElements(items), [items]);
   const openIndex = useMemo(() => {
     const index = findItemIndex(items, selectedId);
     return index >= 0 ? index : null;
   }, [items, selectedId]);
 
-  // Keep latest items for slide callback without recreating the callback each render.
+  const selectedItem = useMemo(() => {
+    const index = findItemIndex(items, selectedId);
+    return index >= 0 ? items[index] : null;
+  }, [items, selectedId]);
+
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
-  const handleSlideChange = useCallback((index: number) => {
-    const item = itemsRef.current[index];
-    if (!item) return;
-    if (String(item.id) === String(selectedIdRef.current)) return;
-    onSelectedIdChange?.(item.id);
-  }, [onSelectedIdChange]);
+  const handleSlideChange = useCallback(
+    (index: number) => {
+      const item = itemsRef.current[index];
+      if (!item) return;
+      if (String(item.id) === String(selectedIdRef.current)) return;
+      setDetailsOpen(false);
+      onSelectedIdChange?.(item.id);
+    },
+    [onSelectedIdChange],
+  );
 
   const handleClose = useCallback(() => {
+    setDetailsOpen(false);
     onSelectedIdChange?.(null);
+  }, [onSelectedIdChange]);
+
+  const handleMediaClick = useCallback((index: number) => {
+    const item = itemsRef.current[index];
+    if (!item) return;
+    if (String(item.id) !== String(selectedIdRef.current)) {
+      onSelectedIdChange?.(item.id);
+    }
+    setDetailsOpen(true);
   }, [onSelectedIdChange]);
 
   if (items.length === 0) return null;
@@ -92,6 +122,21 @@ export function LightGalleryAlbum({
         openIndex={openIndex}
         onClose={handleClose}
         onSlideChange={handleSlideChange}
+        onSlideMediaClick={handleMediaClick}
+      />
+
+      <PhotoDetailsModal
+        item={detailsOpen ? selectedItem : null}
+        onClose={() => setDetailsOpen(false)}
+        isAdmin={isAdmin}
+        onEdit={onEdit}
+        onMakeDefault={onMakeDefault}
+        isDefaultPhoto={
+          selectedItem && isCoverPhoto
+            ? isCoverPhoto(selectedItem)
+            : false
+        }
+        onItemTagsChange={onItemTagsChange}
       />
     </>
   );
