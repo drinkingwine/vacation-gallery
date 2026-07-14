@@ -1,21 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { buildGalleryItem, toLightGalleryElements } from "@/lib/gallery";
+import { buildGalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
 import { FAVORITE_TAG } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
 
-const LightGalleryInlineCarousel = dynamic(
+const LightGalleryAlbum = dynamic(
   () =>
-    import("@/components/gallery/LightGalleryInlineCarousel").then((mod) => ({
-      default: mod.LightGalleryInlineCarousel,
+    import("@/components/gallery/LightGalleryAlbum").then((mod) => ({
+      default: mod.LightGalleryAlbum,
     })),
   {
     ssr: false,
     loading: () => (
-      <div className="vc-lg-inline-container animate-pulse rounded-2xl bg-zinc-200/80 dark:bg-zinc-800/80" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-4/5 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
+          />
+        ))}
+      </div>
     ),
   },
 );
@@ -39,6 +46,8 @@ export function TripPhotoGallery({
   loading,
   emptyMessage,
 }: TripPhotoGalleryProps) {
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+
   const items = useMemo(() => {
     const built = photos.map((photo) =>
       buildGalleryItem({
@@ -73,11 +82,16 @@ export function TripPhotoGallery({
     });
   }, [photos, trip?.location, trip?.startDate, trip?.title, tripName]);
 
-  const elements = useMemo(() => toLightGalleryElements(items), [items]);
-
   if (loading) {
     return (
-      <div className="vc-lg-inline-container animate-pulse rounded-2xl bg-zinc-200/80 dark:bg-zinc-800/80" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-4/5 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
+          />
+        ))}
+      </div>
     );
   }
 
@@ -89,5 +103,11 @@ export function TripPhotoGallery({
     );
   }
 
-  return <LightGalleryInlineCarousel elements={elements} />;
+  return (
+    <LightGalleryAlbum
+      items={items}
+      selectedId={selectedId}
+      onSelectedIdChange={setSelectedId}
+    />
+  );
 }

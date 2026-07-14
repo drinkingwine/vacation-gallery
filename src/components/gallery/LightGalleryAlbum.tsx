@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
 import type { GalleryItem } from "@/lib/gallery";
 import { toLightGalleryElements } from "@/lib/gallery";
@@ -32,6 +32,23 @@ export function LightGalleryAlbum({
     const index = findItemIndex(items, selectedId);
     return index >= 0 ? index : null;
   }, [items, selectedId]);
+
+  // Keep latest items for slide callback without recreating the callback each render.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+
+  const handleSlideChange = useCallback((index: number) => {
+    const item = itemsRef.current[index];
+    if (!item) return;
+    if (String(item.id) === String(selectedIdRef.current)) return;
+    onSelectedIdChange?.(item.id);
+  }, [onSelectedIdChange]);
+
+  const handleClose = useCallback(() => {
+    onSelectedIdChange?.(null);
+  }, [onSelectedIdChange]);
 
   if (items.length === 0) return null;
 
@@ -73,11 +90,8 @@ export function LightGalleryAlbum({
       <LightGalleryViewer
         elements={elements}
         openIndex={openIndex}
-        onClose={() => onSelectedIdChange?.(null)}
-        onSlideChange={(index) => {
-          const item = items[index];
-          if (item) onSelectedIdChange?.(item.id);
-        }}
+        onClose={handleClose}
+        onSlideChange={handleSlideChange}
       />
     </>
   );
