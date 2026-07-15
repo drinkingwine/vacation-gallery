@@ -108,7 +108,7 @@ export function sortTripsWithFavoritesFirst<
   T extends { name: string; startDate?: string; endDate?: string; title: string },
 >(trips: T[]): T[] {
   const favorites = trips.filter((trip) => trip.name === "Favorites");
-  const rest = sortTripsByDateAsc(
+  const rest = sortTripsByDateDesc(
     trips.filter((trip) => trip.name !== "Favorites"),
   );
   return [...favorites, ...rest];

@@ -93,14 +93,52 @@ export function getTimelineBounds(spans: TripTimelineSpan[]) {
 }
 
 export function assignTimelineRows(spans: TripTimelineSpan[]) {
-  const sorted = [...spans].sort((a, b) => b.startMs - a.startMs);
+  const sorted = [...spans].sort((a, b) => {
+    if (b.year !== a.year) return b.year - a.year;
+    return b.startMs - a.startMs;
+  });
+
   const assignments = new Map<string, number>();
+  const nextRowByYear = new Map<number, number>();
+  let rowCount = 0;
 
   for (const span of sorted) {
-    assignments.set(span.trip.path, 0);
+    const row = nextRowByYear.get(span.year) ?? 0;
+    assignments.set(span.trip.path, row);
+    nextRowByYear.set(span.year, row + 1);
+    rowCount = Math.max(rowCount, row + 1);
   }
 
-  return { rowCount: sorted.length > 0 ? 1 : 0, assignments };
+  return { rowCount, assignments };
+}
+
+/** Shared horizontal anchor per year so stacked same-year flags stay vertically aligned. */
+export function timelineYearAnchorPercents(
+  spans: TripTimelineSpan[],
+  bounds: { minMs: number; maxMs: number; spanMs: number },
+  order: "newest-first" | "oldest-first" = "newest-first",
+) {
+  const byYear = new Map<number, TripTimelineSpan[]>();
+  for (const span of spans) {
+    const list = byYear.get(span.year) ?? [];
+    list.push(span);
+    byYear.set(span.year, list);
+  }
+
+  const anchors = new Map<number, number>();
+  for (const [year, yearSpans] of byYear) {
+    let sumCenter = 0;
+    for (const span of yearSpans) {
+      sumCenter += (span.startMs + span.endMs) / 2;
+    }
+    const avgCenter = sumCenter / yearSpans.length;
+    anchors.set(
+      year,
+      timelineCenterPercent(avgCenter, avgCenter, bounds, order),
+    );
+  }
+
+  return anchors;
 }
 
 export function timelineCenterPercent(

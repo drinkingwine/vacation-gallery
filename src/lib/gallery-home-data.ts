@@ -16,6 +16,7 @@ import {
 import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import type { ThingSummary } from "@/lib/things-gallery";
+import { sortTripsWithFavoritesFirst } from "@/lib/trip-meta";
 import type { GalleryPhoto, Trip } from "@/lib/types";
 
 /** Minimal photo fields needed to build randomized gallery home views. */
@@ -110,7 +111,9 @@ export function buildGalleryHomeViews(
   const galleryPhotos = photos as GalleryPhoto[];
 
   return {
-    trips: applyRandomFavoritesCover(trips, photos),
+    trips: sortTripsWithFavoritesFirst(
+      applyRandomFavoritesCover(trips, photos),
+    ),
     people: applyRandomPeopleCovers(
       buildPeopleGalleryList(galleryPhotos),
       photos,

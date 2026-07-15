@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -12,10 +12,15 @@ import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { refreshGallery } from "@/lib/gallery-admin";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { galleryCopy } from "@/lib/gallery-copy";
+import { sortTripsWithFavoritesFirst } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
 
 export function GalleryTripSelection() {
   const { value: trips, loading } = useGalleryHomeSlice("trips");
+  const sortedTrips = useMemo(
+    () => sortTripsWithFavoritesFirst(trips),
+    [trips],
+  );
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -51,10 +56,10 @@ export function GalleryTripSelection() {
     <GallerySelectionShell
       title={galleryCopy.title}
       description="Pick a trip to browse its photos."
-      count={trips.length}
-      countLabel={trips.length === 1 ? "trip" : "trips"}
+      count={sortedTrips.length}
+      countLabel={sortedTrips.length === 1 ? "trip" : "trips"}
       loading={loading}
-      empty={!loading && trips.length === 0}
+      empty={!loading && sortedTrips.length === 0}
       contentClassName="contents"
       emptyMessage={
         <div>
@@ -87,7 +92,7 @@ export function GalleryTripSelection() {
       }
     >
       <LightGalleryTripPicker
-        trips={trips}
+        trips={sortedTrips}
         isAdmin={isAdmin}
         onDelete={
           isAdmin

@@ -10,11 +10,13 @@ import {
   TripMediaFilter,
   type TripMediaFilterValue,
 } from "@/components/TripMediaFilter";
+import { TripTagFilter } from "@/components/TripTagFilter";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
 import { countMedia, formatMediaCount } from "@/lib/media-count";
+import { formatTagLabel } from "@/lib/photo-tags";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import {
   getCachedTripPage,
@@ -32,6 +34,7 @@ export default function TripPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState(false);
   const [mediaFilter, setMediaFilter] = useState<TripMediaFilterValue>("all");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
   const confirm = useConfirm();
@@ -40,6 +43,31 @@ export default function TripPage() {
   const mediaCounts = useMemo(() => countMedia(photos), [photos]);
   const showMediaFilter =
     !loading && mediaCounts.photos > 0 && mediaCounts.videos > 0;
+
+  const tagOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const photo of photos) {
+      for (const raw of photo.tags ?? []) {
+        const tag = raw.trim().toLowerCase();
+        if (!tag) continue;
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return formatTagLabel(a.tag).localeCompare(formatTagLabel(b.tag));
+      });
+  }, [photos]);
+
+  useEffect(() => {
+    if (!tagFilter) return;
+    const stillPresent = tagOptions.some(
+      (option) => option.tag === tagFilter.toLowerCase(),
+    );
+    if (!stillPresent) setTagFilter(null);
+  }, [tagFilter, tagOptions]);
 
   const fetchTrip = useCallback(async (options?: { background?: boolean }) => {
     const background = options?.background ?? false;
@@ -137,18 +165,30 @@ export default function TripPage() {
       <main className="main-offset relative z-0 flex-1 pb-16">
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           <header className="space-y-2 px-1">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
               <h1 className="min-w-0 font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
                 {title}
               </h1>
-              {showMediaFilter ? (
-                <TripMediaFilter
-                  value={mediaFilter}
-                  onChange={setMediaFilter}
-                  photos={mediaCounts.photos}
-                  videos={mediaCounts.videos}
-                  total={mediaCounts.total}
-                />
+              {(showMediaFilter || (!loading && tagOptions.length > 0)) ? (
+                <div className="flex max-w-full flex-col items-end gap-2">
+                  {showMediaFilter ? (
+                    <TripMediaFilter
+                      value={mediaFilter}
+                      onChange={setMediaFilter}
+                      photos={mediaCounts.photos}
+                      videos={mediaCounts.videos}
+                      total={mediaCounts.total}
+                    />
+                  ) : null}
+                  {!loading && tagOptions.length > 0 ? (
+                    <TripTagFilter
+                      tags={tagOptions}
+                      value={tagFilter}
+                      onChange={setTagFilter}
+                      className="justify-end"
+                    />
+                  ) : null}
+                </div>
               ) : null}
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -219,6 +259,7 @@ export default function TripPage() {
             coverUrl={trip?.coverUrl ?? null}
             mediaFilter={mediaFilter}
             onMediaFilterChange={setMediaFilter}
+            tagFilter={tagFilter}
             onPhotoChanged={() => {
               void fetchTrip({ background: true });
             }}

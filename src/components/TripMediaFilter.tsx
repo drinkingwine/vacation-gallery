@@ -30,7 +30,8 @@ export function TripMediaFilter({
   return (
     <div
       className={cn(
-        "inline-flex shrink-0 rounded-full border border-zinc-200 bg-zinc-50/80 p-1 dark:border-zinc-700 dark:bg-zinc-900/70",
+        "inline-flex shrink-0 rounded-full border border-stone-300/90 bg-white p-1 shadow-sm",
+        "dark:border-white/20 dark:bg-zinc-950 dark:shadow-[0_8px_24px_rgb(0_0_0/0.35)]",
         className,
       )}
       role="group"
@@ -52,15 +53,15 @@ export function TripMediaFilter({
             className={cn(
               "rounded-full px-3.5 py-1.5 text-xs font-medium tracking-wide transition",
               active
-                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                ? "bg-stone-900 text-white dark:bg-amber-100 dark:text-stone-950"
+                : "text-stone-700 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-200 dark:hover:bg-white/10 dark:hover:text-white",
             )}
           >
             {tab.label}
             <span
               className={cn(
                 "ml-1.5 tabular-nums",
-                active ? "opacity-80" : "opacity-55",
+                active ? "opacity-80" : "opacity-60",
               )}
             >
               {count}

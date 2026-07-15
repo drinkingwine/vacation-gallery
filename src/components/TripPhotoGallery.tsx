@@ -10,7 +10,7 @@ import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { buildGalleryItem } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
-import { FAVORITE_TAG } from "@/lib/photo-tags";
+import { FAVORITE_TAG, formatTagLabel, hasPhotoTag } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
 
 const LightGalleryAlbum = dynamic(
@@ -45,6 +45,7 @@ type TripPhotoGalleryProps = {
   onPhotoChanged?: () => void;
   mediaFilter?: TripMediaFilterValue;
   onMediaFilterChange?: (value: TripMediaFilterValue) => void;
+  tagFilter?: string | null;
 };
 
 export function TripPhotoGallery({
@@ -59,6 +60,7 @@ export function TripPhotoGallery({
   onPhotoChanged,
   mediaFilter: mediaFilterProp,
   onMediaFilterChange,
+  tagFilter = null,
 }: TripPhotoGalleryProps) {
   const { isAdmin: authIsAdmin } = useAuth();
   const isAdmin = isAdminProp ?? authIsAdmin;
@@ -105,25 +107,30 @@ export function TripPhotoGallery({
   }, [photos, trip?.location, trip?.startDate, trip?.title, tripName]);
 
   const filteredItems = useMemo(() => {
+    let next = items;
     if (mediaFilter === "photo") {
-      return items.filter((item) => item.type !== "video");
+      next = next.filter((item) => item.type !== "video");
+    } else if (mediaFilter === "video") {
+      next = next.filter((item) => item.type === "video");
     }
-    if (mediaFilter === "video") {
-      return items.filter((item) => item.type === "video");
+    if (tagFilter) {
+      next = next.filter((item) =>
+        hasPhotoTag(item.tags ?? [], tagFilter),
+      );
     }
-    return items;
-  }, [items, mediaFilter]);
+    return next;
+  }, [items, mediaFilter, tagFilter]);
 
   useEffect(() => {
     setSelectedId(null);
-  }, [mediaFilter]);
+  }, [mediaFilter, tagFilter]);
 
-  // If current filter has no items left (e.g. last video deleted), fall back to All.
+  // If current media filter has no items left (e.g. last video deleted), fall back to All.
   useEffect(() => {
     if (mediaFilter === "all") return;
     if (filteredItems.length > 0) return;
-    if (items.length > 0) setMediaFilter("all");
-  }, [filteredItems.length, items.length, mediaFilter, setMediaFilter]);
+    if (items.length > 0 && !tagFilter) setMediaFilter("all");
+  }, [filteredItems.length, items.length, mediaFilter, setMediaFilter, tagFilter]);
 
   const isCoverPhoto = useCallback(
     (item: GalleryItem) => {
@@ -189,11 +196,13 @@ export function TripPhotoGallery({
     return (
       <div className="flex flex-col items-center justify-center py-24 text-zinc-400">
         <p className="text-sm">
-          {mediaFilter === "video"
-            ? "No videos in this trip"
-            : mediaFilter === "photo"
-              ? "No photos in this trip"
-              : (emptyMessage ?? "No media found")}
+          {tagFilter
+            ? `No ${mediaFilter === "video" ? "videos" : mediaFilter === "photo" ? "photos" : "items"} tagged #${formatTagLabel(tagFilter)}`
+            : mediaFilter === "video"
+              ? "No videos in this trip"
+              : mediaFilter === "photo"
+                ? "No photos in this trip"
+                : (emptyMessage ?? "No media found")}
         </p>
       </div>
     );

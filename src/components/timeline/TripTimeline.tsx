@@ -40,12 +40,23 @@ function TimelineYearHeader({
     >
       <TimelineDateBadge variant="year">{label}</TimelineDateBadge>
       {flags.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {flags.map((flag) => (
+        <div
+          className="relative flex items-center"
+          style={{
+            width: flags.length > 1 ? `${1.75 + (flags.length - 1) * 0.85}rem` : "1.75rem",
+            height: flags.length > 1 ? `${1.75 + (flags.length - 1) * 0.55}rem` : "1.75rem",
+          }}
+          aria-hidden
+        >
+          {flags.map((flag, index) => (
             <span
-              key={flag}
-              className="text-3xl leading-none"
-              aria-hidden
+              key={`${flag}-${index}`}
+              className="absolute text-3xl leading-none drop-shadow-sm"
+              style={{
+                left: `${index * 0.85}rem`,
+                top: `${index * 0.55}rem`,
+                zIndex: flags.length - index,
+              }}
             >
               {flag}
             </span>
@@ -105,12 +116,29 @@ export function TripTimeline({ trips }: TripTimelineProps) {
           >
             <TimelineDateBadge variant="year">Undated</TimelineDateBadge>
             {undatedFlags.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-2">
-                {undatedFlags.map((flag) => (
+              <div
+                className="relative flex items-center"
+                style={{
+                  width:
+                    undatedFlags.length > 1
+                      ? `${1.75 + (undatedFlags.length - 1) * 0.85}rem`
+                      : "1.75rem",
+                  height:
+                    undatedFlags.length > 1
+                      ? `${1.75 + (undatedFlags.length - 1) * 0.55}rem`
+                      : "1.75rem",
+                }}
+                aria-hidden
+              >
+                {undatedFlags.map((flag, index) => (
                   <span
-                    key={flag}
-                    className="text-3xl leading-none"
-                    aria-hidden
+                    key={`${flag}-${index}`}
+                    className="absolute text-3xl leading-none drop-shadow-sm"
+                    style={{
+                      left: `${index * 0.85}rem`,
+                      top: `${index * 0.55}rem`,
+                      zIndex: undatedFlags.length - index,
+                    }}
                   >
                     {flag}
                   </span>

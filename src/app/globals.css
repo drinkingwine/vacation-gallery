@@ -550,6 +550,32 @@ body.gallery-chrome-hidden .front-floating-nav * {
   }
 }
 
+/* Trip picker: row-major grid so newest→oldest reads left-to-right */
+.vc-lg-album.vc-lg-trip-picker {
+  column-count: unset;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.15rem 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .vc-lg-album.vc-lg-trip-picker {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.15rem 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vc-lg-album.vc-lg-trip-picker {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem 1.15rem;
+  }
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure {
+  margin: 0;
+}
+
 .vc-lg-album .vc-lg-album-item {
   break-inside: avoid;
   display: block;
