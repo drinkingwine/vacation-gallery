@@ -52,13 +52,24 @@ export function PlaceCard({
               </span>
             </div>
           )}
-          <div className={coverCountBadgeClass()}>{place.photoCount}</div>
+          <div
+            className={coverCountBadgeClass()}
+            aria-label={`${place.tripCount} ${place.tripCount === 1 ? "trip" : "trips"}`}
+          >
+            {place.tripCount} {place.tripCount === 1 ? "trip" : "trips"}
+          </div>
         </div>
 
         <div className="px-1">
           <h2 className={coverCardLabelClass()}>{place.title}</h2>
-          {place.location ? (
-            <p className={coverCardMetaClass()}>{place.location}</p>
+          {place.tripLocations.length > 0 ? (
+            <ul className="mt-1 space-y-0.5">
+              {place.tripLocations.map((location) => (
+                <li key={location} className={coverCardMetaClass()}>
+                  {location}
+                </li>
+              ))}
+            </ul>
           ) : null}
         </div>
       </Link>

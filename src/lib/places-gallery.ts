@@ -9,6 +9,7 @@ export type PlaceSummary = {
   location?: string;
   tripCount: number;
   tripTitles: string[];
+  tripLocations: string[];
   photoCount: number;
   mediaLabel: string;
   coverUrl: string | null;
@@ -108,6 +109,13 @@ export function buildPlacesGalleryList(trips: Trip[]): PlaceSummary[] {
           sortedTrips[0].location,
         tripCount: sortedTrips.length,
         tripTitles: sortedTrips.map((trip) => trip.title),
+        tripLocations: [
+          ...new Set(
+            sortedTrips
+              .map((trip) => trip.location?.trim())
+              .filter((value): value is string => Boolean(value)),
+          ),
+        ],
         photoCount,
         mediaLabel: tripLabel,
         coverUrl: pickPlaceCover(sortedTrips),
