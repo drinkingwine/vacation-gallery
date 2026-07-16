@@ -2,16 +2,25 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import type { TripMediaFilterValue } from "@/components/TripMediaFilter";
-import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
+import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
+import { requestGalleryPhotoEdit, refreshGallery } from "@/lib/gallery-admin";
 import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { buildGalleryItem, itemHasAssignedTags } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
-import { formatTagLabel, hasPhotoTag } from "@/lib/photo-tags";
+import {
+  formatTagLabel,
+  getPresetTagColorClasses,
+  hasPhotoTag,
+  PRESET_PHOTO_TAG_SECTIONS,
+} from "@/lib/photo-tags";
+import { patchCachedTripPhoto } from "@/lib/trip-page-cache";
 import type { Photo, Trip } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const LightGalleryAlbum = dynamic(
   () =>
@@ -68,9 +77,26 @@ export function TripPhotoGallery({
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
   const [internalMediaFilter, setInternalMediaFilter] =
     useState<TripMediaFilterValue>("all");
+  const [taggingMode, setTaggingMode] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [tagOverrides, setTagOverrides] = useState<Map<string, string[]>>(
+    () => new Map(),
+  );
+  const [taggingBusyId, setTaggingBusyId] = useState<string | null>(null);
 
   const mediaFilter = mediaFilterProp ?? internalMediaFilter;
   const setMediaFilter = onMediaFilterChange ?? setInternalMediaFilter;
+
+  useEffect(() => {
+    setTagOverrides(new Map());
+  }, [photos]);
+
+  useEffect(() => {
+    if (!isAdmin && taggingMode) {
+      setTaggingMode(false);
+      setActiveTag(null);
+    }
+  }, [isAdmin, taggingMode]);
 
   const items = useMemo(() => {
     const built = photos.map((photo) =>
@@ -81,6 +107,7 @@ export function TripPhotoGallery({
         tripTitle: trip?.title ?? tripName.replace(/-/g, " "),
         tripLocation: trip?.location,
         tripStartDate: trip?.startDate,
+        tags: tagOverrides.get(photo.path) ?? photo.tags ?? [],
       }),
     );
 
@@ -104,7 +131,15 @@ export function TripPhotoGallery({
       }
       return compareByDateAsc(a, b);
     });
-  }, [isAdmin, photos, trip?.location, trip?.startDate, trip?.title, tripName]);
+  }, [
+    isAdmin,
+    photos,
+    tagOverrides,
+    trip?.location,
+    trip?.startDate,
+    trip?.title,
+    tripName,
+  ]);
 
   const filteredItems = useMemo(() => {
     let next = items;
@@ -171,6 +206,57 @@ export function TripPhotoGallery({
     [coverPhoto, onPhotoChanged, tripName],
   );
 
+  const handleToggleTag = useCallback(
+    async (item: GalleryItem) => {
+      if (!activeTag || taggingBusyId) return;
+
+      const removing = hasPhotoTag(item.tags ?? [], activeTag);
+      const currentTags = item.tags ?? [];
+      const nextTags = removing
+        ? currentTags.filter(
+            (tag) => tag.toLowerCase() !== activeTag.toLowerCase(),
+          )
+        : [...currentTags, activeTag];
+
+      setTaggingBusyId(String(item.id));
+      setTagOverrides((prev) => {
+        const next = new Map(prev);
+        next.set(item.path, nextTags);
+        return next;
+      });
+
+      try {
+        const res = await fetch("/api/photos/update", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            path: item.path,
+            sha: item.sha,
+            trip: tripName,
+            ...(removing ? { removeTag: activeTag } : { addTag: activeTag }),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to update tag");
+
+        patchCachedTripPhoto(tripName, item.path, { tags: nextTags });
+        invalidateGalleryHomeCache();
+        refreshGallery();
+        onPhotoChanged?.();
+      } catch (err) {
+        setTagOverrides((prev) => {
+          const next = new Map(prev);
+          next.set(item.path, currentTags);
+          return next;
+        });
+        alert(err instanceof Error ? err.message : "Failed to update tag");
+      } finally {
+        setTaggingBusyId(null);
+      }
+    },
+    [activeTag, onPhotoChanged, taggingBusyId, tripName],
+  );
+
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -209,30 +295,100 @@ export function TripPhotoGallery({
   }
 
   return (
-    <LightGalleryAlbum
-      className="vc-lg-album-ordered"
-      items={filteredItems}
-      selectedId={selectedId}
-      onSelectedIdChange={setSelectedId}
-      onVideoOpen={(item) => {
-        const href = galleryVideoWatchPath(
-          item,
-          `/trips/${encodeURIComponent(tripName)}`,
-        );
-        if (href) router.push(href);
-      }}
-      isAdmin={isAdmin}
-      onEdit={(item) =>
-        requestGalleryPhotoEdit(
-          item,
-          `/trips/${encodeURIComponent(tripName)}`,
-        )
-      }
-      onMakeDefault={
-        isAdmin ? (item) => void handleToggleDefault(item) : undefined
-      }
-      isCoverPhoto={isCoverPhoto}
-      onPhotoChanged={onPhotoChanged}
-    />
+    <div className="space-y-4">
+      {isAdmin ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setTaggingMode((on) => {
+                if (on) setActiveTag(null);
+                return !on;
+              });
+            }}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] transition",
+              taggingMode
+                ? "border-amber-500 bg-amber-500 text-white hover:bg-amber-600 dark:border-amber-400 dark:bg-amber-400 dark:text-stone-950"
+                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800",
+            )}
+          >
+            <Tags className="h-3.5 w-3.5" />
+            {taggingMode ? "Tagging on" : "Tag"}
+          </button>
+        </div>
+      ) : null}
+
+      {isAdmin && taggingMode ? (
+        <div className="sticky top-28 z-20 space-y-3 rounded-2xl border border-zinc-200/80 bg-white/95 p-4 shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-950/95">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+            {activeTag
+              ? `Click images to toggle #${formatTagLabel(activeTag)}`
+              : "Pick a tag, then click images to apply it"}
+          </p>
+          <div className="space-y-3">
+            {PRESET_PHOTO_TAG_SECTIONS.map((section) => (
+              <div key={section.label}>
+                <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                  {section.label}
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {section.tags.map((tag) => {
+                    const active = activeTag?.toLowerCase() === tag.toLowerCase();
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          setActiveTag(active ? null : tag)
+                        }
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+                          getPresetTagColorClasses(tag),
+                          active &&
+                            "ring-2 ring-amber-400 ring-offset-1 ring-offset-white dark:ring-offset-zinc-950",
+                        )}
+                      >
+                        {formatTagLabel(tag)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <LightGalleryAlbum
+        className="vc-lg-album-ordered"
+        items={filteredItems}
+        selectedId={selectedId}
+        onSelectedIdChange={setSelectedId}
+        onVideoOpen={(item) => {
+          const href = galleryVideoWatchPath(
+            item,
+            `/trips/${encodeURIComponent(tripName)}`,
+          );
+          if (href) router.push(href);
+        }}
+        isAdmin={isAdmin}
+        onEdit={(item) =>
+          requestGalleryPhotoEdit(
+            item,
+            `/trips/${encodeURIComponent(tripName)}`,
+          )
+        }
+        onMakeDefault={
+          isAdmin ? (item) => void handleToggleDefault(item) : undefined
+        }
+        isCoverPhoto={isCoverPhoto}
+        onPhotoChanged={onPhotoChanged}
+        taggingMode={taggingMode}
+        activeTag={activeTag}
+        onToggleTag={(item) => void handleToggleTag(item)}
+        taggingBusyId={taggingBusyId}
+      />
+    </div>
   );
 }

@@ -3,10 +3,14 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
-import { DeleteIconButton } from "@/components/gallery/PhotoOverlayIcons";
+import {
+  DeleteIconButton,
+  PhotoTagOverlay,
+} from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsModal } from "@/components/gallery/PhotoDetailsModal";
 import type { GalleryItem } from "@/lib/gallery";
-import { toLightGalleryElements } from "@/lib/gallery";
+import { getItemDisplayTags, toLightGalleryElements } from "@/lib/gallery";
+import { hasPhotoTag } from "@/lib/photo-tags";
 import { cn } from "@/lib/utils";
 
 type GalleryId = string | number;
@@ -25,6 +29,11 @@ type LightGalleryAlbumProps = {
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
   onItemRemoved?: (itemId: string) => void;
   onPhotoChanged?: () => void;
+  /** When set, clicking an image toggles this tag instead of opening edit. */
+  taggingMode?: boolean;
+  activeTag?: string | null;
+  onToggleTag?: (item: GalleryItem) => void;
+  taggingBusyId?: string | null;
 };
 
 function findItemIndex(items: GalleryItem[], id: GalleryId | null | undefined) {
@@ -46,6 +55,10 @@ export function LightGalleryAlbum({
   onItemTagsChange,
   onItemRemoved,
   onPhotoChanged,
+  taggingMode = false,
+  activeTag = null,
+  onToggleTag,
+  taggingBusyId = null,
 }: LightGalleryAlbumProps) {
   const confirm = useConfirm();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -106,13 +119,17 @@ export function LightGalleryAlbum({
         onVideoOpen?.(item);
         return;
       }
+      if (taggingMode && onToggleTag) {
+        onToggleTag(item);
+        return;
+      }
       if (isAdmin && onEdit) {
         onEdit(item);
         return;
       }
       onSelectedIdChange?.(item.id);
     },
-    [isAdmin, onEdit, onSelectedIdChange, onVideoOpen],
+    [isAdmin, onEdit, onSelectedIdChange, onToggleTag, onVideoOpen, taggingMode],
   );
 
   const handleDeleteItem = useCallback(
@@ -165,23 +182,36 @@ export function LightGalleryAlbum({
       <div className={cn("vc-lg-album", className)}>
         {items.map((item) => {
           const isVideo = item.type === "video";
-          const isBusy = busyItemId === String(item.id);
+          const isBusy =
+            busyItemId === String(item.id) ||
+            taggingBusyId === String(item.id);
+          const displayTags = getItemDisplayTags(item, 6);
+          const hasActiveTag =
+            Boolean(activeTag) && hasPhotoTag(item.tags ?? [], activeTag!);
 
           return (
             <figure
               key={item.id}
-              className="vc-lg-album-figure group relative"
+              className={cn(
+                "vc-lg-album-figure group relative",
+                taggingMode &&
+                  hasActiveTag &&
+                  "ring-2 ring-amber-400/80 ring-offset-2 ring-offset-transparent",
+              )}
             >
               <button
                 type="button"
                 className="vc-lg-album-item"
                 data-media-type={item.type}
+                disabled={isBusy && taggingMode}
                 aria-label={
                   isVideo
                     ? `Play ${item.title}`
-                    : isAdmin && onEdit
-                      ? `Edit ${item.title}`
-                      : item.title
+                    : taggingMode && activeTag
+                      ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
+                      : isAdmin && onEdit
+                        ? `Edit ${item.title}`
+                        : item.title
                 }
                 onClick={() => handleThumbClick(item)}
               >
@@ -201,6 +231,9 @@ export function LightGalleryAlbum({
                     className="vc-lg-album-media"
                   />
                 )}
+                {taggingMode && displayTags.length > 0 ? (
+                  <PhotoTagOverlay tags={displayTags} />
+                ) : null}
               </button>
 
               {isAdmin ? (
@@ -211,7 +244,7 @@ export function LightGalleryAlbum({
                       e.stopPropagation();
                       void handleDeleteItem(item);
                     }}
-                    busy={isBusy}
+                    busy={busyItemId === String(item.id)}
                     disabled={isBusy}
                   />
                 </div>

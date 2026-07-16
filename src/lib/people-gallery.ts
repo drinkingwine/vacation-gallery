@@ -30,7 +30,10 @@ export function buildPeopleGalleryList(photos: GalleryPhoto[]): PersonSummary[] 
     };
   })
     .filter((person) => person.photoCount > 0)
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort(
+      (a, b) =>
+        b.photoCount - a.photoCount || a.label.localeCompare(b.label),
+    );
 }
 
 export function personGalleryPath(tag: string) {

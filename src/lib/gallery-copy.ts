@@ -16,7 +16,7 @@ export const galleryCopy = {
   people: {
     eyebrow: "Gallery / People",
     title: "People Gallery",
-    description: "Browse photos by person, sorted A–Z.",
+    description: "Browse photos by person, sorted by photo count.",
     empty: "No tagged people yet. Add person tags when editing a photo.",
     noPhotos: (name: string) => `No photos tagged with ${name} yet.`,
   },
