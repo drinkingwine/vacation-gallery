@@ -56,7 +56,7 @@ export function GalleryAlbumHero({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <section className="front-fade-up relative mx-auto h-[52vh] min-h-[320px] max-h-[900px] overflow-hidden rounded-2xl bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900 sm:h-[65vh] sm:min-h-[420px] sm:rounded-[32px] md:h-[78vh] md:min-h-[560px]">
+      <section className="front-fade-up relative mx-auto hidden h-[65vh] min-h-[420px] max-h-[900px] overflow-hidden rounded-[32px] bg-zinc-100 shadow-2xl shadow-black/10 dark:bg-zinc-900 md:block md:h-[78vh] md:min-h-[560px]">
         {heroImages.length > 0 ? (
           heroImages.map((src, index) => (
             <div
@@ -144,6 +144,42 @@ export function GalleryAlbumHero({
           </div>
         </div>
       </section>
+
+      <header className="space-y-2 md:hidden">
+        {eyebrow ? (
+          <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400">
+            {eyebrow}
+          </p>
+        ) : null}
+        {badges.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {badges.map((badge) => (
+              <span
+                key={badge.label}
+                className={cn(
+                  "rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",
+                  badge.className,
+                )}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          {title}
+        </h1>
+        {description ? (
+          <p className="max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+            {description}
+          </p>
+        ) : null}
+        {subtitle ? (
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+            {subtitle}
+          </p>
+        ) : null}
+      </header>
 
       {backHref && backLabel ? (
         <Link

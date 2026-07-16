@@ -125,7 +125,7 @@ export function AppNavbar({ onUpload }: AppNavbarProps) {
   return (
     <>
       <header className="front-floating-nav front-floating-nav--solid safe-top pointer-events-none fixed inset-x-0 top-0 z-50 transition duration-200 ease-out">
-        <div className="page-container mx-auto flex flex-col gap-2 pb-3 sm:gap-3 sm:pb-6">
+        <div className="page-container mx-auto flex flex-col gap-1.5 pb-2 sm:gap-3 sm:pb-6">
           <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
             {backHref ? (
               <Link
@@ -138,12 +138,15 @@ export function AppNavbar({ onUpload }: AppNavbarProps) {
                 >
                   ←
                 </span>
-                {backLabel ?? "Back"}
+                <span className="truncate">{backLabel ?? "Back"}</span>
               </Link>
             ) : (
               <Link href="/" className="pointer-events-auto min-w-0 flex-1 text-left">
-                <span className="font-serif block text-[11px] font-semibold leading-snug tracking-[0.04em] text-zinc-800/90 sm:text-base sm:leading-tight sm:tracking-[0.06em] md:text-xl lg:text-2xl dark:text-white/85">
-                  Ralph &amp; Robin&apos;s Great Adventures!
+                <span className="font-serif block truncate text-sm font-semibold leading-snug tracking-[0.04em] text-zinc-800/90 sm:text-base sm:leading-tight sm:tracking-[0.06em] md:text-xl lg:text-2xl dark:text-white/85">
+                  <span className="sm:hidden">R&amp;R Adventures</span>
+                  <span className="hidden sm:inline">
+                    Ralph &amp; Robin&apos;s Great Adventures!
+                  </span>
                 </span>
               </Link>
             )}
@@ -261,7 +264,10 @@ export function AppNavbar({ onUpload }: AppNavbarProps) {
             </div>
           </div>
 
-          <nav className="front-nav-mobile pointer-events-auto flex w-full flex-wrap items-center justify-center gap-1.5 border-t border-border/60 pt-2 sm:hidden">
+          <nav
+            className="front-nav-mobile pointer-events-auto -mx-1 flex w-[calc(100%+0.5rem)] items-stretch justify-between gap-0.5 overflow-x-auto overscroll-x-contain border-t border-border/60 px-1 pt-1.5 sm:hidden"
+            aria-label="Primary"
+          >
             {mainNavItems.map((item) => {
               const active =
                 item.href === "/"
@@ -273,6 +279,9 @@ export function AppNavbar({ onUpload }: AppNavbarProps) {
                   item={item}
                   active={active}
                   variant="badge"
+                  labelHidden
+                  className="shrink-0 justify-center px-2.5 py-2"
+                  iconClassName="h-4 w-4"
                 />
               );
             })}

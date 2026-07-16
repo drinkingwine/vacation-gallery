@@ -11,6 +11,8 @@ type MainNavLinkProps = {
   layout?: "inline" | "stacked";
   variant?: "plain" | "badge";
   badgeTone?: NavBadgeTone;
+  /** Visually hide the label (keeps it for screen readers). */
+  labelHidden?: boolean;
 };
 
 export function MainNavLink({
@@ -21,16 +23,25 @@ export function MainNavLink({
   layout = "inline",
   variant = "plain",
   badgeTone = "default",
+  labelHidden = false,
 }: MainNavLinkProps) {
   const Icon = item.icon;
 
   return (
     <Link
       href={item.href}
+      aria-label={labelHidden ? item.label : undefined}
       className={cn(
         "transition",
         variant === "badge"
-          ? navBadgeClass(active, className, badgeTone)
+          ? navBadgeClass(
+              active,
+              cn(
+                layout === "stacked" && "flex-col gap-0.5",
+                className,
+              ),
+              badgeTone,
+            )
           : layout === "stacked"
             ? "inline-flex flex-col items-center gap-0.5"
             : "inline-flex items-center gap-1.5",
@@ -40,13 +51,17 @@ export function MainNavLink({
       <Icon
         className={cn(
           "shrink-0",
-          layout === "stacked" ? "h-3.5 w-3.5" : "h-3.5 w-3.5 sm:h-4 sm:w-4",
+          layout === "stacked" ? "h-4 w-4" : "h-3.5 w-3.5 sm:h-4 sm:w-4",
           active && "opacity-100",
           iconClassName,
         )}
         aria-hidden
       />
-      <span>{item.label}</span>
+      {labelHidden ? (
+        <span className="sr-only">{item.label}</span>
+      ) : (
+        <span>{item.label}</span>
+      )}
     </Link>
   );
 }

@@ -115,16 +115,16 @@ export function LightGalleryAlbum({
 
   const handleThumbClick = useCallback(
     (item: GalleryItem) => {
-      if (item.type === "video") {
-        onVideoOpen?.(item);
-        return;
-      }
       if (taggingMode && onToggleTag) {
         onToggleTag(item);
         return;
       }
       if (isAdmin && onEdit) {
         onEdit(item);
+        return;
+      }
+      if (item.type === "video") {
+        onVideoOpen?.(item);
         return;
       }
       onSelectedIdChange?.(item.id);
@@ -205,12 +205,12 @@ export function LightGalleryAlbum({
                 data-media-type={item.type}
                 disabled={isBusy && taggingMode}
                 aria-label={
-                  isVideo
-                    ? `Play ${item.title}`
-                    : taggingMode && activeTag
-                      ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
-                      : isAdmin && onEdit
-                        ? `Edit ${item.title}`
+                  taggingMode && activeTag
+                    ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
+                    : isAdmin && onEdit
+                      ? `Edit ${item.title}`
+                      : isVideo
+                        ? `Play ${item.title}`
                         : item.title
                 }
                 onClick={() => handleThumbClick(item)}

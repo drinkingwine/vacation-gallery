@@ -39,7 +39,7 @@ export function FeaturedTripCard({
             )}
             <div className="relative z-10 space-y-4">
               {trip.location ? (
-                <span className="text-xs text-zinc-600/80 dark:text-white/60">
+                <span className="hidden text-xs text-zinc-600/80 dark:text-white/60 md:inline">
                   {trip.location}
                 </span>
               ) : null}
@@ -47,11 +47,11 @@ export function FeaturedTripCard({
                 {trip.title}
               </h3>
               {trip.description ? (
-                <p className="line-clamp-2 text-sm text-zinc-600/80 dark:text-white/60">
+                <p className="hidden line-clamp-2 text-sm text-zinc-600/80 dark:text-white/60 md:block">
                   {trip.description}
                 </p>
               ) : dates ? (
-                <p className="text-xs text-zinc-600/80 dark:text-white/60">
+                <p className="hidden text-xs text-zinc-600/80 dark:text-white/60 md:block">
                   {dates}
                 </p>
               ) : null}

@@ -60,7 +60,7 @@ export function HomeHero() {
   }, [heroSlides.length]);
 
   return (
-    <section className="front-fade-up group relative w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+    <section className="front-fade-up group relative hidden w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900 md:block">
       <div className="relative min-h-[100svh] w-full">
         {heroSlides.map((slide, index) => (
           <div

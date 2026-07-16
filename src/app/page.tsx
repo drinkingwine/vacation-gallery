@@ -113,14 +113,16 @@ export default function Home() {
 
         <section
           id="trips"
-          className="front-fade-up page-container mx-auto space-y-8 px-4 py-10 sm:px-0 sm:py-16 lg:space-y-10"
+          className="front-fade-up page-container mx-auto space-y-8 px-4 pb-6 pt-[calc(8.5rem+env(safe-area-inset-top,0px))] sm:px-0 sm:pb-16 sm:pt-16 lg:space-y-10"
         >
-          <SectionHeader
-            title="Featured trips"
-            description="Signature albums blending place, light, and moment into a unified travel narrative."
-            actionLabel="View gallery"
-            actionHref="/gallery"
-          />
+          <div className="hidden md:block">
+            <SectionHeader
+              title="Featured trips"
+              description="Signature albums blending place, light, and moment into a unified travel narrative."
+              actionLabel="View gallery"
+              actionHref="/gallery"
+            />
+          </div>
 
           {trips.length === 0 ? (
             <div className="flex flex-col items-center py-20 text-zinc-400">
