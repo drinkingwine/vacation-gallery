@@ -7,10 +7,10 @@ import { useAuth } from "@/components/AuthProvider";
 import type { TripMediaFilterValue } from "@/components/TripMediaFilter";
 import { requestGalleryPhotoEdit } from "@/lib/gallery-admin";
 import { galleryVideoWatchPath } from "@/lib/edit-paths";
-import { buildGalleryItem } from "@/lib/gallery";
+import { buildGalleryItem, itemHasAssignedTags } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
-import { FAVORITE_TAG, formatTagLabel, hasPhotoTag } from "@/lib/photo-tags";
+import { formatTagLabel, hasPhotoTag } from "@/lib/photo-tags";
 import type { Photo, Trip } from "@/lib/types";
 
 const LightGalleryAlbum = dynamic(
@@ -95,16 +95,16 @@ export function TripPhotoGallery({
       return a.filename.localeCompare(b.filename);
     };
 
-    const hasAssignedTag = (item: (typeof built)[number]) =>
-      (item.tags ?? []).some((tag) => tag.toLowerCase() !== FAVORITE_TAG);
-
     return [...built].sort((a, b) => {
-      const aTagged = hasAssignedTag(a);
-      const bTagged = hasAssignedTag(b);
-      if (aTagged !== bTagged) return aTagged ? 1 : -1;
+      // Admin: tagged photos sink to the bottom so untagged ones stay in the work queue.
+      if (isAdmin) {
+        const aTagged = itemHasAssignedTags(a);
+        const bTagged = itemHasAssignedTags(b);
+        if (aTagged !== bTagged) return aTagged ? 1 : -1;
+      }
       return compareByDateAsc(a, b);
     });
-  }, [photos, trip?.location, trip?.startDate, trip?.title, tripName]);
+  }, [isAdmin, photos, trip?.location, trip?.startDate, trip?.title, tripName]);
 
   const filteredItems = useMemo(() => {
     let next = items;
@@ -210,6 +210,7 @@ export function TripPhotoGallery({
 
   return (
     <LightGalleryAlbum
+      className="vc-lg-album-ordered"
       items={filteredItems}
       selectedId={selectedId}
       onSelectedIdChange={setSelectedId}
@@ -231,6 +232,7 @@ export function TripPhotoGallery({
         isAdmin ? (item) => void handleToggleDefault(item) : undefined
       }
       isCoverPhoto={isCoverPhoto}
+      onPhotoChanged={onPhotoChanged}
     />
   );
 }

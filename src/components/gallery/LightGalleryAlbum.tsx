@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
+import { DeleteIconButton } from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsModal } from "@/components/gallery/PhotoDetailsModal";
 import type { GalleryItem } from "@/lib/gallery";
 import { toLightGalleryElements } from "@/lib/gallery";
@@ -21,6 +23,8 @@ type LightGalleryAlbumProps = {
   onMakeDefault?: (item: GalleryItem) => void;
   isCoverPhoto?: (item: GalleryItem) => boolean;
   onItemTagsChange?: (itemId: string, tags: string[]) => void;
+  onItemRemoved?: (itemId: string) => void;
+  onPhotoChanged?: () => void;
 };
 
 function findItemIndex(items: GalleryItem[], id: GalleryId | null | undefined) {
@@ -40,8 +44,12 @@ export function LightGalleryAlbum({
   onMakeDefault,
   isCoverPhoto,
   onItemTagsChange,
+  onItemRemoved,
+  onPhotoChanged,
 }: LightGalleryAlbumProps) {
+  const confirm = useConfirm();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
 
   // lightGallery only handles photos; videos route to a dedicated page.
   const photoItems = useMemo(
@@ -107,6 +115,49 @@ export function LightGalleryAlbum({
     [isAdmin, onEdit, onSelectedIdChange, onVideoOpen],
   );
 
+  const handleDeleteItem = useCallback(
+    async (item: GalleryItem) => {
+      if (busyItemId) return;
+
+      const confirmed = await confirm({
+        title: "Are you sure?",
+        message: `Delete "${item.filename}"? This cannot be undone.`,
+        destructive: true,
+      });
+      if (!confirmed) return;
+
+      setBusyItemId(String(item.id));
+      try {
+        const res = await fetch("/api/photos/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: item.path }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Delete failed");
+
+        if (String(selectedId) === String(item.id)) {
+          setDetailsOpen(false);
+          onSelectedIdChange?.(null);
+        }
+        onItemRemoved?.(String(item.id));
+        onPhotoChanged?.();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Delete failed");
+      } finally {
+        setBusyItemId(null);
+      }
+    },
+    [
+      busyItemId,
+      confirm,
+      onItemRemoved,
+      onPhotoChanged,
+      onSelectedIdChange,
+      selectedId,
+    ],
+  );
+
   if (items.length === 0) return null;
 
   return (
@@ -114,38 +165,58 @@ export function LightGalleryAlbum({
       <div className={cn("vc-lg-album", className)}>
         {items.map((item) => {
           const isVideo = item.type === "video";
+          const isBusy = busyItemId === String(item.id);
+
           return (
-            <button
+            <figure
               key={item.id}
-              type="button"
-              className="vc-lg-album-item"
-              data-media-type={item.type}
-              aria-label={
-                isVideo
-                  ? `Play ${item.title}`
-                  : isAdmin && onEdit
-                    ? `Edit ${item.title}`
-                    : item.title
-              }
-              onClick={() => handleThumbClick(item)}
+              className="vc-lg-album-figure group relative"
             >
-              {isVideo ? (
-                <video
-                  src={item.src}
-                  muted
-                  playsInline
-                  preload="metadata"
-                  className="vc-lg-album-media"
-                />
-              ) : (
-                <img
-                  src={item.src}
-                  alt={item.title}
-                  loading="lazy"
-                  className="vc-lg-album-media"
-                />
-              )}
-            </button>
+              <button
+                type="button"
+                className="vc-lg-album-item"
+                data-media-type={item.type}
+                aria-label={
+                  isVideo
+                    ? `Play ${item.title}`
+                    : isAdmin && onEdit
+                      ? `Edit ${item.title}`
+                      : item.title
+                }
+                onClick={() => handleThumbClick(item)}
+              >
+                {isVideo ? (
+                  <video
+                    src={item.src}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="vc-lg-album-media"
+                  />
+                ) : (
+                  <img
+                    src={item.src}
+                    alt={item.title}
+                    loading="lazy"
+                    className="vc-lg-album-media"
+                  />
+                )}
+              </button>
+
+              {isAdmin ? (
+                <div className="absolute right-2 top-2 z-20">
+                  <DeleteIconButton
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void handleDeleteItem(item);
+                    }}
+                    busy={isBusy}
+                    disabled={isBusy}
+                  />
+                </div>
+              ) : null}
+            </figure>
           );
         })}
       </div>

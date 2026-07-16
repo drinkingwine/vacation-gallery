@@ -550,8 +550,9 @@ body.gallery-chrome-hidden .front-floating-nav * {
   }
 }
 
-/* Trip picker: row-major grid so newest→oldest reads left-to-right */
-.vc-lg-album.vc-lg-trip-picker {
+/* Trip picker / ordered albums: row-major so DOM order reads LTR */
+.vc-lg-album.vc-lg-trip-picker,
+.vc-lg-album.vc-lg-album-ordered {
   column-count: unset;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -559,20 +560,23 @@ body.gallery-chrome-hidden .front-floating-nav * {
 }
 
 @media (min-width: 640px) {
-  .vc-lg-album.vc-lg-trip-picker {
+  .vc-lg-album.vc-lg-trip-picker,
+  .vc-lg-album.vc-lg-album-ordered {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.15rem 1rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .vc-lg-album.vc-lg-trip-picker {
+  .vc-lg-album.vc-lg-trip-picker,
+  .vc-lg-album.vc-lg-album-ordered {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.25rem 1.15rem;
   }
 }
 
-.vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure {
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure,
+.vc-lg-album.vc-lg-album-ordered .vc-lg-album-figure {
   margin: 0;
 }
 
