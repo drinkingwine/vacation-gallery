@@ -73,6 +73,7 @@ export async function GalleryPlaceContent({
         initialKeyword={keyword}
         place={normalizedSlug}
         emptyMessage={galleryCopy.places.noPhotos(place.title)}
+        showTagFilter
       />
     </div>
   );

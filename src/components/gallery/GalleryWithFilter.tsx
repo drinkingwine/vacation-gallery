@@ -18,9 +18,14 @@ import { useAuth } from "@/components/AuthProvider";
 import { useDebounce } from "@/hooks/use-debounce";
 import { GalleryInfinite } from "@/components/gallery/GalleryInfinite";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
+import {
+  TripTagFilter,
+  type TripTagOption,
+} from "@/components/TripTagFilter";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import { galleryCopy } from "@/lib/gallery-copy";
 import type { GalleryItem } from "@/lib/gallery";
+import { formatTagLabel, hasPhotoTag } from "@/lib/photo-tags";
 
 type MediaType = "all" | "photo" | "video";
 type SortOrder = "newest" | "oldest";
@@ -36,6 +41,8 @@ type GalleryWithFilterProps = {
   trip?: string;
   emptyMessage?: string;
   gridEngine?: "cards" | "lightgallery";
+  /** Show a tag select beside media filters (places / things detail pages). */
+  showTagFilter?: boolean;
 };
 
 const mediaTypeFilters = [
@@ -57,6 +64,7 @@ export function GalleryWithFilter({
   trip = "",
   emptyMessage,
   gridEngine = "cards",
+  showTagFilter = false,
 }: GalleryWithFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -72,6 +80,7 @@ export function GalleryWithFilter({
     return param === "oldest" ? "oldest" : "newest";
   });
   const [keyword, setKeyword] = useState(initialKeyword);
+  const [photoTagFilter, setPhotoTagFilter] = useState<string | null>(null);
   const isScoped = Boolean(tag || place || trip);
   const adminClickToEdit = isAdmin && Boolean(tag || place);
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
@@ -94,6 +103,64 @@ export function GalleryWithFilter({
       searchParams.get("sortOrder") === "oldest" ? "oldest" : "newest";
     lastFilterKeyRef.current = `${initialMediaType}|${initialSortOrder}|${initialKeyword.trim()}|${tag}|${place}|${trip}`;
   }
+
+  const tagOptions = useMemo(() => {
+    if (!showTagFilter) return [] as TripTagOption[];
+    const source = viewerItems.length > 0 ? viewerItems : items;
+    const exclude = tag.trim().toLowerCase();
+    const counts = new Map<string, number>();
+    for (const item of source) {
+      for (const raw of item.tags ?? []) {
+        const next = raw.trim().toLowerCase();
+        if (!next) continue;
+        if (exclude && next === exclude) continue;
+        counts.set(next, (counts.get(next) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([tagValue, count]) => ({ tag: tagValue, count }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return formatTagLabel(a.tag).localeCompare(formatTagLabel(b.tag));
+      });
+  }, [items, showTagFilter, tag, viewerItems]);
+
+  useEffect(() => {
+    if (!photoTagFilter) return;
+    const stillPresent = tagOptions.some(
+      (option) => option.tag === photoTagFilter.toLowerCase(),
+    );
+    if (!stillPresent) setPhotoTagFilter(null);
+  }, [photoTagFilter, tagOptions]);
+
+  const displayItems = useMemo(() => {
+    if (!photoTagFilter) return items;
+    const source =
+      isScoped && viewerItems.length > 0 ? viewerItems : items;
+    return source.filter((item) =>
+      hasPhotoTag(item.tags ?? [], photoTagFilter),
+    );
+  }, [isScoped, items, photoTagFilter, viewerItems]);
+
+  const displayViewerItems = useMemo(() => {
+    if (!photoTagFilter) return viewerItems;
+    return viewerItems.filter((item) =>
+      hasPhotoTag(item.tags ?? [], photoTagFilter),
+    );
+  }, [photoTagFilter, viewerItems]);
+
+  const displayHasNext = photoTagFilter ? false : hasNext;
+
+  const filterExtras = useMemo(() => {
+    if (!showTagFilter || tagOptions.length === 0) return null;
+    return (
+      <TripTagFilter
+        tags={tagOptions}
+        value={photoTagFilter}
+        onChange={setPhotoTagFilter}
+      />
+    );
+  }, [photoTagFilter, showTagFilter, tagOptions]);
 
   const replaceQuery = useCallback(
     (patch: Record<string, string | null>) => {
@@ -313,19 +380,21 @@ export function GalleryWithFilter({
 
       {isFiltering ? (
         <GallerySkeleton />
-      ) : items.length === 0 ? (
+      ) : displayItems.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white/60 p-10 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
-          {normalizedKeyword
-            ? galleryCopy.noResults
-            : (emptyMessage ?? galleryCopy.noResults)}
+          {photoTagFilter
+            ? `No items tagged #${formatTagLabel(photoTagFilter)}`
+            : normalizedKeyword
+              ? galleryCopy.noResults
+              : (emptyMessage ?? galleryCopy.noResults)}
         </div>
       ) : (
         <GalleryInfinite
-          initialItems={items}
-          viewerItems={isScoped ? viewerItems : undefined}
+          initialItems={displayItems}
+          viewerItems={isScoped ? displayViewerItems : undefined}
           initialPage={1}
           pageSize={pageSize}
-          hasNext={hasNext}
+          hasNext={displayHasNext}
           mediaType={mediaType}
           sortOrder={sortOrder}
           keyword={normalizedKeyword}
@@ -338,6 +407,7 @@ export function GalleryWithFilter({
           onItemRemoved={isScoped ? handleItemRemoved : undefined}
           clickToEdit={adminClickToEdit}
           gridEngine={gridEngine}
+          filterExtras={filterExtras}
         />
       )}
     </div>

@@ -66,6 +66,7 @@ export async function GalleryThingContent({
         initialKeyword={keyword}
         tag={normalizedTag}
         emptyMessage={galleryCopy.things.noPhotos(label)}
+        showTagFilter
       />
     </div>
   );

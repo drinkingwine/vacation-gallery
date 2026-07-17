@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
@@ -53,6 +53,7 @@ type Gallery25Props = {
   showTimestamp?: boolean;
   tripTitle?: string | null;
   showUntaggedFilter?: boolean;
+  filterExtras?: ReactNode;
 };
 
 const clampColumnCount = (value: number, max = 10) =>
@@ -156,6 +157,7 @@ export function Gallery25({
   showTimestamp = false,
   tripTitle = null,
   showUntaggedFilter = false,
+  filterExtras,
 }: Gallery25Props) {
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -488,6 +490,7 @@ export function Gallery25({
             onFilterChange={setFilter}
             summaryLabel={gridSummaryLabel}
             mediaCounts={gridMediaCounts}
+            filterExtras={filterExtras}
             showMediaFilters={chromeVisible}
             columnCount={columnCount}
             onColumnCountChange={(value) =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ type GalleryInfiniteProps = {
   clickToEdit?: boolean;
   allowCardDelete?: boolean;
   gridEngine?: "cards" | "lightgallery";
+  filterExtras?: ReactNode;
 };
 
 export function GalleryInfinite({
@@ -79,6 +80,7 @@ export function GalleryInfinite({
   clickToEdit = false,
   allowCardDelete = false,
   gridEngine = "cards",
+  filterExtras,
 }: GalleryInfiniteProps) {
   const router = useRouter();
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
@@ -206,6 +208,7 @@ export function GalleryInfinite({
           onItemRemoved={handleItemRemoved}
           clickToEdit={clickToEdit}
           allowCardDelete={allowCardDelete}
+          filterExtras={filterExtras}
         />
       )}
 

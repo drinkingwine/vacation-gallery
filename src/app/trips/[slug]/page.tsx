@@ -7,7 +7,6 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { type GalleryGridMediaFilter } from "@/components/gallery/GalleryGridControls";
-import { TripTagFilter } from "@/components/TripTagFilter";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
@@ -158,19 +157,9 @@ export default function TripPage() {
       <main className="main-offset relative z-0 flex-1 pb-16">
         <section className="page-container mx-auto space-y-8 px-0 py-8 sm:py-12">
           <header className="space-y-2 px-1">
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-              <h1 className="min-w-0 font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-                {title}
-              </h1>
-              {!loading && tagOptions.length > 0 ? (
-                <TripTagFilter
-                  tags={tagOptions}
-                  value={tagFilter}
-                  onChange={setTagFilter}
-                  className="justify-end"
-                />
-              ) : null}
-            </div>
+            <h1 className="min-w-0 font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
+              {title}
+            </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               {[trip?.location, dates, formatMediaCount(photos)]
                 .filter(Boolean)
@@ -240,6 +229,8 @@ export default function TripPage() {
             mediaFilter={mediaFilter}
             onMediaFilterChange={setMediaFilter}
             tagFilter={tagFilter}
+            onTagFilterChange={setTagFilter}
+            tagOptions={tagOptions}
             onPhotoChanged={() => {
               void fetchTrip({ background: true });
             }}

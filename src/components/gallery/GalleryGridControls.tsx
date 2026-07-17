@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { galleryCopy } from "@/lib/gallery-copy";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,7 @@ export type GalleryGridControlsProps = {
     photo: number;
     video: number;
   };
+  filterExtras?: ReactNode;
   showMediaFilters?: boolean;
   columnCount?: number;
   onColumnCountChange?: (value: number) => void;
@@ -67,6 +69,7 @@ export function GalleryGridControls({
   onFilterChange,
   summaryLabel,
   mediaCounts,
+  filterExtras,
   showMediaFilters = true,
   columnCount,
   onColumnCountChange,
@@ -88,6 +91,7 @@ export function GalleryGridControls({
     typeof columnCount === "number" &&
     typeof onColumnCountChange === "function" &&
     typeof columnSliderMax === "number";
+  const showFilterRow = showMediaFilters || Boolean(filterExtras);
 
   return (
     <div
@@ -97,38 +101,41 @@ export function GalleryGridControls({
         className,
       )}
     >
-      {showMediaFilters ? (
-        <div className="-mx-1 flex overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:pb-0">
-          <div className="flex shrink-0 gap-1.5 rounded-full border border-zinc-200 bg-white px-1.5 py-1.5 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-2 sm:px-2 sm:py-2">
-            {MEDIA_FILTERS.map((tab) => {
-              const count = mediaCounts?.[tab.value];
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => onFilterChange(tab.value)}
-                  className={cn(
-                    "shrink-0 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]",
-                    filter === tab.value
-                      ? "bg-zinc-100 text-zinc-900 dark:bg-white/10 dark:text-white"
-                      : "text-zinc-600/80 hover:text-zinc-900 dark:text-white/60 dark:hover:text-white",
-                  )}
-                >
-                  {galleryCopy.filters[tab.key]}
-                  {typeof count === "number" ? (
-                    <span
-                      className={cn(
-                        "ml-1.5 tabular-nums normal-case tracking-normal",
-                        filter === tab.value ? "opacity-80" : "opacity-60",
-                      )}
-                    >
-                      {count}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+      {showFilterRow ? (
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:pb-0">
+          {showMediaFilters ? (
+            <div className="flex shrink-0 gap-1.5 rounded-full border border-zinc-200 bg-white px-1.5 py-1.5 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-2 sm:px-2 sm:py-2">
+              {MEDIA_FILTERS.map((tab) => {
+                const count = mediaCounts?.[tab.value];
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => onFilterChange(tab.value)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]",
+                      filter === tab.value
+                        ? "bg-zinc-100 text-zinc-900 dark:bg-white/10 dark:text-white"
+                        : "text-zinc-600/80 hover:text-zinc-900 dark:text-white/60 dark:hover:text-white",
+                    )}
+                  >
+                    {galleryCopy.filters[tab.key]}
+                    {typeof count === "number" ? (
+                      <span
+                        className={cn(
+                          "ml-1.5 tabular-nums normal-case tracking-normal",
+                          filter === tab.value ? "opacity-80" : "opacity-60",
+                        )}
+                      >
+                        {count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {filterExtras}
         </div>
       ) : null}
 

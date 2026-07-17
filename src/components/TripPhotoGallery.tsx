@@ -9,9 +9,12 @@ import {
   GalleryGridControls,
   type GalleryGridMediaFilter,
 } from "@/components/gallery/GalleryGridControls";
+import {
+  TripTagFilter,
+  type TripTagOption,
+} from "@/components/TripTagFilter";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { requestGalleryPhotoEdit, refreshGallery } from "@/lib/gallery-admin";
-import { galleryCopy } from "@/lib/gallery-copy";
 import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { buildGalleryItem, itemHasAssignedTags } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
@@ -59,6 +62,8 @@ type TripPhotoGalleryProps = {
   mediaFilter?: GalleryGridMediaFilter;
   onMediaFilterChange?: (value: GalleryGridMediaFilter) => void;
   tagFilter?: string | null;
+  onTagFilterChange?: (tag: string | null) => void;
+  tagOptions?: TripTagOption[];
 };
 
 export function TripPhotoGallery({
@@ -74,6 +79,8 @@ export function TripPhotoGallery({
   mediaFilter: mediaFilterProp,
   onMediaFilterChange,
   tagFilter = null,
+  onTagFilterChange,
+  tagOptions = [],
 }: TripPhotoGalleryProps) {
   const { isAdmin: authIsAdmin } = useAuth();
   const isAdmin = isAdminProp ?? authIsAdmin;
@@ -160,6 +167,19 @@ export function TripPhotoGallery({
     }
     return next;
   }, [items, mediaFilter, tagFilter]);
+
+  const mediaCounts = useMemo(() => {
+    const base = tagFilter
+      ? items.filter((item) => hasPhotoTag(item.tags ?? [], tagFilter))
+      : items;
+    let photo = 0;
+    let video = 0;
+    for (const item of base) {
+      if (item.type === "video") video++;
+      else photo++;
+    }
+    return { all: photo + video, photo, video };
+  }, [items, tagFilter]);
 
   useEffect(() => {
     setSelectedId(null);
@@ -283,24 +303,21 @@ export function TripPhotoGallery({
     );
   }
 
-  const mediaLabel =
-    mediaFilter === "video"
-      ? filteredItems.length === 1
-        ? "Video"
-        : "Videos"
-      : filteredItems.length === 1
-        ? "Image"
-        : "Images";
-  const summaryLabel = trip?.title
-    ? galleryCopy.grid.tripSummary(filteredItems.length, trip.title, mediaLabel)
-    : galleryCopy.grid.summary(filteredItems.length);
-
   return (
     <div className="space-y-4">
       <GalleryGridControls
         filter={mediaFilter}
         onFilterChange={setMediaFilter}
-        summaryLabel={summaryLabel}
+        mediaCounts={mediaCounts}
+        filterExtras={
+          tagOptions.length > 0 && onTagFilterChange ? (
+            <TripTagFilter
+              tags={tagOptions}
+              value={tagFilter}
+              onChange={onTagFilterChange}
+            />
+          ) : null
+        }
         tagsVisible={tagsVisible}
         onTagsVisibleChange={setTagsVisible}
       />

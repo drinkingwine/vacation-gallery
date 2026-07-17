@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatTagLabel } from "@/lib/photo-tags";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +14,8 @@ export type TripTagOption = {
   tag: string;
   count: number;
 };
+
+const ALL_TAGS_VALUE = "__all__";
 
 type TripTagFilterProps = {
   tags: TripTagOption[];
@@ -24,49 +33,32 @@ export function TripTagFilter({
   if (tags.length === 0) return null;
 
   return (
-    <div
-      className={cn("flex flex-wrap items-center gap-2", className)}
-      role="group"
-      aria-label="Filter by tag"
+    <Select
+      value={value ?? ALL_TAGS_VALUE}
+      onValueChange={(next) =>
+        onChange(next === ALL_TAGS_VALUE ? null : next)
+      }
     >
-      <button
-        type="button"
-        onClick={() => onChange(null)}
+      <SelectTrigger
         className={cn(
-          "rounded-full border px-3 py-1 text-[11px] font-medium tracking-wide shadow-sm transition",
-          value === null
-            ? "border-stone-900 bg-stone-900 text-white dark:border-amber-100 dark:bg-amber-100 dark:text-stone-950"
-            : "border-stone-300/90 bg-white text-stone-700 hover:border-stone-400 hover:bg-stone-50 hover:text-stone-950 dark:border-white/20 dark:bg-zinc-950 dark:text-stone-200 dark:hover:border-white/35 dark:hover:bg-zinc-900 dark:hover:text-white",
+          "h-auto w-auto min-w-38 shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:min-w-44",
+          className,
         )}
+        aria-label="Filter by tag"
       >
-        All tags
-      </button>
-      {tags.map(({ tag, count }) => {
-        const active = value?.toLowerCase() === tag.toLowerCase();
-        return (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => onChange(active ? null : tag)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-[11px] font-medium tracking-wide shadow-sm transition",
-              active
-                ? "border-stone-900 bg-stone-900 text-white dark:border-amber-100 dark:bg-amber-100 dark:text-stone-950"
-                : "border-stone-300/90 bg-white text-stone-700 hover:border-stone-400 hover:bg-stone-50 hover:text-stone-950 dark:border-white/20 dark:bg-zinc-950 dark:text-stone-200 dark:hover:border-white/35 dark:hover:bg-zinc-900 dark:hover:text-white",
-            )}
-          >
+        <SelectValue placeholder="All tags" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL_TAGS_VALUE} className="text-xs">
+          All tags
+        </SelectItem>
+        {tags.map(({ tag, count }) => (
+          <SelectItem key={tag} value={tag} className="text-xs">
             #{formatTagLabel(tag)}
-            <span
-              className={cn(
-                "ml-1.5 tabular-nums",
-                active ? "opacity-80" : "opacity-60",
-              )}
-            >
-              {count}
-            </span>
-          </button>
-        );
-      })}
-    </div>
+            <span className="ml-1.5 tabular-nums opacity-60">{count}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
