@@ -27,9 +27,6 @@ export function GalleryPlacesSelection() {
   return (
     <GallerySelectionShell
       title="Places"
-      description={galleryCopy.places.description}
-      count={places.length}
-      countLabel={places.length === 1 ? "place" : "places"}
       loading={loading}
       empty={!loading && places.length === 0}
       contentClassName="contents"

@@ -25,9 +25,6 @@ export function GalleryThingsSelection() {
   return (
     <GallerySelectionShell
       title="Things"
-      description={galleryCopy.things.description}
-      count={things.length}
-      countLabel={things.length === 1 ? "subject" : "subjects"}
       loading={loading}
       empty={!loading && things.length === 0}
       contentClassName="contents"

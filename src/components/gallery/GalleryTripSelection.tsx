@@ -55,9 +55,6 @@ export function GalleryTripSelection() {
   return (
     <GallerySelectionShell
       title={galleryCopy.title}
-      description="Pick a trip to browse its photos."
-      count={sortedTrips.length}
-      countLabel={sortedTrips.length === 1 ? "trip" : "trips"}
       loading={loading}
       empty={!loading && sortedTrips.length === 0}
       contentClassName="contents"

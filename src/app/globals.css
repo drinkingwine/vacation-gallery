@@ -592,6 +592,43 @@ body.gallery-chrome-hidden .front-floating-nav * {
   margin: 0;
 }
 
+/* Uniform trip/collection picker cards */
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-item {
+  aspect-ratio: 4 / 5;
+  margin-bottom: 0;
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-media {
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-fallback {
+  height: 100%;
+  aspect-ratio: unset;
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-caption {
+  display: flex;
+  min-height: 4.25rem;
+  flex: 1;
+  flex-direction: column;
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-caption-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .vc-lg-album .vc-lg-album-item {
   break-inside: avoid;
   display: block;

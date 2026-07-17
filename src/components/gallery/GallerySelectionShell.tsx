@@ -3,9 +3,6 @@ import { cn } from "@/lib/utils";
 
 type GallerySelectionShellProps = {
   title: string;
-  description?: string;
-  count?: number;
-  countLabel?: string;
   loading?: boolean;
   empty?: boolean;
   emptyMessage?: ReactNode;
@@ -16,9 +13,6 @@ type GallerySelectionShellProps = {
 
 export function GallerySelectionShell({
   title,
-  description,
-  count,
-  countLabel,
   loading = false,
   empty = false,
   emptyMessage,
@@ -29,8 +23,8 @@ export function GallerySelectionShell({
   return (
     <div className="gallery-page-shell flex flex-1 flex-col">
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-20">
-        <div className="space-y-10 sm:space-y-12">
-          <header className="front-fade-up relative max-w-3xl space-y-3">
+        <div className="space-y-8 sm:space-y-10">
+          <header className="front-fade-up relative max-w-3xl">
             <div
               aria-hidden
               className="pointer-events-none absolute -left-6 -top-8 h-28 w-28 rounded-full bg-rose-200/40 blur-3xl dark:bg-violet-500/20"
@@ -39,9 +33,6 @@ export function GallerySelectionShell({
               aria-hidden
               className="pointer-events-none absolute left-24 -top-4 h-20 w-32 rounded-full bg-sky-200/50 blur-3xl dark:bg-teal-500/15"
             />
-            <p className="relative text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500 dark:text-zinc-400">
-              Vacation archive
-            </p>
             <h1
               className={cn(
                 "relative font-serif text-4xl font-semibold tracking-tight",
@@ -50,16 +41,6 @@ export function GallerySelectionShell({
             >
               {title}
             </h1>
-            {description ? (
-              <p className="relative max-w-xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 sm:text-[15px]">
-                {description}
-              </p>
-            ) : null}
-            {typeof count === "number" && !loading && !empty ? (
-              <p className="relative text-xs font-medium tabular-nums tracking-wide text-zinc-500 dark:text-zinc-400">
-                {count} {countLabel ?? (count === 1 ? "collection" : "collections")}
-              </p>
-            ) : null}
           </header>
 
           {loading ? (
