@@ -5,9 +5,13 @@ import dynamic from "next/dynamic";
 import { Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import type { TripMediaFilterValue } from "@/components/TripMediaFilter";
+import {
+  GalleryGridControls,
+  type GalleryGridMediaFilter,
+} from "@/components/gallery/GalleryGridControls";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { requestGalleryPhotoEdit, refreshGallery } from "@/lib/gallery-admin";
+import { galleryCopy } from "@/lib/gallery-copy";
 import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { buildGalleryItem, itemHasAssignedTags } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
@@ -52,8 +56,8 @@ type TripPhotoGalleryProps = {
   coverPhoto?: string | null;
   coverUrl?: string | null;
   onPhotoChanged?: () => void;
-  mediaFilter?: TripMediaFilterValue;
-  onMediaFilterChange?: (value: TripMediaFilterValue) => void;
+  mediaFilter?: GalleryGridMediaFilter;
+  onMediaFilterChange?: (value: GalleryGridMediaFilter) => void;
   tagFilter?: string | null;
 };
 
@@ -76,13 +80,14 @@ export function TripPhotoGallery({
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
   const [internalMediaFilter, setInternalMediaFilter] =
-    useState<TripMediaFilterValue>("all");
+    useState<GalleryGridMediaFilter>("all");
   const [taggingMode, setTaggingMode] = useState(false);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [tagOverrides, setTagOverrides] = useState<Map<string, string[]>>(
     () => new Map(),
   );
   const [taggingBusyId, setTaggingBusyId] = useState<string | null>(null);
+  const [tagsVisible, setTagsVisible] = useState(false);
 
   const mediaFilter = mediaFilterProp ?? internalMediaFilter;
   const setMediaFilter = onMediaFilterChange ?? setInternalMediaFilter;
@@ -278,24 +283,28 @@ export function TripPhotoGallery({
     );
   }
 
-  if (filteredItems.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-zinc-400">
-        <p className="text-sm">
-          {tagFilter
-            ? `No ${mediaFilter === "video" ? "videos" : mediaFilter === "photo" ? "photos" : "items"} tagged #${formatTagLabel(tagFilter)}`
-            : mediaFilter === "video"
-              ? "No videos in this trip"
-              : mediaFilter === "photo"
-                ? "No photos in this trip"
-                : (emptyMessage ?? "No media found")}
-        </p>
-      </div>
-    );
-  }
+  const mediaLabel =
+    mediaFilter === "video"
+      ? filteredItems.length === 1
+        ? "Video"
+        : "Videos"
+      : filteredItems.length === 1
+        ? "Image"
+        : "Images";
+  const summaryLabel = trip?.title
+    ? galleryCopy.grid.tripSummary(filteredItems.length, trip.title, mediaLabel)
+    : galleryCopy.grid.summary(filteredItems.length);
 
   return (
     <div className="space-y-4">
+      <GalleryGridControls
+        filter={mediaFilter}
+        onFilterChange={setMediaFilter}
+        summaryLabel={summaryLabel}
+        tagsVisible={tagsVisible}
+        onTagsVisibleChange={setTagsVisible}
+      />
+
       {isAdmin ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button
@@ -360,35 +369,53 @@ export function TripPhotoGallery({
         </div>
       ) : null}
 
-      <LightGalleryAlbum
-        className="vc-lg-album-ordered"
-        items={filteredItems}
-        selectedId={selectedId}
-        onSelectedIdChange={setSelectedId}
-        onVideoOpen={(item) => {
-          const href = galleryVideoWatchPath(
-            item,
-            `/trips/${encodeURIComponent(tripName)}`,
-          );
-          if (href) router.push(href);
-        }}
-        isAdmin={isAdmin}
-        onEdit={(item) =>
-          requestGalleryPhotoEdit(
-            item,
-            `/trips/${encodeURIComponent(tripName)}`,
-          )
-        }
-        onMakeDefault={
-          isAdmin ? (item) => void handleToggleDefault(item) : undefined
-        }
-        isCoverPhoto={isCoverPhoto}
-        onPhotoChanged={onPhotoChanged}
-        taggingMode={taggingMode}
-        activeTag={activeTag}
-        onToggleTag={(item) => void handleToggleTag(item)}
-        taggingBusyId={taggingBusyId}
-      />
+      {filteredItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-zinc-400">
+          <p className="text-sm">
+            {tagFilter
+              ? `No ${mediaFilter === "video" ? "videos" : mediaFilter === "photo" ? "photos" : "items"} tagged #${formatTagLabel(tagFilter)}`
+              : mediaFilter === "video"
+                ? "No videos in this trip"
+                : mediaFilter === "photo"
+                  ? "No photos in this trip"
+                  : (emptyMessage ?? "No media found")}
+          </p>
+        </div>
+      ) : (
+        <LightGalleryAlbum
+          className={cn(
+            "vc-lg-album-ordered",
+            isAdmin && "vc-lg-album-uniform",
+          )}
+          items={filteredItems}
+          selectedId={selectedId}
+          onSelectedIdChange={setSelectedId}
+          onVideoOpen={(item) => {
+            const href = galleryVideoWatchPath(
+              item,
+              `/trips/${encodeURIComponent(tripName)}`,
+            );
+            if (href) router.push(href);
+          }}
+          isAdmin={isAdmin}
+          onEdit={(item) =>
+            requestGalleryPhotoEdit(
+              item,
+              `/trips/${encodeURIComponent(tripName)}`,
+            )
+          }
+          onMakeDefault={
+            isAdmin ? (item) => void handleToggleDefault(item) : undefined
+          }
+          isCoverPhoto={isCoverPhoto}
+          onPhotoChanged={onPhotoChanged}
+          taggingMode={taggingMode}
+          activeTag={activeTag}
+          onToggleTag={(item) => void handleToggleTag(item)}
+          taggingBusyId={taggingBusyId}
+          showTags={tagsVisible}
+        />
+      )}
     </div>
   );
 }

@@ -34,6 +34,8 @@ type LightGalleryAlbumProps = {
   activeTag?: string | null;
   onToggleTag?: (item: GalleryItem) => void;
   taggingBusyId?: string | null;
+  /** Show tag overlays on thumbs (independent of tagging mode). */
+  showTags?: boolean;
 };
 
 function findItemIndex(items: GalleryItem[], id: GalleryId | null | undefined) {
@@ -59,6 +61,7 @@ export function LightGalleryAlbum({
   activeTag = null,
   onToggleTag,
   taggingBusyId = null,
+  showTags = false,
 }: LightGalleryAlbumProps) {
   const confirm = useConfirm();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -231,7 +234,7 @@ export function LightGalleryAlbum({
                     className="vc-lg-album-media"
                   />
                 )}
-                {taggingMode && displayTags.length > 0 ? (
+                {((taggingMode || showTags) && displayTags.length > 0) ? (
                   <PhotoTagOverlay tags={displayTags} />
                 ) : null}
               </button>

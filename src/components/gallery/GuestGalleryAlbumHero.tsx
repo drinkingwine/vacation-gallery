@@ -7,6 +7,5 @@ type GuestGalleryAlbumHeroProps = React.ComponentProps<typeof GalleryAlbumHero>;
 
 export function GuestGalleryAlbumHero(props: GuestGalleryAlbumHeroProps) {
   const { isAdmin } = useAuth();
-  if (isAdmin) return null;
-  return <GalleryAlbumHero {...props} />;
+  return <GalleryAlbumHero {...props} compact={isAdmin || props.compact} />;
 }

@@ -587,13 +587,34 @@ body.gallery-chrome-hidden .front-floating-nav * {
   }
 }
 
+/* Admin trip edit grid: denser / smaller cards */
+.vc-lg-album.vc-lg-album-uniform {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .vc-lg-album.vc-lg-album-uniform {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vc-lg-album.vc-lg-album-uniform {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+}
+
 .vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure,
 .vc-lg-album.vc-lg-album-ordered .vc-lg-album-figure {
   margin: 0;
 }
 
-/* Uniform trip/collection picker cards */
-.vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure {
+/* Uniform trip/collection picker cards + admin trip edit grid */
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-figure,
+.vc-lg-album.vc-lg-album-uniform .vc-lg-album-figure {
   display: flex;
   height: 100%;
   flex-direction: column;
@@ -604,13 +625,23 @@ body.gallery-chrome-hidden .front-floating-nav * {
   margin-bottom: 0;
 }
 
-.vc-lg-album.vc-lg-trip-picker .vc-lg-album-media {
+.vc-lg-album.vc-lg-album-uniform .vc-lg-album-item {
+  aspect-ratio: 1 / 1;
+  margin-bottom: 0;
+  border-radius: 0.5rem;
+}
+
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-media,
+.vc-lg-album.vc-lg-album-uniform .vc-lg-album-media,
+.vc-lg-album.vc-lg-album-uniform .vc-lg-album-item video {
   height: 100%;
+  width: 100%;
   object-fit: cover;
   object-position: center;
 }
 
-.vc-lg-album.vc-lg-trip-picker .vc-lg-album-fallback {
+.vc-lg-album.vc-lg-trip-picker .vc-lg-album-fallback,
+.vc-lg-album.vc-lg-album-uniform .vc-lg-album-fallback {
   height: 100%;
   aspect-ratio: unset;
 }

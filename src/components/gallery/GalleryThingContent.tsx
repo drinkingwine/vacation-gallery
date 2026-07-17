@@ -55,12 +55,6 @@ export async function GalleryThingContent({
       <GuestGalleryAlbumHero
         images={heroImages}
         title={label}
-        eyebrow={galleryCopy.things.eyebrow}
-        badges={[
-          {
-            label: `${sorted.length} ${sorted.length === 1 ? "photo" : "photos"}`,
-          },
-        ]}
       />
 
       <GalleryWithFilter

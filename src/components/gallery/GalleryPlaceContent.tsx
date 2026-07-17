@@ -59,11 +59,6 @@ export async function GalleryPlaceContent({
       <GuestGalleryAlbumHero
         images={heroImages}
         title={place.title}
-        eyebrow={galleryCopy.places.eyebrow}
-        badges={[
-          { label: place.mediaLabel },
-          ...(place.location ? [{ label: place.location }] : []),
-        ]}
         subtitle={
           place.tripCount > 1 ? place.tripTitles.join(" · ") : undefined
         }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { BlurImage } from "@/components/gallery/BlurImage";
+import { GalleryGridControls, type GalleryGridMediaFilter } from "@/components/gallery/GalleryGridControls";
 import { GalleryHeader } from "@/components/gallery/GalleryHeader";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
@@ -53,14 +54,6 @@ type Gallery25Props = {
   tripTitle?: string | null;
   showUntaggedFilter?: boolean;
 };
-
-const filters = [
-  { value: "all", key: "all" },
-  { value: "photo", key: "photo" },
-  { value: "video", key: "video" },
-] as const;
-
-type FilterValue = (typeof filters)[number]["value"];
 
 const clampColumnCount = (value: number, max = 10) =>
   Math.min(max, Math.max(2, value));
@@ -217,7 +210,7 @@ export function Gallery25({
   const [columnCount, setColumnCount] = useState(() =>
     readStoredNumber("gallery25-columns", 4),
   );
-  const [filter, setFilter] = useState<FilterValue>("all");
+  const [filter, setFilter] = useState<GalleryGridMediaFilter>("all");
   const [isChromeVisible, setIsChromeVisible] = useState(true);
   const [ratioMap, setRatioMap] = useState<Record<string, number>>({});
 
@@ -312,20 +305,30 @@ export function Gallery25({
     [displayColumnCount, ratioMap, visibleItems],
   );
 
+  const gridMediaCounts = useMemo(() => {
+    const base = effectiveUntaggedOnly
+      ? items.filter((item) => !itemHasAssignedTags(item))
+      : items;
+    let photo = 0;
+    let video = 0;
+    for (const item of base) {
+      if (item.type === "video") video++;
+      else photo++;
+    }
+    return { all: photo + video, photo, video };
+  }, [effectiveUntaggedOnly, items]);
+
   const gridSummaryLabel = useMemo(() => {
+    if (!tripTitle) return undefined;
     if (filter === "video") {
       const count = visibleItems.length;
       const mediaLabel = count === 1 ? "Video" : "Videos";
-      return tripTitle
-        ? galleryCopy.grid.tripSummary(count, tripTitle, mediaLabel)
-        : galleryCopy.grid.summary(count);
+      return galleryCopy.grid.tripSummary(count, tripTitle, mediaLabel);
     }
 
     const count = visibleItems.length;
     const mediaLabel = count === 1 ? "Image" : "Images";
-    return tripTitle
-      ? galleryCopy.grid.tripSummary(count, tripTitle, mediaLabel)
-      : galleryCopy.grid.summary(count);
+    return galleryCopy.grid.tripSummary(count, tripTitle, mediaLabel);
   }, [filter, tripTitle, visibleItems.length]);
   const modalVisibleItems = useMemo(() => {
     let filtered = navigationItems;
@@ -480,122 +483,29 @@ export function Gallery25({
         {chromeVisible && showHeader ? <GalleryHeader /> : null}
 
         {gridControlsVisible ? (
-          <div
-            className={cn(
-              "flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white/85 p-3 shadow-sm backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/85 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:p-4",
-              isFullBleed &&
-                "sticky top-[calc(5.5rem+env(safe-area-inset-top))] z-30",
-            )}
-          >
-            {chromeVisible ? (
-              <div className="-mx-1 flex overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:pb-0">
-                <div className="flex shrink-0 gap-1.5 rounded-full border border-zinc-200 bg-white px-1.5 py-1.5 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-2 sm:px-2 sm:py-2">
-                  {filters.map((tab) => (
-                    <button
-                      key={tab.value}
-                      type="button"
-                      onClick={() => setFilter(tab.value)}
-                      className={cn(
-                        "shrink-0 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]",
-                        filter === tab.value
-                          ? "bg-zinc-100 text-zinc-900 dark:bg-white/10 dark:text-white"
-                          : "text-zinc-600/80 hover:text-zinc-900 dark:text-white/60 dark:hover:text-white",
-                      )}
-                    >
-                      {galleryCopy.filters[tab.key]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex w-full flex-wrap items-center gap-3 text-sm text-muted-foreground sm:w-auto sm:justify-end">
-              <span className="text-xs sm:text-sm">
-                {gridSummaryLabel}
-              </span>
-              <label className="flex min-w-[10rem] flex-1 items-center gap-2 text-xs text-muted-foreground sm:min-w-0 sm:flex-none">
-                <span className="shrink-0">{galleryCopy.grid.columns.label}</span>
-                <input
-                  type="range"
-                  min={2}
-                  max={columnSliderMax}
-                  step={1}
-                  value={Math.min(columnCount, columnSliderMax)}
-                  onChange={(event) =>
-                    setColumnCount(
-                      clampColumnCount(
-                        Number(event.target.value),
-                        columnSliderMax,
-                      ),
-                    )
-                  }
-                  className="h-1 min-w-0 flex-1 cursor-pointer accent-primary sm:w-32 sm:flex-none"
-                  aria-label={galleryCopy.grid.columns.aria}
-                />
-                <span className="shrink-0 tabular-nums">
-                  {galleryCopy.grid.columns.count(displayColumnCount)}
-                </span>
-              </label>
-              <button
-                type="button"
-                onClick={() => setTagsVisible((visible) => !visible)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
-                  tagsVisible
-                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
-                    : "border-border text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {tagsVisible
-                  ? galleryCopy.grid.tags.off
-                  : galleryCopy.grid.tags.on}
-              </button>
-              {showUntaggedFilter ? (
-                <button
-                  type="button"
-                  onClick={() => setUntaggedOnly((active) => !active)}
-                  className={cn(
-                    "shrink-0 rounded-full border px-3 py-1 text-xs transition",
-                    untaggedOnly
-                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
-                      : "border-border text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {untaggedOnly
-                    ? galleryCopy.grid.untagged.all
-                    : galleryCopy.grid.untagged.only}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setDownloadsVisible((visible) => !visible)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
-                  downloadsVisible
-                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
-                    : "border-border text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {downloadsVisible
-                  ? galleryCopy.grid.downloads.off
-                  : galleryCopy.grid.downloads.on}
-              </button>
-              <button
-                type="button"
-                onClick={() => setTimestampsVisible((visible) => !visible)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1 text-xs transition",
-                  timestampsVisible
-                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
-                    : "border-border text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {timestampsVisible
-                  ? galleryCopy.grid.timestamps.off
-                  : galleryCopy.grid.timestamps.on}
-              </button>
-            </div>
-          </div>
+          <GalleryGridControls
+            filter={filter}
+            onFilterChange={setFilter}
+            summaryLabel={gridSummaryLabel}
+            mediaCounts={gridMediaCounts}
+            showMediaFilters={chromeVisible}
+            columnCount={columnCount}
+            onColumnCountChange={(value) =>
+              setColumnCount(clampColumnCount(value, columnSliderMax))
+            }
+            columnSliderMax={columnSliderMax}
+            displayColumnCount={displayColumnCount}
+            tagsVisible={tagsVisible}
+            onTagsVisibleChange={setTagsVisible}
+            downloadsVisible={downloadsVisible}
+            onDownloadsVisibleChange={setDownloadsVisible}
+            timestampsVisible={timestampsVisible}
+            onTimestampsVisibleChange={setTimestampsVisible}
+            showUntaggedFilter={showUntaggedFilter}
+            untaggedOnly={untaggedOnly}
+            onUntaggedOnlyChange={setUntaggedOnly}
+            sticky={isFullBleed}
+          />
         ) : null}
 
         <div

@@ -6,16 +6,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
-import {
-  TripMediaFilter,
-  type TripMediaFilterValue,
-} from "@/components/TripMediaFilter";
+import { type GalleryGridMediaFilter } from "@/components/gallery/GalleryGridControls";
 import { TripTagFilter } from "@/components/TripTagFilter";
 import { TripPhotoGallery } from "@/components/TripPhotoGallery";
 import { tripEditPath } from "@/lib/edit-paths";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { formatDateRange } from "@/lib/trip-meta";
-import { countMedia, formatMediaCount } from "@/lib/media-count";
+import { formatMediaCount } from "@/lib/media-count";
 import { formatTagLabel } from "@/lib/photo-tags";
 import { GALLERY_REFRESH_EVENT } from "@/lib/gallery-admin";
 import {
@@ -33,16 +30,12 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState(false);
-  const [mediaFilter, setMediaFilter] = useState<TripMediaFilterValue>("all");
+  const [mediaFilter, setMediaFilter] = useState<GalleryGridMediaFilter>("all");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { openUpload } = useUploadModal();
   const confirm = useConfirm();
   const router = useRouter();
-
-  const mediaCounts = useMemo(() => countMedia(photos), [photos]);
-  const showMediaFilter =
-    !loading && mediaCounts.photos > 0 && mediaCounts.videos > 0;
 
   const tagOptions = useMemo(() => {
     const counts = new Map<string, number>();
@@ -169,26 +162,13 @@ export default function TripPage() {
               <h1 className="min-w-0 font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
                 {title}
               </h1>
-              {(showMediaFilter || (!loading && tagOptions.length > 0)) ? (
-                <div className="flex max-w-full flex-col items-end gap-2">
-                  {showMediaFilter ? (
-                    <TripMediaFilter
-                      value={mediaFilter}
-                      onChange={setMediaFilter}
-                      photos={mediaCounts.photos}
-                      videos={mediaCounts.videos}
-                      total={mediaCounts.total}
-                    />
-                  ) : null}
-                  {!loading && tagOptions.length > 0 ? (
-                    <TripTagFilter
-                      tags={tagOptions}
-                      value={tagFilter}
-                      onChange={setTagFilter}
-                      className="justify-end"
-                    />
-                  ) : null}
-                </div>
+              {!loading && tagOptions.length > 0 ? (
+                <TripTagFilter
+                  tags={tagOptions}
+                  value={tagFilter}
+                  onChange={setTagFilter}
+                  className="justify-end"
+                />
               ) : null}
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
