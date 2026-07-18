@@ -155,7 +155,7 @@ export default function EditPhotoPageClient() {
       trip?.location?.trim() ||
       trip?.geoLocation?.trim() ||
       null;
-    const source =
+    const source: "photo" | "trip" | "label" | null =
       typeof photo?.latitude === "number" &&
       typeof photo?.longitude === "number" &&
       Number.isFinite(photo.latitude) &&
