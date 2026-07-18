@@ -1,3 +1,5 @@
+import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
+
 export type MapPhotoMarker = {
   id: string;
   path: string;
@@ -17,6 +19,7 @@ export type MapLocationMarker = {
   longitude: number;
   location?: string;
   photoCount: number;
+  photos: MapPhotoMarker[];
 };
 
 /** ~11 m — treats nearby GPS readings as the same spot. */
@@ -46,6 +49,15 @@ function pickLocationLabel(locations: string[]): string | undefined {
   return best;
 }
 
+function comparePhotosByDate(a: MapPhotoMarker, b: MapPhotoMarker) {
+  const timeA =
+    parsePhotoTimestamp(a.dateTaken) ?? Number.POSITIVE_INFINITY;
+  const timeB =
+    parsePhotoTimestamp(b.dateTaken) ?? Number.POSITIVE_INFINITY;
+  if (timeA !== timeB) return timeA - timeB;
+  return a.title.localeCompare(b.title);
+}
+
 export function groupPhotosByLocation(
   photos: MapPhotoMarker[],
 ): MapLocationMarker[] {
@@ -56,6 +68,7 @@ export function groupPhotosByLocation(
       lngSum: number;
       count: number;
       locations: string[];
+      photos: MapPhotoMarker[];
     }
   >();
 
@@ -67,6 +80,7 @@ export function groupPhotosByLocation(
       existing.latSum += photo.latitude;
       existing.lngSum += photo.longitude;
       existing.count += 1;
+      existing.photos.push(photo);
       if (photo.location) existing.locations.push(photo.location);
       continue;
     }
@@ -76,6 +90,7 @@ export function groupPhotosByLocation(
       lngSum: photo.longitude,
       count: 1,
       locations: photo.location ? [photo.location] : [],
+      photos: [photo],
     });
   }
 
@@ -86,6 +101,7 @@ export function groupPhotosByLocation(
       longitude: group.lngSum / group.count,
       location: pickLocationLabel(group.locations),
       photoCount: group.count,
+      photos: [...group.photos].sort(comparePhotosByDate),
     }))
     .sort((a, b) => b.photoCount - a.photoCount);
 }

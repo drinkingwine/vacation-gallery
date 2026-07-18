@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Map, useApiIsLoaded } from "@vis.gl/react-google-maps";
 import { X } from "lucide-react";
@@ -7,6 +8,7 @@ import {
   googleMapsPlaceUrl,
   googleMapsStreetViewUrl,
   type MapLocationMarker,
+  type MapPhotoMarker,
 } from "@/lib/map";
 import { formatCoordinates } from "@/lib/reverse-geocode";
 
@@ -107,10 +109,57 @@ function StreetViewPanel({
   );
 }
 
+function LocationPhotoGrid({ photos }: { photos: MapPhotoMarker[] }) {
+  if (photos.length === 0) return null;
+
+  return (
+    <div className="border-t border-zinc-200 dark:border-zinc-800">
+      <div className="flex items-center justify-between gap-3 px-4 pt-3">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+          Photos
+        </h3>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+          {photos.length}
+        </span>
+      </div>
+      <div className="max-h-[min(28dvh,220px)] overflow-y-auto px-4 py-3 custom-scrollbar">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {photos.map((photo) => (
+            <Link
+              key={photo.id}
+              href={`/trips/${encodeURIComponent(photo.tripName)}`}
+              className="group min-w-0"
+            >
+              <div className="aspect-square overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.thumbnailUrl}
+                  alt={photo.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.03]"
+                />
+              </div>
+              <p className="mt-1 truncate text-[11px] font-medium text-zinc-700 dark:text-zinc-200">
+                {photo.tripTitle}
+              </p>
+              {photo.title && photo.title !== photo.tripTitle ? (
+                <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">
+                  {photo.title}
+                </p>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LocationViewPanel({ location, onClose }: LocationViewPanelProps) {
   const [streetViewAvailable, setStreetViewAvailable] = useState(true);
   const label =
     location.location ?? formatCoordinates(location.latitude, location.longitude);
+  const photos = location.photos ?? [];
 
   useEffect(() => {
     setStreetViewAvailable(true);
@@ -125,8 +174,8 @@ export function LocationViewPanel({ location, onClose }: LocationViewPanelProps)
         onClick={onClose}
       />
 
-      <div className="relative flex max-h-[min(82dvh,720px)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 sm:max-w-3xl">
-        <div className="flex items-start justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <div className="relative flex max-h-[min(90dvh,820px)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 sm:max-w-3xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {label}
@@ -146,7 +195,7 @@ export function LocationViewPanel({ location, onClose }: LocationViewPanelProps)
           </button>
         </div>
 
-        <div className="relative h-[min(56dvh,480px)] min-h-[280px] w-full bg-zinc-100 dark:bg-zinc-950">
+        <div className="relative h-[min(42dvh,360px)] min-h-[220px] w-full shrink-0 bg-zinc-100 dark:bg-zinc-950">
           {streetViewAvailable ? (
             <StreetViewPanel
               latitude={location.latitude}
@@ -161,7 +210,9 @@ export function LocationViewPanel({ location, onClose }: LocationViewPanelProps)
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3 text-xs dark:border-zinc-800">
+        <LocationPhotoGrid photos={photos} />
+
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3 text-xs dark:border-zinc-800">
           <span className="text-zinc-500 dark:text-zinc-400">
             {streetViewAvailable ? "Google Street View" : "Satellite view"}
           </span>

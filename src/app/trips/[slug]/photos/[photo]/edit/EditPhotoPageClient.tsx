@@ -9,6 +9,7 @@ import {
   MakeDefaultIconButton,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsSection } from "@/components/gallery/photo-detail/PhotoDetailsSection";
+import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { GALLERY_REFRESH_EVENT, refreshGallery } from "@/lib/gallery-admin";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
@@ -17,6 +18,7 @@ import { PresetTagSectionList } from "@/components/gallery/PresetTagSectionList"
 import { formFieldClass } from "@/lib/form-styles";
 import { findPhotoByName, getEditablePhotoTags, stripAutoPhotoTags } from "@/lib/gallery";
 import { galleryCopy } from "@/lib/gallery-copy";
+import { googleMapsPlaceUrl } from "@/lib/map";
 import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
@@ -134,6 +136,41 @@ export default function EditPhotoPageClient() {
   );
   const displayTitle = caption.trim() || photo?.name || photoName;
   const tripDisplayName = trip?.title ?? tripName;
+
+  const geo = useMemo(() => {
+    const latitude =
+      typeof photo?.latitude === "number" && Number.isFinite(photo.latitude)
+        ? photo.latitude
+        : typeof trip?.latitude === "number" && Number.isFinite(trip.latitude)
+          ? trip.latitude
+          : null;
+    const longitude =
+      typeof photo?.longitude === "number" && Number.isFinite(photo.longitude)
+        ? photo.longitude
+        : typeof trip?.longitude === "number" && Number.isFinite(trip.longitude)
+          ? trip.longitude
+          : null;
+    const locationName =
+      photo?.location?.trim() ||
+      trip?.location?.trim() ||
+      trip?.geoLocation?.trim() ||
+      null;
+    const source =
+      typeof photo?.latitude === "number" &&
+      typeof photo?.longitude === "number" &&
+      Number.isFinite(photo.latitude) &&
+      Number.isFinite(photo.longitude)
+        ? "photo"
+        : typeof trip?.latitude === "number" &&
+            typeof trip?.longitude === "number" &&
+            Number.isFinite(trip.latitude) &&
+            Number.isFinite(trip.longitude)
+          ? "trip"
+          : locationName
+            ? "label"
+            : null;
+    return { latitude, longitude, locationName, source };
+  }, [photo, trip]);
   const capturedPreview =
     fromDatetimeLocalValue(captured) ?? photo?.dateTaken ?? trip?.startDate ?? null;
 
@@ -326,6 +363,22 @@ export default function EditPhotoPageClient() {
             </div>
           ) : (
             <form onSubmit={handleSave} className="space-y-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={cancelHref}
+                  className="rounded-full border border-amber-400/60 bg-amber-50 px-5 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100 dark:hover:bg-amber-500/25"
+                >
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  disabled={saving || !filename.trim()}
+                  className="rounded-full bg-green-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+                >
+                  {saving ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+
               {saveError && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
                   {saveError}
@@ -373,14 +426,50 @@ export default function EditPhotoPageClient() {
 
                     <PhotoDetailsSection
                       tripName={tripDisplayName}
-                      locationName={photo?.location ?? trip?.location ?? null}
-                      latitude={photo?.latitude ?? null}
-                      longitude={photo?.longitude ?? null}
+                      locationName={geo.locationName}
+                      latitude={geo.latitude}
+                      longitude={geo.longitude}
                       width={width}
                       height={height}
                       size={photo?.size ?? null}
                       dateShot={capturedPreview}
+                      showEmptyLocation
+                      locationSource={geo.source}
                     />
+
+                    {geo.latitude != null && geo.longitude != null ? (
+                      <section className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                            Map
+                            {geo.source === "trip" ? (
+                              <span className="ml-2 font-medium normal-case tracking-normal text-zinc-500">
+                                (trip location)
+                              </span>
+                            ) : null}
+                          </h3>
+                          <a
+                            href={googleMapsPlaceUrl(
+                              geo.latitude,
+                              geo.longitude,
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 underline decoration-zinc-300 underline-offset-2 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-zinc-100"
+                          >
+                            Open map
+                          </a>
+                        </div>
+                        <LocationPreviewMap
+                          latitude={geo.latitude}
+                          longitude={geo.longitude}
+                          label={geo.locationName}
+                          heightClassName="h-56"
+                          className="rounded-xl"
+                          compact
+                        />
+                      </section>
+                    ) : null}
 
                     {canSetDefault ? (
                       <div className="flex flex-wrap items-center gap-2">
@@ -518,22 +607,6 @@ export default function EditPhotoPageClient() {
                     </section>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <Link
-                  href={cancelHref}
-                  className="rounded-full border border-amber-400/60 bg-amber-50 px-5 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100 dark:hover:bg-amber-500/25"
-                >
-                  Cancel
-                </Link>
-                <button
-                  type="submit"
-                  disabled={saving || !filename.trim()}
-                  className="rounded-full bg-green-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
-                >
-                  {saving ? "Saving…" : "Save changes"}
-                </button>
               </div>
             </form>
           )}

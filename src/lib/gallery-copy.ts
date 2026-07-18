@@ -56,12 +56,12 @@ export const galleryCopy = {
       off: "Hide timestamps",
     },
     tags: {
-      on: "Tags",
+      on: "Show Tags",
       off: "Hide tags",
     },
     downloads: {
-      on: "Download",
-      off: "Hide downloads",
+      on: "Show Download Button",
+      off: "Hide Download Button",
     },
     untagged: {
       only: "Untagged only",

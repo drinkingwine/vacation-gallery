@@ -13,6 +13,7 @@ import {
   TripTagFilter,
   type TripTagOption,
 } from "@/components/TripTagFilter";
+import { useViewportWidth } from "@/hooks/use-viewport-width";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { requestGalleryPhotoEdit, refreshGallery } from "@/lib/gallery-admin";
 import { galleryVideoWatchPath } from "@/lib/edit-paths";
@@ -48,6 +49,26 @@ const LightGalleryAlbum = dynamic(
     ),
   },
 );
+
+const COLUMN_STORAGE_KEY = "trip-album-columns";
+
+const clampColumnCount = (value: number, max = 10) =>
+  Math.min(max, Math.max(2, value));
+
+const getColumnSliderMax = (width: number) => {
+  if (width >= 1024) return 10;
+  if (width >= 640) return 6;
+  return 4;
+};
+
+const readStoredColumnCount = () => {
+  if (typeof window === "undefined") return 4;
+  const stored = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+  if (!stored) return 4;
+  const parsed = Number(stored);
+  if (Number.isNaN(parsed)) return 4;
+  return clampColumnCount(parsed, 10);
+};
 
 type TripPhotoGalleryProps = {
   photos: Photo[];
@@ -85,6 +106,7 @@ export function TripPhotoGallery({
   const { isAdmin: authIsAdmin } = useAuth();
   const isAdmin = isAdminProp ?? authIsAdmin;
   const router = useRouter();
+  const viewportWidth = useViewportWidth();
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
   const [internalMediaFilter, setInternalMediaFilter] =
     useState<GalleryGridMediaFilter>("all");
@@ -95,9 +117,21 @@ export function TripPhotoGallery({
   );
   const [taggingBusyId, setTaggingBusyId] = useState<string | null>(null);
   const [tagsVisible, setTagsVisible] = useState(false);
+  const [downloadsVisible, setDownloadsVisible] = useState(false);
+  const [columnCount, setColumnCount] = useState(4);
 
   const mediaFilter = mediaFilterProp ?? internalMediaFilter;
   const setMediaFilter = onMediaFilterChange ?? setInternalMediaFilter;
+
+  useEffect(() => {
+    setColumnCount(readStoredColumnCount());
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(COLUMN_STORAGE_KEY, String(columnCount));
+  }, [columnCount]);
+
+  const columnSliderMax = getColumnSliderMax(viewportWidth || 1024);
 
   useEffect(() => {
     setTagOverrides(new Map());
@@ -180,6 +214,12 @@ export function TripPhotoGallery({
     }
     return { all: photo + video, photo, video };
   }, [items, tagFilter]);
+
+  const displayColumnCount = Math.min(
+    columnCount,
+    columnSliderMax,
+    Math.max(1, filteredItems.length || 1),
+  );
 
   useEffect(() => {
     setSelectedId(null);
@@ -320,6 +360,14 @@ export function TripPhotoGallery({
         }
         tagsVisible={tagsVisible}
         onTagsVisibleChange={setTagsVisible}
+        downloadsVisible={downloadsVisible}
+        onDownloadsVisibleChange={setDownloadsVisible}
+        columnCount={columnCount}
+        onColumnCountChange={(value) =>
+          setColumnCount(clampColumnCount(value, columnSliderMax))
+        }
+        columnSliderMax={columnSliderMax}
+        displayColumnCount={displayColumnCount}
       />
 
       {isAdmin ? (
@@ -404,6 +452,7 @@ export function TripPhotoGallery({
             "vc-lg-album-ordered",
             isAdmin && "vc-lg-album-uniform",
           )}
+          columnCount={displayColumnCount}
           items={filteredItems}
           selectedId={selectedId}
           onSelectedIdChange={setSelectedId}
@@ -431,6 +480,7 @@ export function TripPhotoGallery({
           onToggleTag={(item) => void handleToggleTag(item)}
           taggingBusyId={taggingBusyId}
           showTags={tagsVisible}
+          showDownloads={downloadsVisible}
         />
       )}
     </div>

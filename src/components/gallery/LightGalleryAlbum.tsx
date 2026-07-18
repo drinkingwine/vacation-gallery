@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
 import {
   DeleteIconButton,
+  DownloadIconButton,
   PhotoTagOverlay,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { PhotoDetailsModal } from "@/components/gallery/PhotoDetailsModal";
 import type { GalleryItem } from "@/lib/gallery";
 import { getItemDisplayTags, toLightGalleryElements } from "@/lib/gallery";
+import { downloadGalleryItem } from "@/lib/gallery-download";
 import { hasPhotoTag } from "@/lib/photo-tags";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +24,8 @@ type LightGalleryAlbumProps = {
   /** Videos use a dedicated watch page — keep lightGallery photo-only. */
   onVideoOpen?: (item: GalleryItem) => void;
   className?: string;
+  style?: CSSProperties;
+  columnCount?: number;
   isAdmin?: boolean;
   onEdit?: (item: GalleryItem) => void;
   onMakeDefault?: (item: GalleryItem) => void;
@@ -36,6 +40,8 @@ type LightGalleryAlbumProps = {
   taggingBusyId?: string | null;
   /** Show tag overlays on thumbs (independent of tagging mode). */
   showTags?: boolean;
+  /** Show download badges on thumbs. */
+  showDownloads?: boolean;
 };
 
 function findItemIndex(items: GalleryItem[], id: GalleryId | null | undefined) {
@@ -50,6 +56,8 @@ export function LightGalleryAlbum({
   onSelectedIdChange,
   onVideoOpen,
   className,
+  style,
+  columnCount,
   isAdmin = false,
   onEdit,
   onMakeDefault,
@@ -62,10 +70,14 @@ export function LightGalleryAlbum({
   onToggleTag,
   taggingBusyId = null,
   showTags = false,
+  showDownloads = false,
 }: LightGalleryAlbumProps) {
   const confirm = useConfirm();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
+  const [downloadingItemId, setDownloadingItemId] = useState<string | null>(
+    null,
+  );
 
   // lightGallery only handles photos; videos route to a dedicated page.
   const photoItems = useMemo(
@@ -178,11 +190,32 @@ export function LightGalleryAlbum({
     ],
   );
 
+  const handleDownloadItem = useCallback(async (item: GalleryItem) => {
+    if (downloadingItemId) return;
+    setDownloadingItemId(String(item.id));
+    try {
+      await downloadGalleryItem(item);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadingItemId(null);
+    }
+  }, [downloadingItemId]);
+
   if (items.length === 0) return null;
+
+  const albumStyle: CSSProperties = {
+    ...style,
+    ...(typeof columnCount === "number"
+      ? {
+          gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+        }
+      : null),
+  };
 
   return (
     <>
-      <div className={cn("vc-lg-album", className)}>
+      <div className={cn("vc-lg-album", className)} style={albumStyle}>
         {items.map((item) => {
           const isVideo = item.type === "video";
           const isBusy =
@@ -196,62 +229,79 @@ export function LightGalleryAlbum({
             <figure
               key={item.id}
               className={cn(
-                "vc-lg-album-figure group relative",
+                "vc-lg-album-figure group",
                 taggingMode &&
                   hasActiveTag &&
                   "ring-2 ring-amber-400/80 ring-offset-2 ring-offset-transparent",
               )}
             >
-              <button
-                type="button"
-                className="vc-lg-album-item"
-                data-media-type={item.type}
-                disabled={isBusy && taggingMode}
-                aria-label={
-                  taggingMode && activeTag
-                    ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
-                    : isAdmin && onEdit
-                      ? `Edit ${item.title}`
-                      : isVideo
-                        ? `Play ${item.title}`
-                        : item.title
-                }
-                onClick={() => handleThumbClick(item)}
-              >
-                {isVideo ? (
-                  <video
-                    src={item.src}
-                    muted
-                    playsInline
-                    preload="metadata"
-                    className="vc-lg-album-media"
-                  />
-                ) : (
-                  <img
-                    src={item.src}
-                    alt={item.title}
-                    loading="lazy"
-                    className="vc-lg-album-media"
-                  />
-                )}
-                {((taggingMode || showTags) && displayTags.length > 0) ? (
-                  <PhotoTagOverlay tags={displayTags} />
-                ) : null}
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  className="vc-lg-album-item"
+                  data-media-type={item.type}
+                  disabled={isBusy && taggingMode}
+                  aria-label={
+                    taggingMode && activeTag
+                      ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
+                      : isAdmin && onEdit
+                        ? `Edit ${item.title}`
+                        : isVideo
+                          ? `Play ${item.title}`
+                          : item.title
+                  }
+                  onClick={() => handleThumbClick(item)}
+                >
+                  {isVideo ? (
+                    <video
+                      src={item.src}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      className="vc-lg-album-media"
+                    />
+                  ) : (
+                    <img
+                      src={item.src}
+                      alt={item.title}
+                      loading="lazy"
+                      className="vc-lg-album-media"
+                    />
+                  )}
+                  {((taggingMode || showTags) && displayTags.length > 0) ? (
+                    <PhotoTagOverlay tags={displayTags} />
+                  ) : null}
+                </button>
 
-              {isAdmin ? (
-                <div className="absolute right-2 top-2 z-20">
-                  <DeleteIconButton
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      void handleDeleteItem(item);
-                    }}
-                    busy={busyItemId === String(item.id)}
-                    disabled={isBusy}
-                  />
+                <div className="pointer-events-none absolute inset-0 z-30">
+                  {isAdmin ? (
+                    <div className="pointer-events-auto absolute right-1.5 top-1.5">
+                      <DeleteIconButton
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleDeleteItem(item);
+                        }}
+                        busy={busyItemId === String(item.id)}
+                        disabled={isBusy}
+                      />
+                    </div>
+                  ) : null}
+                  {showDownloads ? (
+                    <div className="pointer-events-auto absolute bottom-1.5 right-1.5">
+                      <DownloadIconButton
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleDownloadItem(item);
+                        }}
+                        busy={downloadingItemId === String(item.id)}
+                        disabled={Boolean(downloadingItemId)}
+                      />
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
             </figure>
           );
         })}

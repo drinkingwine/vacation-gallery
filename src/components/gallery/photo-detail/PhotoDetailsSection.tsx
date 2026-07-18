@@ -16,6 +16,9 @@ type PhotoDetailsSectionProps = {
   size?: number | null;
   dateShot?: string | null;
   className?: string;
+  /** Always show a location row, even when no place/GPS is available. */
+  showEmptyLocation?: boolean;
+  locationSource?: "photo" | "trip" | "label" | null;
 };
 
 export function PhotoDetailsSection({
@@ -28,6 +31,8 @@ export function PhotoDetailsSection({
   size,
   dateShot,
   className,
+  showEmptyLocation = false,
+  locationSource = null,
 }: PhotoDetailsSectionProps) {
   const resolution = formatPhotoResolution(width, height);
   const hasCoords =
@@ -35,6 +40,19 @@ export function PhotoDetailsSection({
     typeof longitude === "number" &&
     Number.isFinite(latitude) &&
     Number.isFinite(longitude);
+  const locationLabel =
+    locationName ||
+    (hasCoords
+      ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+      : showEmptyLocation
+        ? "No location recorded"
+        : null);
+  const locationHint =
+    locationSource === "trip"
+      ? "Trip"
+      : locationSource === "photo"
+        ? "Photo GPS"
+        : null;
 
   return (
     <section className={className}>
@@ -45,7 +63,7 @@ export function PhotoDetailsSection({
         {tripName ? (
           <Row label={galleryCopy.grid.modal.trip} value={tripName} />
         ) : null}
-        {locationName ? (
+        {locationLabel ? (
           <Row
             label={galleryCopy.grid.modal.location}
             icon="location"
@@ -57,10 +75,15 @@ export function PhotoDetailsSection({
                   rel="noopener noreferrer"
                   className="text-right underline decoration-stone-300 underline-offset-2 transition-colors hover:text-amber-800 dark:decoration-stone-600 dark:hover:text-amber-200"
                 >
-                  {locationName}
+                  {locationLabel}
+                  {locationHint ? (
+                    <span className="mt-0.5 block text-[10px] font-medium normal-case tracking-normal text-stone-400 no-underline">
+                      {locationHint}
+                    </span>
+                  ) : null}
                 </a>
               ) : (
-                locationName
+                locationLabel
               )
             }
           />
@@ -84,6 +107,8 @@ export function PhotoDetailsSection({
               }
             />
           </>
+        ) : showEmptyLocation ? (
+          <Row label="GPS" value="No coordinates" />
         ) : null}
         <Row label="Resolution" value={resolution ?? "-"} />
         <Row
