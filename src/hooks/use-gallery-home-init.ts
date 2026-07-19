@@ -15,7 +15,7 @@ export function useGalleryHomeInit() {
     setLoading(true);
     setError(null);
     try {
-      await loadGalleryHome();
+      await loadGalleryHome({ force: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load gallery");
     } finally {

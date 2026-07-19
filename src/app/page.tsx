@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CoverImage } from "@/components/gallery/CoverImage";
 import { Spinner } from "@/components/gallery/Spinner";
 import { useFooterConfig } from "@/components/footer-config";
@@ -60,6 +60,11 @@ function pickDestinationImages({
   };
 }
 
+function withImageCacheBust(url: string, bust: number): string {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${bust}`;
+}
+
 function DestinationCard({
   item,
   index,
@@ -114,12 +119,25 @@ function DestinationCard({
 
 export default function Home() {
   const { loading: homeLoading, error, retry: retryHome } = useGalleryHomeInit();
-  const { value: trips, loading: tripsLoading } = useGalleryHomeSlice("trips");
-  const { value: people, loading: peopleLoading } = useGalleryHomeSlice("people");
-  const { value: places, loading: placesLoading } = useGalleryHomeSlice("places");
-  const { value: things, loading: thingsLoading } = useGalleryHomeSlice("things");
+  const { value: trips, loading: tripsLoading } = useGalleryHomeSlice("trips", {
+    force: true,
+  });
+  const { value: people, loading: peopleLoading } = useGalleryHomeSlice(
+    "people",
+    { force: true },
+  );
+  const { value: places, loading: placesLoading } = useGalleryHomeSlice(
+    "places",
+    { force: true },
+  );
+  const { value: things, loading: thingsLoading } = useGalleryHomeSlice(
+    "things",
+    { force: true },
+  );
   const showLoading =
     homeLoading || tripsLoading || peopleLoading || placesLoading || thingsLoading;
+
+  const [imageBust] = useState(() => Date.now());
 
   const destinationImages = pickDestinationImages({
     trips,
@@ -191,14 +209,19 @@ export default function Home() {
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {homeDestinations.map((item, index) => (
-            <DestinationCard
-              key={item.href}
-              item={item}
-              index={index}
-              imageUrl={destinationImages[item.href] ?? null}
-            />
-          ))}
+          {homeDestinations.map((item, index) => {
+            const rawUrl = destinationImages[item.href] ?? null;
+            return (
+              <DestinationCard
+                key={item.href}
+                item={item}
+                index={index}
+                imageUrl={
+                  rawUrl ? withImageCacheBust(rawUrl, imageBust) : null
+                }
+              />
+            );
+          })}
         </div>
       </section>
     </main>

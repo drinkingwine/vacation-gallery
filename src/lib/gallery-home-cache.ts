@@ -16,6 +16,7 @@ type GalleryHomeCacheEntry = {
 
 let cache: GalleryHomeCacheEntry | null = null;
 let inflight: Promise<GalleryHomeData> | null = null;
+let inflightIsForce = false;
 
 function readStoredCache(): GalleryHomeCacheEntry | null {
   if (typeof window === "undefined") return null;
@@ -93,6 +94,7 @@ export function getCachedThings() {
 export function invalidateGalleryHomeCache(): void {
   cache = null;
   inflight = null;
+  inflightIsForce = false;
   clearStoredCache();
 }
 
@@ -102,8 +104,13 @@ export function rerandomizeGalleryHomeCovers(): GalleryHomeData | null {
   return commitCache(buildCacheEntry(entry.trips, entry.photos));
 }
 
-async function fetchGalleryHome(): Promise<GalleryHomeData> {
-  const res = await fetch("/api/gallery/home");
+async function fetchGalleryHome(options?: {
+  force?: boolean;
+}): Promise<GalleryHomeData> {
+  const url = options?.force
+    ? "/api/gallery/home?fresh=1"
+    : "/api/gallery/home";
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -120,19 +127,22 @@ async function fetchGalleryHome(): Promise<GalleryHomeData> {
 export async function loadGalleryHome(options?: {
   force?: boolean;
 }): Promise<GalleryHomeData> {
-  if (options?.force) {
+  const force = options?.force ?? false;
+
+  if (force) {
     cache = null;
-    inflight = null;
     clearStoredCache();
+    if (inflight && inflightIsForce) return inflight;
   } else {
     const existing = hydrateCacheFromStorage();
     if (existing) return existing.views;
+    if (inflight) return inflight;
   }
 
-  if (inflight) return inflight;
-
-  inflight = fetchGalleryHome().finally(() => {
+  inflightIsForce = force;
+  inflight = fetchGalleryHome({ force }).finally(() => {
     inflight = null;
+    inflightIsForce = false;
   });
 
   return inflight;
