@@ -34,6 +34,19 @@ function uniqueCoverUrls(items: { coverUrl: string | null }[]): string[] {
   return urls;
 }
 
+function pickRandomUrl(urls: string[]): string | null {
+  if (urls.length === 0) return null;
+  return urls[Math.floor(Math.random() * urls.length)]!;
+}
+
+/** Prefer an unused URL so cards don't all share the same photo. */
+function takeRandomUrl(urls: string[], used: Set<string>): string | null {
+  const available = urls.filter((url) => !used.has(url));
+  const pick = pickRandomUrl(available.length > 0 ? available : urls);
+  if (pick) used.add(pick);
+  return pick;
+}
+
 function pickDestinationImages({
   trips,
   people,
@@ -49,14 +62,27 @@ function pickDestinationImages({
   const peopleCovers = uniqueCoverUrls(people);
   const placeCovers = uniqueCoverUrls(places);
   const thingCovers = uniqueCoverUrls(things);
+  const used = new Set<string>();
 
   return {
-    "/gallery": tripCovers[0] ?? null,
-    "/people": peopleCovers[0] ?? tripCovers[1] ?? tripCovers[0] ?? null,
-    "/places": placeCovers[0] ?? tripCovers[2] ?? tripCovers[0] ?? null,
-    "/things": thingCovers[0] ?? tripCovers[3] ?? tripCovers[0] ?? null,
-    "/timeline": tripCovers[1] ?? tripCovers[0] ?? null,
-    "/map": placeCovers[1] ?? tripCovers[2] ?? placeCovers[0] ?? tripCovers[0] ?? null,
+    "/gallery": takeRandomUrl(tripCovers, used),
+    "/people": takeRandomUrl(
+      peopleCovers.length > 0 ? peopleCovers : tripCovers,
+      used,
+    ),
+    "/places": takeRandomUrl(
+      placeCovers.length > 0 ? placeCovers : tripCovers,
+      used,
+    ),
+    "/things": takeRandomUrl(
+      thingCovers.length > 0 ? thingCovers : tripCovers,
+      used,
+    ),
+    "/timeline": takeRandomUrl(tripCovers, used),
+    "/map": takeRandomUrl(
+      placeCovers.length > 0 ? placeCovers : tripCovers,
+      used,
+    ),
   };
 }
 
@@ -138,13 +164,16 @@ export default function Home() {
     homeLoading || tripsLoading || peopleLoading || placesLoading || thingsLoading;
 
   const [imageBust] = useState(() => Date.now());
+  const [destinationImages, setDestinationImages] = useState<
+    Record<string, string | null>
+  >({});
 
-  const destinationImages = pickDestinationImages({
-    trips,
-    people,
-    places,
-    things,
-  });
+  useEffect(() => {
+    if (showLoading) return;
+    setDestinationImages(
+      pickDestinationImages({ trips, people, places, things }),
+    );
+  }, [showLoading, trips, people, places, things]);
 
   useEffect(() => {
     if (showLoading) return;
