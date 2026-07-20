@@ -17,15 +17,20 @@ export function countryCodeToFlagEmoji(code: string): string {
 }
 
 export function countryCodeFromTrip(
-  trip: Pick<Trip, "location" | "geoLocation">,
+  trip: Pick<Trip, "location" | "geoLocation" | "title" | "name">,
 ): string | null {
-  const candidates = [trip.location, trip.geoLocation].filter(Boolean);
+  const candidates = [
+    trip.location,
+    trip.geoLocation,
+    trip.title,
+    trip.name,
+  ].filter(Boolean);
 
   for (const text of candidates) {
     if (!text) continue;
 
     const segments = text
-      .split(/[,;]+/)
+      .split(/[,;/_-]+/)
       .map((part) => part.trim())
       .filter(Boolean);
 
@@ -55,7 +60,7 @@ export function countryCodeToName(code: string): string {
 }
 
 export function getTripCountryName(
-  trip: Pick<Trip, "location" | "geoLocation">,
+  trip: Pick<Trip, "location" | "geoLocation" | "title" | "name">,
 ): string | null {
   const code = countryCodeFromTrip(trip);
   if (code) return countryCodeToName(code);
@@ -72,14 +77,14 @@ export function getTripCountryName(
 }
 
 export function getTripCountryFlag(
-  trip: Pick<Trip, "location" | "geoLocation">,
+  trip: Pick<Trip, "location" | "geoLocation" | "title" | "name">,
 ): string {
   const code = countryCodeFromTrip(trip);
   return code ? countryCodeToFlagEmoji(code) : "🌐";
 }
 
 export function getUniqueTripFlags(
-  trips: Array<Pick<Trip, "location" | "geoLocation">>,
+  trips: Array<Pick<Trip, "location" | "geoLocation" | "title" | "name">>,
 ): string[] {
   const flags: string[] = [];
   const seen = new Set<string>();

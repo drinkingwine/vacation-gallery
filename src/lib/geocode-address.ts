@@ -207,6 +207,21 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   cayman: "KY",
   australia: "AU",
   japan: "JP",
+  fiji: "FJ",
+  beqa: "FJ",
+  korea: "KR",
+  "south korea": "KR",
+  "republic of korea": "KR",
+  philippines: "PH",
+  philippine: "PH",
+  phillipines: "PH",
+  philipines: "PH",
+  indonesia: "ID",
+  indonisia: "ID",
+  yap: "FM",
+  micronesia: "FM",
+  "federated states of micronesia": "FM",
+  honduras: "HN",
 };
 
 function normalizeCountryName(value: string): string {

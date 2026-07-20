@@ -22,11 +22,52 @@ export type MapLocationMarker = {
   photos: MapPhotoMarker[];
 };
 
-/** ~11 m — treats nearby GPS readings as the same spot. */
-const LOCATION_PRECISION = 4;
+/** Good for walks / boat rides without merging distant towns. */
+export const MAP_CLUSTER_RADIUS_METERS = 500;
 
-function locationKey(latitude: number, longitude: number): string {
-  return `${latitude.toFixed(LOCATION_PRECISION)},${longitude.toFixed(LOCATION_PRECISION)}`;
+const EARTH_RADIUS_METERS = 6_371_000;
+
+type Cluster = {
+  latSum: number;
+  lngSum: number;
+  count: number;
+  locations: string[];
+  photos: MapPhotoMarker[];
+};
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+export function distanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_METERS * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function centroid(cluster: Cluster) {
+  return {
+    latitude: cluster.latSum / cluster.count,
+    longitude: cluster.lngSum / cluster.count,
+  };
+}
+
+function addToCluster(cluster: Cluster, photo: MapPhotoMarker) {
+  cluster.latSum += photo.latitude;
+  cluster.lngSum += photo.longitude;
+  cluster.count += 1;
+  cluster.photos.push(photo);
+  if (photo.location) cluster.locations.push(photo.location);
 }
 
 function pickLocationLabel(locations: string[]): string | undefined {
@@ -37,7 +78,7 @@ function pickLocationLabel(locations: string[]): string | undefined {
     counts.set(location, (counts.get(location) ?? 0) + 1);
   }
 
-  let best = locations[0];
+  let best = locations[0]!;
   let bestCount = 0;
   for (const [location, count] of counts) {
     if (count > bestCount) {
@@ -58,34 +99,47 @@ function comparePhotosByDate(a: MapPhotoMarker, b: MapPhotoMarker) {
   return a.title.localeCompare(b.title);
 }
 
+/**
+ * Group geotagged photos by distance (greedy centroid clustering).
+ * Photos within `radiusMeters` of a cluster centroid share one marker.
+ */
 export function groupPhotosByLocation(
   photos: MapPhotoMarker[],
+  radiusMeters: number = MAP_CLUSTER_RADIUS_METERS,
 ): MapLocationMarker[] {
-  const groups = new Map<
-    string,
-    {
-      latSum: number;
-      lngSum: number;
-      count: number;
-      locations: string[];
-      photos: MapPhotoMarker[];
+  const clusters: Cluster[] = [];
+
+  const ordered = [...photos].sort(
+    (a, b) =>
+      a.latitude - b.latitude ||
+      a.longitude - b.longitude ||
+      a.id.localeCompare(b.id),
+  );
+
+  for (const photo of ordered) {
+    let bestIndex = -1;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (let i = 0; i < clusters.length; i++) {
+      const c = centroid(clusters[i]!);
+      const d = distanceMeters(
+        photo.latitude,
+        photo.longitude,
+        c.latitude,
+        c.longitude,
+      );
+      if (d <= radiusMeters && d < bestDistance) {
+        bestDistance = d;
+        bestIndex = i;
+      }
     }
-  >();
 
-  for (const photo of photos) {
-    const key = locationKey(photo.latitude, photo.longitude);
-    const existing = groups.get(key);
-
-    if (existing) {
-      existing.latSum += photo.latitude;
-      existing.lngSum += photo.longitude;
-      existing.count += 1;
-      existing.photos.push(photo);
-      if (photo.location) existing.locations.push(photo.location);
+    if (bestIndex >= 0) {
+      addToCluster(clusters[bestIndex]!, photo);
       continue;
     }
 
-    groups.set(key, {
+    clusters.push({
       latSum: photo.latitude,
       lngSum: photo.longitude,
       count: 1,
@@ -94,15 +148,18 @@ export function groupPhotosByLocation(
     });
   }
 
-  return Array.from(groups.entries())
-    .map(([key, group]) => ({
-      id: key,
-      latitude: group.latSum / group.count,
-      longitude: group.lngSum / group.count,
-      location: pickLocationLabel(group.locations),
-      photoCount: group.count,
-      photos: [...group.photos].sort(comparePhotosByDate),
-    }))
+  return clusters
+    .map((cluster, index) => {
+      const c = centroid(cluster);
+      return {
+        id: `cluster-${index}-${c.latitude.toFixed(5)},${c.longitude.toFixed(5)}`,
+        latitude: c.latitude,
+        longitude: c.longitude,
+        location: pickLocationLabel(cluster.locations),
+        photoCount: cluster.count,
+        photos: [...cluster.photos].sort(comparePhotosByDate),
+      };
+    })
     .sort((a, b) => b.photoCount - a.photoCount);
 }
 
