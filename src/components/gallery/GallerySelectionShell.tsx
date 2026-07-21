@@ -8,6 +8,7 @@ type GallerySelectionShellProps = {
   emptyMessage?: ReactNode;
   skeletonCount?: number;
   contentClassName?: string;
+  actions?: ReactNode;
   children: ReactNode;
 };
 
@@ -18,29 +19,37 @@ export function GallerySelectionShell({
   emptyMessage,
   skeletonCount = 10,
   contentClassName,
+  actions,
   children,
 }: GallerySelectionShellProps) {
   return (
     <div className="gallery-page-shell flex flex-1 flex-col">
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-20">
         <div className="space-y-8 sm:space-y-10">
-          <header className="front-fade-up relative max-w-3xl">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -left-6 -top-8 h-28 w-28 rounded-full bg-rose-200/40 blur-3xl dark:bg-violet-500/20"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute left-24 -top-4 h-20 w-32 rounded-full bg-sky-200/50 blur-3xl dark:bg-teal-500/15"
-            />
-            <h1
-              className={cn(
-                "relative font-serif text-4xl font-semibold tracking-tight",
-                "text-zinc-900/90 dark:text-white/90 md:text-5xl",
-              )}
-            >
-              {title}
-            </h1>
+          <header className="front-fade-up relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="relative max-w-3xl">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -left-6 -top-8 h-28 w-28 rounded-full bg-rose-200/40 blur-3xl dark:bg-violet-500/20"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-24 -top-4 h-20 w-32 rounded-full bg-sky-200/50 blur-3xl dark:bg-teal-500/15"
+              />
+              <h1
+                className={cn(
+                  "relative font-serif text-4xl font-semibold tracking-tight",
+                  "text-zinc-900/90 dark:text-white/90 md:text-5xl",
+                )}
+              >
+                {title}
+              </h1>
+            </div>
+            {actions ? (
+              <div className="relative flex shrink-0 items-center gap-2">
+                {actions}
+              </div>
+            ) : null}
           </header>
 
           {loading ? (

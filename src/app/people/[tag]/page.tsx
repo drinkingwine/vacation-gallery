@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { GalleryPageClient } from "@/components/gallery/GalleryPageClient";
 import { GalleryPersonContent } from "@/components/gallery/GalleryPersonContent";
-import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
 import { isPeoplePhotoTag } from "@/lib/photo-tags";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +30,7 @@ export default async function PersonPage({
   return (
     <GalleryPageClient>
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
-        <Suspense fallback={<GallerySkeleton />}>
+        <Suspense fallback={null}>
           <GalleryPersonContent tag={tag} initialKeyword={keyword} />
         </Suspense>
       </main>

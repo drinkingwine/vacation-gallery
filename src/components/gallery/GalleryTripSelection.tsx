@@ -7,19 +7,30 @@ import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { GallerySelectionShell } from "@/components/gallery/GallerySelectionShell";
 import { LightGalleryTripPicker } from "@/components/gallery/LightGalleryTripPicker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { refreshGallery } from "@/lib/gallery-admin";
 import { invalidateGalleryHomeCache } from "@/lib/gallery-home-cache";
 import { galleryCopy } from "@/lib/gallery-copy";
-import { sortTripsWithFavoritesFirst } from "@/lib/trip-meta";
+import {
+  sortTripsWithFavoritesFirst,
+  type TripSortMode,
+} from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
 
 export function GalleryTripSelection() {
   const { value: trips, loading } = useGalleryHomeSlice("trips");
+  const [sortMode, setSortMode] = useState<TripSortMode>("date");
   const sortedTrips = useMemo(
-    () => sortTripsWithFavoritesFirst(trips),
-    [trips],
+    () => sortTripsWithFavoritesFirst(trips, sortMode),
+    [sortMode, trips],
   );
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
@@ -58,6 +69,29 @@ export function GalleryTripSelection() {
       loading={loading}
       empty={!loading && sortedTrips.length === 0}
       contentClassName="contents"
+      actions={
+        !loading && sortedTrips.length > 0 ? (
+          <Select
+            value={sortMode}
+            onValueChange={(value) => setSortMode(value as TripSortMode)}
+          >
+            <SelectTrigger
+              aria-label="Sort trips"
+              className="h-9 w-auto min-w-[140px] rounded-full border border-zinc-200 bg-white/50 px-4 text-xs backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date" className="text-xs">
+                Sort by date
+              </SelectItem>
+              <SelectItem value="title" className="text-xs">
+                Sort by title
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null
+      }
       emptyMessage={
         <div>
           <p className="font-serif text-xl text-zinc-800 dark:text-zinc-100">

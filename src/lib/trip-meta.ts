@@ -104,12 +104,18 @@ export function sortTripsByDateAsc<
   });
 }
 
+export type TripSortMode = "date" | "title";
+
+export function sortTripsByTitle<T extends { title: string }>(trips: T[]): T[] {
+  return [...trips].sort((a, b) => a.title.localeCompare(b.title));
+}
+
 export function sortTripsWithFavoritesFirst<
   T extends { name: string; startDate?: string; endDate?: string; title: string },
->(trips: T[]): T[] {
+>(trips: T[], mode: TripSortMode = "date"): T[] {
   const favorites = trips.filter((trip) => trip.name === "Favorites");
-  const rest = sortTripsByDateDesc(
-    trips.filter((trip) => trip.name !== "Favorites"),
-  );
-  return [...favorites, ...rest];
+  const rest = trips.filter((trip) => trip.name !== "Favorites");
+  const sorted =
+    mode === "title" ? sortTripsByTitle(rest) : sortTripsByDateDesc(rest);
+  return [...favorites, ...sorted];
 }
