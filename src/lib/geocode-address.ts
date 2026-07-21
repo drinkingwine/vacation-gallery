@@ -30,6 +30,21 @@ const QUERY_STOP_WORDS = new Set([
   "avenue",
 ]);
 
+/** Generic hospitality words that hurt exact place matching. */
+const PLACE_NOISE_WORDS = new Set([
+  ...QUERY_STOP_WORDS,
+  "resort",
+  "resorts",
+  "hotel",
+  "hotels",
+  "spa",
+  "club",
+  "all",
+  "inclusive",
+  "adults",
+  "only",
+]);
+
 const US_STATE =
   /^(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)$/i;
 
@@ -240,6 +255,73 @@ export function extractPrimaryLocationHint(query: string): string {
   return parts.length > 1 ? parts[parts.length - 1]! : query.trim();
 }
 
+/** Place-name segment before city/region/country commas. */
+export function extractPrimaryPlaceName(query: string): string {
+  const parts = query
+    .split(/[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts[0] ?? query.trim();
+}
+
+function stripPlaceNoiseWords(text: string): string {
+  return text
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token && !PLACE_NOISE_WORDS.has(token.toLowerCase()))
+    .join(" ")
+    .trim();
+}
+
+/**
+ * Alternate place queries for providers that choke on long resort strings
+ * like "Excellence Resort, Riviera Cancun, Mexico".
+ */
+export function buildPlaceGeocodeQueryVariants(query: string): string[] {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const variants: string[] = [];
+  const seen = new Set<string>();
+  const add = (value: string) => {
+    const next = value.trim().replace(/\s+/g, " ");
+    if (!next) return;
+    const key = next.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    variants.push(next);
+  };
+
+  const parts = trimmed
+    .split(/[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const primary = parts[0] ?? trimmed;
+  const cleanedPrimary = stripPlaceNoiseWords(primary) || primary;
+  const middle = parts.length > 2 ? parts.slice(1, -1) : parts.slice(1);
+  const country = parts.length > 1 ? parts[parts.length - 1]! : null;
+
+  add(trimmed);
+  add([cleanedPrimary, ...parts.slice(1)].filter(Boolean).join(", "));
+  add([cleanedPrimary, ...middle, country].filter(Boolean).join(" "));
+  add([cleanedPrimary, ...middle].filter(Boolean).join(", "));
+  add([cleanedPrimary, ...middle].filter(Boolean).join(" "));
+
+  if (middle.length > 0) {
+    add(`${cleanedPrimary} ${middle.join(" ")}`);
+  }
+
+  add(cleanedPrimary);
+  if (country) {
+    add(`${cleanedPrimary}, ${country}`);
+    if (middle.length > 0) {
+      add(`${cleanedPrimary}, ${middle.join(", ")}, ${country}`);
+    }
+  }
+
+  return variants;
+}
+
 export function inferCountryCodeFromText(text?: string | null): string | null {
   const normalized = normalizeCountryName(normalizePart(text));
   if (!normalized) return null;
@@ -417,6 +499,15 @@ function extractQueryTokens(query: string): string[] {
     .filter((token) => token.length >= 3 && !QUERY_STOP_WORDS.has(token));
 }
 
+function extractDistinctivePlaceTokens(query: string): string[] {
+  return extractPrimaryPlaceName(query)
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !PLACE_NOISE_WORDS.has(token));
+}
+
 function tokenMatchScore(token: string, haystack: string): number {
   if (!haystack.includes(token)) return 0;
   return Math.min(10, 3 + Math.floor(token.length / 2));
@@ -425,6 +516,10 @@ function tokenMatchScore(token: string, haystack: string): number {
 function looksLikeUnitedStates(label: string): boolean {
   const normalized = label.toLowerCase();
   if (/\bcayman\b/.test(normalized)) return false;
+  // Country Mexico is not the US state New Mexico.
+  if (/(^|,\s*)mexico\s*$/i.test(label.trim()) || /,\s*m[eé]xico\b/i.test(label)) {
+    return false;
+  }
 
   return (
     /\b(united states|usa|u\.s\.a\.)\b/.test(normalized) ||
@@ -437,6 +532,82 @@ function looksLikeUnitedStates(label: string): boolean {
   );
 }
 
+export function scoreGeocodeResultForQuery(
+  result: PositionstackResult,
+  query: string,
+): number {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return 0;
+
+  const locationHint = extractPrimaryLocationHint(query).toLowerCase();
+  const hintTokens = extractQueryTokens(locationHint);
+  const tokens = extractQueryTokens(query);
+  const primaryTokens = extractDistinctivePlaceTokens(query);
+  const inferredCountry =
+    inferCountryCodeFromText(query) ?? inferCountryCodeFromText(locationHint);
+
+  const label = String(result.label ?? "").toLowerCase();
+  const region = String(result.region ?? "").toLowerCase();
+  const regionCode = String(result.region_code ?? "").toLowerCase();
+  const haystack = `${label} ${region} ${regionCode}`.trim();
+
+  let score = 0;
+  if (label.includes(normalizedQuery)) {
+    score += 16;
+  }
+
+  if (locationHint && label.includes(locationHint)) {
+    score += 20;
+  }
+
+  for (const token of hintTokens) {
+    score += tokenMatchScore(token, haystack) + 4;
+  }
+
+  for (const token of tokens) {
+    if (PLACE_NOISE_WORDS.has(token)) continue;
+    score += tokenMatchScore(token, haystack);
+  }
+
+  for (const token of primaryTokens) {
+    const match = tokenMatchScore(token, haystack);
+    if (match > 0) {
+      score += match + 10;
+    } else {
+      score -= 18;
+    }
+  }
+
+  if (inferredCountry && inferredCountry !== "US" && looksLikeUnitedStates(label)) {
+    score -= 24;
+  }
+
+  if (inferredCountry === "KY" && /\bcayman\b/.test(haystack)) {
+    score += 12;
+  }
+
+  if (inferredCountry === "MX" && /\bm[eé]xico\b/.test(haystack)) {
+    score += 8;
+  }
+
+  return score;
+}
+
+/** Reject weak matches that miss the distinctive place name tokens. */
+export function isWeakPlaceGeocodeMatch(
+  result: PositionstackResult,
+  query: string,
+): boolean {
+  const primaryTokens = extractDistinctivePlaceTokens(query);
+  if (primaryTokens.length === 0) return false;
+
+  const label = String(result.label ?? "").toLowerCase();
+  const region = String(result.region ?? "").toLowerCase();
+  const haystack = `${label} ${region}`;
+  const matched = primaryTokens.filter((token) => haystack.includes(token));
+  return matched.length === 0;
+}
+
 export function pickBestGeocodeResultForQuery(
   results: PositionstackResult[],
   query: string,
@@ -446,46 +617,11 @@ export function pickBestGeocodeResultForQuery(
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return results[0] ?? null;
 
-  const locationHint = extractPrimaryLocationHint(query).toLowerCase();
-  const hintTokens = extractQueryTokens(locationHint);
-  const tokens = extractQueryTokens(query);
-  const inferredCountry =
-    inferCountryCodeFromText(query) ?? inferCountryCodeFromText(locationHint);
-
   let best: PositionstackResult | null = null;
   let bestScore = Number.NEGATIVE_INFINITY;
 
   for (const result of results) {
-    const label = String(result.label ?? "").toLowerCase();
-    const region = String(result.region ?? "").toLowerCase();
-    const regionCode = String(result.region_code ?? "").toLowerCase();
-    const haystack = `${label} ${region} ${regionCode}`.trim();
-
-    let score = 0;
-    if (label.includes(normalizedQuery)) {
-      score += 16;
-    }
-
-    if (locationHint && label.includes(locationHint)) {
-      score += 20;
-    }
-
-    for (const token of hintTokens) {
-      score += tokenMatchScore(token, haystack) + 4;
-    }
-
-    for (const token of tokens) {
-      score += tokenMatchScore(token, haystack);
-    }
-
-    if (inferredCountry && inferredCountry !== "US" && looksLikeUnitedStates(label)) {
-      score -= 24;
-    }
-
-    if (inferredCountry === "KY" && /\bcayman\b/.test(haystack)) {
-      score += 12;
-    }
-
+    const score = scoreGeocodeResultForQuery(result, query);
     if (score > bestScore) {
       best = result;
       bestScore = score;
