@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Map, useApiIsLoaded } from "@vis.gl/react-google-maps";
 import { X } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { photoEditPath } from "@/lib/edit-paths";
 import {
   googleMapsPlaceUrl,
   googleMapsStreetViewUrl,
@@ -109,7 +111,17 @@ function StreetViewPanel({
   );
 }
 
+function mapPhotoHref(photo: MapPhotoMarker, isAdmin: boolean) {
+  const tripHref = `/trips/${encodeURIComponent(photo.tripName)}`;
+  if (!isAdmin) return tripHref;
+
+  const photoName = photo.path.split("/").pop() || photo.path;
+  return photoEditPath(photo.tripName, photoName, "/map");
+}
+
 function LocationPhotoGrid({ photos }: { photos: MapPhotoMarker[] }) {
+  const { isAdmin } = useAuth();
+
   if (photos.length === 0) return null;
 
   return (
@@ -127,8 +139,13 @@ function LocationPhotoGrid({ photos }: { photos: MapPhotoMarker[] }) {
           {photos.map((photo) => (
             <Link
               key={photo.id}
-              href={`/trips/${encodeURIComponent(photo.tripName)}`}
+              href={mapPhotoHref(photo, isAdmin)}
               className="group min-w-0"
+              aria-label={
+                isAdmin
+                  ? `Edit ${photo.title}`
+                  : `Open ${photo.tripTitle}`
+              }
             >
               <div className="aspect-square overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

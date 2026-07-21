@@ -23,6 +23,7 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from "@/lib/photo-timestamp";
+import { isNullIslandCoords } from "@/lib/reverse-geocode";
 import {
   FAVORITE_TAG,
   formatTagLabel,
@@ -70,6 +71,7 @@ export default function EditPhotoPageClient() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [makingDefault, setMakingDefault] = useState(false);
+  const [resettingLocation, setResettingLocation] = useState(false);
 
   const loadPhoto = useCallback(async () => {
     setLoading(true);
@@ -171,6 +173,20 @@ export default function EditPhotoPageClient() {
             : null;
     return { latitude, longitude, locationName, source };
   }, [photo, trip]);
+
+  const photoAtNullIsland = isNullIslandCoords(
+    photo?.latitude,
+    photo?.longitude,
+  );
+  const tripHasCoords =
+    typeof trip?.latitude === "number" &&
+    typeof trip?.longitude === "number" &&
+    Number.isFinite(trip.latitude) &&
+    Number.isFinite(trip.longitude) &&
+    !isNullIslandCoords(trip.latitude, trip.longitude);
+  const canResetToTripLocation = Boolean(
+    photo && photoAtNullIsland && tripHasCoords,
+  );
   const capturedPreview =
     fromDatetimeLocalValue(captured) ?? photo?.dateTaken ?? trip?.startDate ?? null;
 
@@ -239,6 +255,53 @@ export default function EditPhotoPageClient() {
       );
     } finally {
       setMakingDefault(false);
+    }
+  };
+
+  const handleResetToTripLocation = async () => {
+    if (!photo || !trip || !canResetToTripLocation || resettingLocation) return;
+
+    setResettingLocation(true);
+    setSaveError(null);
+
+    const nextLatitude = trip.latitude!;
+    const nextLongitude = trip.longitude!;
+    const nextLocation =
+      trip.location?.trim() || trip.geoLocation?.trim() || null;
+
+    try {
+      const res = await fetch("/api/photos/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: photo.path,
+          sha: photo.sha,
+          trip: tripName,
+          latitude: nextLatitude,
+          longitude: nextLongitude,
+          location: nextLocation,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to reset location");
+      }
+
+      const patch = {
+        latitude: nextLatitude,
+        longitude: nextLongitude,
+        location: nextLocation ?? undefined,
+      };
+      setPhoto((current) => (current ? { ...current, ...patch } : current));
+      patchCachedTripPhoto(tripName, photo.path, patch);
+      invalidateGalleryHomeCache();
+      refreshGallery();
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to reset location",
+      );
+    } finally {
+      setResettingLocation(false);
     }
   };
 
@@ -446,6 +509,10 @@ export default function EditPhotoPageClient() {
                               <span className="ml-2 font-medium normal-case tracking-normal text-zinc-500">
                                 (trip location)
                               </span>
+                            ) : photoAtNullIsland ? (
+                              <span className="ml-2 font-medium normal-case tracking-normal text-amber-600 dark:text-amber-400">
+                                (0,0 — invalid GPS)
+                              </span>
                             ) : null}
                           </h3>
                           <a
@@ -468,6 +535,33 @@ export default function EditPhotoPageClient() {
                           className="rounded-xl"
                           compact
                         />
+                        {photoAtNullIsland ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleResetToTripLocation()}
+                              disabled={
+                                !canResetToTripLocation ||
+                                resettingLocation ||
+                                saving
+                              }
+                              className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                            >
+                              {resettingLocation
+                                ? "Resetting…"
+                                : "Use trip location"}
+                            </button>
+                            {!tripHasCoords ? (
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                Set a trip location first to reset this photo.
+                              </span>
+                            ) : (
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                Replace 0,0 with the trip’s default coordinates.
+                              </span>
+                            )}
+                          </div>
+                        ) : null}
                       </section>
                     ) : null}
 

@@ -97,6 +97,9 @@ export type UpdatePhotoInput = {
   removeTag?: string;
   tags?: string[];
   dateTaken?: string | null;
+  location?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type GalleryPhoto = Photo & {

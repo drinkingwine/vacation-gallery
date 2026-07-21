@@ -4,6 +4,7 @@ import { isMedia, sanitizeMediaFilename } from "@/lib/media";
 import { headMedia } from "@/lib/r2";
 import {
   formatCoordinates,
+  isNullIslandCoords,
   reverseGeocode,
 } from "@/lib/reverse-geocode";
 import type { PhotoMetaEntry } from "@/lib/types";
@@ -102,10 +103,17 @@ export async function POST(req: NextRequest) {
     const tripPath =
       trip ?? (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
-    const hasImageGps = latitude !== undefined && longitude !== undefined;
+    const hasImageGps =
+      latitude !== undefined &&
+      longitude !== undefined &&
+      !isNullIslandCoords(latitude, longitude);
 
     if (tripPath) {
-      const locationMeta = await resolveUploadLocation(latitude, longitude, tripPath);
+      const locationMeta = await resolveUploadLocation(
+        hasImageGps ? latitude : undefined,
+        hasImageGps ? longitude : undefined,
+        tripPath,
+      );
       const patch: Partial<PhotoMetaEntry> = {
         ...(locationMeta ?? {}),
         ...(dateTaken ? { dateTaken } : {}),

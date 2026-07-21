@@ -1,4 +1,6 @@
+import { isNullIslandCoords } from "./reverse-geocode";
 import { FAVORITES_TRIP_NAME } from "./favorites-trip";
+
 import { countMedia } from "./media-count";
 import { getMediaType } from "./media";
 export { isImage } from "./media";
@@ -172,7 +174,8 @@ function hasPhotoGeo(entry: PhotoMetaEntry | undefined): boolean {
     typeof entry?.latitude === "number" &&
     typeof entry?.longitude === "number" &&
     !Number.isNaN(entry.latitude) &&
-    !Number.isNaN(entry.longitude)
+    !Number.isNaN(entry.longitude) &&
+    !isNullIslandCoords(entry.latitude, entry.longitude)
   );
 }
 
@@ -468,7 +471,8 @@ export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
         typeof photo.latitude === "number" &&
         typeof photo.longitude === "number" &&
         !Number.isNaN(photo.latitude) &&
-        !Number.isNaN(photo.longitude),
+        !Number.isNaN(photo.longitude) &&
+        !isNullIslandCoords(photo.latitude, photo.longitude),
     )
     .map((photo) => ({
       id: photo.path,
@@ -638,14 +642,14 @@ function prunePhotoMetaEntry(entry: PhotoMetaEntry | undefined) {
   const caption = entry.caption?.trim();
   const tags = normalizePhotoTags(entry.tags);
   const location = entry.location?.trim();
-  const latitude =
-    typeof entry.latitude === "number" && !Number.isNaN(entry.latitude)
-      ? entry.latitude
-      : undefined;
-  const longitude =
-    typeof entry.longitude === "number" && !Number.isNaN(entry.longitude)
-      ? entry.longitude
-      : undefined;
+  const hasValidGeo =
+    typeof entry.latitude === "number" &&
+    typeof entry.longitude === "number" &&
+    !Number.isNaN(entry.latitude) &&
+    !Number.isNaN(entry.longitude) &&
+    !isNullIslandCoords(entry.latitude, entry.longitude);
+  const latitude = hasValidGeo ? entry.latitude : undefined;
+  const longitude = hasValidGeo ? entry.longitude : undefined;
   const dateTaken = entry.dateTaken?.trim();
   const sourceTrip = entry.sourceTrip?.trim();
   const sourcePath = entry.sourcePath?.trim();
@@ -752,6 +756,40 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
       const entry = meta[currentName] ?? {};
       const dateTaken = input.dateTaken?.trim() || undefined;
       const next = prunePhotoMetaEntry({ ...entry, dateTaken });
+      if (next) meta[currentName] = next;
+      else delete meta[currentName];
+    }
+
+    if (
+      input.location !== undefined ||
+      input.latitude !== undefined ||
+      input.longitude !== undefined
+    ) {
+      const entry = meta[currentName] ?? {};
+      const next = prunePhotoMetaEntry({
+        ...entry,
+        ...(input.location !== undefined
+          ? { location: input.location?.trim() || undefined }
+          : {}),
+        ...(input.latitude !== undefined
+          ? {
+              latitude:
+                typeof input.latitude === "number" &&
+                Number.isFinite(input.latitude)
+                  ? input.latitude
+                  : undefined,
+            }
+          : {}),
+        ...(input.longitude !== undefined
+          ? {
+              longitude:
+                typeof input.longitude === "number" &&
+                Number.isFinite(input.longitude)
+                  ? input.longitude
+                  : undefined,
+            }
+          : {}),
+      });
       if (next) meta[currentName] = next;
       else delete meta[currentName];
     }
