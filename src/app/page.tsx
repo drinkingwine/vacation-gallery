@@ -8,6 +8,7 @@ import { useFooterConfig } from "@/components/footer-config";
 import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import { useGalleryHomeInit } from "@/hooks/use-gallery-home-init";
 import { totalMediaCount } from "@/lib/media-count";
+import { isVideo } from "@/lib/media";
 import { prefetchMapDataWhenIdle } from "@/lib/map-data-cache";
 import { mainNavItems, type MainNavItem } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,8 @@ function uniqueCoverUrls(items: { coverUrl: string | null }[]): string[] {
   const seen = new Set<string>();
   for (const item of items) {
     if (!item.coverUrl || seen.has(item.coverUrl)) continue;
+    // Home cards should never use a video as the cover.
+    if (isVideo(item.coverUrl)) continue;
     seen.add(item.coverUrl);
     urls.push(item.coverUrl);
   }

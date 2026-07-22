@@ -25,9 +25,13 @@ const VIDEO_EXT = new Set([
 export type MediaType = "photo" | "video";
 
 function extension(filename: string): string {
-  const dot = filename.lastIndexOf(".");
+  const cleaned = filename.split("?")[0]?.split("#")[0] ?? filename;
+  const base = cleaned.includes("/")
+    ? cleaned.slice(cleaned.lastIndexOf("/") + 1)
+    : cleaned;
+  const dot = base.lastIndexOf(".");
   if (dot === -1) return "";
-  return filename.slice(dot).toLowerCase();
+  return base.slice(dot).toLowerCase();
 }
 
 export function isImage(filename: string): boolean {

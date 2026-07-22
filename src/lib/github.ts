@@ -2,7 +2,7 @@ import { isNullIslandCoords } from "./reverse-geocode";
 import { FAVORITES_TRIP_NAME, isFavoritesTrip } from "./favorites-trip";
 
 import { countMedia } from "./media-count";
-import { getMediaType } from "./media";
+import { getMediaType, isVideo } from "./media";
 export { isImage } from "./media";
 import type { MapPhotoMarker } from "./map";
 import {
@@ -323,10 +323,13 @@ function resolveCoverUrl(
 ): { coverUrl: string | null; coverPhoto?: string } {
   if (coverPhoto) {
     const match = photos.find((p) => p.name === coverPhoto);
-    if (match) return { coverUrl: match.downloadUrl, coverPhoto };
+    if (match && match.mediaType !== "video" && !isVideo(match.name)) {
+      return { coverUrl: match.downloadUrl, coverPhoto };
+    }
   }
-  const fallbackPhoto =
-    photos.find((p) => p.mediaType !== "video") ?? photos[0];
+  const fallbackPhoto = photos.find(
+    (p) => p.mediaType !== "video" && !isVideo(p.name),
+  );
   const fallback = fallbackPhoto?.downloadUrl ?? null;
   return {
     coverUrl: fallback,

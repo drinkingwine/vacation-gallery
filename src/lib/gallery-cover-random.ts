@@ -1,15 +1,24 @@
-export function pickRandomImageCoverUrl(
-  photos: Array<{ mediaType?: string; downloadUrl?: string }>,
-): string | null {
-  const images = photos.filter(
-    (photo) => photo.mediaType !== "video" && photo.downloadUrl,
-  );
-  const pool =
-    images.length > 0
-      ? images
-      : photos.filter((photo) => photo.downloadUrl);
-  if (pool.length === 0) return null;
+import { isVideo } from "@/lib/media";
 
-  const index = Math.floor(Math.random() * pool.length);
-  return pool[index]!.downloadUrl!;
+function isImageCoverPhoto(photo: {
+  mediaType?: string;
+  downloadUrl?: string;
+  name?: string;
+}): boolean {
+  if (!photo.downloadUrl) return false;
+  if (photo.mediaType === "video") return false;
+  if (photo.name && isVideo(photo.name)) return false;
+  if (isVideo(photo.downloadUrl)) return false;
+  return true;
+}
+
+/** Picks a random still image URL. Never returns a video. */
+export function pickRandomImageCoverUrl(
+  photos: Array<{ mediaType?: string; downloadUrl?: string; name?: string }>,
+): string | null {
+  const images = photos.filter(isImageCoverPhoto);
+  if (images.length === 0) return null;
+
+  const index = Math.floor(Math.random() * images.length);
+  return images[index]!.downloadUrl!;
 }
