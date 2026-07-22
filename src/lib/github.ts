@@ -1,5 +1,5 @@
 import { isNullIslandCoords } from "./reverse-geocode";
-import { FAVORITES_TRIP_NAME } from "./favorites-trip";
+import { FAVORITES_TRIP_NAME, isFavoritesTrip } from "./favorites-trip";
 
 import { countMedia } from "./media-count";
 import { getMediaType } from "./media";
@@ -17,7 +17,7 @@ import {
   listMediaCached,
 } from "@/lib/media-list-cache";
 import { sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
-import { getEventKind, isTripEvent } from "./event-kind";
+import { getEventKind } from "./event-kind";
 import type {
   CreateTripInput,
   GalleryPhoto,
@@ -467,7 +467,7 @@ export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
   const entries = await listTripsWithPhotos();
 
   return entries
-    .filter((entry) => isTripEvent(entry.trip))
+    .filter((entry) => !isFavoritesTrip(entry.trip.name))
     .flatMap((entry) =>
       entry.photos
         .filter(

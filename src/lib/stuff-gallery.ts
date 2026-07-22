@@ -1,7 +1,6 @@
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { isStuffEvent, normalizeEventSlug } from "@/lib/event-kind";
 import { totalMediaCount } from "@/lib/media-count";
-import { tripLabel } from "@/lib/trip-meta";
 import type { GalleryPhoto, Trip } from "@/lib/types";
 
 export type StuffSummary = {
@@ -14,7 +13,7 @@ export type StuffSummary = {
 
 export { normalizeEventSlug };
 
-export function buildStuffGalleryList(trips: Trip[]): StuffSummary[] {
+export function buildStuffGalleryList(trips: Trip[]): Trip[] {
   return trips
     .filter(
       (trip) =>
@@ -22,14 +21,7 @@ export function buildStuffGalleryList(trips: Trip[]): StuffSummary[] {
         !isFavoritesTrip(trip.name) &&
         totalMediaCount(trip) > 0,
     )
-    .map((trip) => ({
-      slug: normalizeEventSlug(trip.name),
-      label: trip.title?.trim() || tripLabel(trip.name),
-      tripName: trip.name,
-      photoCount: totalMediaCount(trip),
-      coverUrl: trip.coverUrl,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => a.title.localeCompare(b.title));
 }
 
 export function galleryPhotosForStuff(
@@ -48,11 +40,24 @@ export function findStuffSummary(
   trips: Trip[],
   slug: string,
 ): StuffSummary | undefined {
-  return buildStuffGalleryList(trips).find(
-    (item) => item.slug === slug.trim().toLowerCase(),
+  const normalized = slug.trim().toLowerCase();
+  const trip = buildStuffGalleryList(trips).find(
+    (item) => normalizeEventSlug(item.name) === normalized,
   );
+  if (!trip) return undefined;
+  return {
+    slug: normalized,
+    label: trip.title,
+    tripName: trip.name,
+    photoCount: totalMediaCount(trip),
+    coverUrl: trip.coverUrl,
+  };
 }
 
 export function stuffGalleryPath(slug: string) {
   return `/stuff/${encodeURIComponent(slug)}`;
+}
+
+export function stuffGalleryPathForTrip(trip: Pick<Trip, "name">) {
+  return stuffGalleryPath(normalizeEventSlug(trip.name));
 }

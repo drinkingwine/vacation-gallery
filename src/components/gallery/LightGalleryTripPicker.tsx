@@ -12,6 +12,7 @@ type LightGalleryTripPickerProps = {
   onDelete?: (trip: Trip) => void;
   deletingName?: string | null;
   className?: string;
+  getHref?: (trip: Trip) => string;
 };
 
 export function LightGalleryTripPicker({
@@ -20,6 +21,7 @@ export function LightGalleryTripPicker({
   onDelete,
   deletingName = null,
   className,
+  getHref,
 }: LightGalleryTripPickerProps) {
   if (trips.length === 0) return null;
 
@@ -29,7 +31,8 @@ export function LightGalleryTripPicker({
         const dates = formatDateRange(trip.startDate, trip.endDate);
         const meta = [dates, trip.location?.trim()].filter(Boolean).join(" · ");
         const count = totalMediaCount(trip);
-        const href = `/trips/${encodeURIComponent(trip.name)}`;
+        const href =
+          getHref?.(trip) ?? `/trips/${encodeURIComponent(trip.name)}`;
 
         return (
           <figure key={trip.path} className="vc-lg-album-figure group relative">

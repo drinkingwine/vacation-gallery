@@ -25,8 +25,6 @@ import { isTripEvent } from "@/lib/event-kind";
 import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import type { ThingSummary } from "@/lib/things-gallery";
-import type { StuffSummary } from "@/lib/stuff-gallery";
-import type { EventSummary } from "@/lib/events-gallery";
 import { sortTripsWithFavoritesFirst } from "@/lib/trip-meta";
 import type { GalleryPhoto, Trip } from "@/lib/types";
 
@@ -48,8 +46,8 @@ export type GalleryHomeData = {
   people: PersonSummary[];
   places: PlaceSummary[];
   things: ThingSummary[];
-  stuff: StuffSummary[];
-  events: EventSummary[];
+  stuff: Trip[];
+  events: Trip[];
 };
 
 function applyRandomFavoritesCover(
@@ -118,31 +116,31 @@ function applyRandomThingCovers(
 }
 
 function applyRandomStuffCovers(
-  stuff: StuffSummary[],
+  stuff: Trip[],
   photos: GalleryHomePhoto[],
-): StuffSummary[] {
+): Trip[] {
   const galleryPhotos = photos as GalleryPhoto[];
 
-  return stuff.map((item) => {
-    const matches = galleryPhotosForStuff(galleryPhotos, item.tripName);
+  return stuff.map((trip) => {
+    const matches = galleryPhotosForStuff(galleryPhotos, trip.name);
     return {
-      ...item,
-      coverUrl: pickRandomImageCoverUrl(matches) ?? item.coverUrl,
+      ...trip,
+      coverUrl: pickRandomImageCoverUrl(matches) ?? trip.coverUrl,
     };
   });
 }
 
 function applyRandomEventCovers(
-  events: EventSummary[],
+  events: Trip[],
   photos: GalleryHomePhoto[],
-): EventSummary[] {
+): Trip[] {
   const galleryPhotos = photos as GalleryPhoto[];
 
-  return events.map((item) => {
-    const matches = galleryPhotosForEvents(galleryPhotos, item.tripName);
+  return events.map((trip) => {
+    const matches = galleryPhotosForEvents(galleryPhotos, trip.name);
     return {
-      ...item,
-      coverUrl: pickRandomImageCoverUrl(matches) ?? item.coverUrl,
+      ...trip,
+      coverUrl: pickRandomImageCoverUrl(matches) ?? trip.coverUrl,
     };
   });
 }

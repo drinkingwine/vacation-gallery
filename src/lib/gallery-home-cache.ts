@@ -6,7 +6,7 @@ import {
 import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
 
-const STORAGE_KEY = "gallery-home-cache-v13";
+const STORAGE_KEY = "gallery-home-cache-v14";
 
 type GalleryHomeCacheEntry = {
   trips: Trip[];

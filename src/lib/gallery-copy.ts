@@ -1,6 +1,6 @@
 export const galleryCopy = {
   eyebrow: "Gallery / Archive",
-  title: "Gallery",
+  title: "Vacations",
   description:
     "Browse the archive by media type and trace the light of each shoot.",
   scrollMore: "Scroll to load more",
