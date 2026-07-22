@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { Trip, UploadFile } from "@/lib/types";
 import {
+  EVENT_KIND_OPTIONS,
+  parseEventKind,
+  type EventKind,
+} from "@/lib/event-kind";
+import {
   MAX_IMAGE_UPLOAD_BYTES,
   MAX_VIDEO_UPLOAD_BYTES,
   contentTypeForFilename,
@@ -46,6 +51,7 @@ export function UploadModal({
   const [tripMode, setTripMode] = useState<"select" | "create">("select");
   const [newTripName, setNewTripName] = useState("");
   const [newTripTitle, setNewTripTitle] = useState("");
+  const [newTripKind, setNewTripKind] = useState<EventKind>("trip");
   const [newTripLocation, setNewTripLocation] = useState("");
   const [newTripStart, setNewTripStart] = useState("");
   const [newTripEnd, setNewTripEnd] = useState("");
@@ -79,6 +85,7 @@ export function UploadModal({
         photoCount: 0,
         coverUrl: null,
         title: tripKey.replace(/-/g, " "),
+        kind: "trip" as const,
       },
       ...localTrips,
     ];
@@ -167,6 +174,7 @@ export function UploadModal({
         body: JSON.stringify({
           name: newTripName,
           title: newTripTitle || undefined,
+          kind: newTripKind,
           location: newTripLocation || undefined,
           startDate: newTripStart || undefined,
           endDate: newTripEnd || undefined,
@@ -181,6 +189,7 @@ export function UploadModal({
           photoCount: 0,
           coverUrl: null,
           title: data.title ?? data.name.replace(/-/g, " "),
+          kind: parseEventKind(data.kind) ?? "trip",
           location: data.location,
           startDate: data.startDate,
           endDate: data.endDate,
@@ -191,6 +200,7 @@ export function UploadModal({
         setTripMode("select");
         setNewTripName("");
         setNewTripTitle("");
+        setNewTripKind("trip");
         setNewTripLocation("");
         setNewTripStart("");
         setNewTripEnd("");
@@ -450,6 +460,22 @@ export function UploadModal({
                     placeholder="Display title (optional)"
                     className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/40"
                   />
+                  <div className="flex flex-wrap gap-2 sm:col-span-2">
+                    {EVENT_KIND_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setNewTripKind(option.value)}
+                        className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                          newTripKind === option.value
+                            ? "border-zinc-900 bg-zinc-900 text-white"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     type="text"
                     value={newTripLocation}
@@ -492,6 +518,7 @@ export function UploadModal({
                       setTripMode("select");
                       setNewTripName("");
                       setNewTripTitle("");
+                      setNewTripKind("trip");
                       setNewTripLocation("");
                       setNewTripStart("");
                       setNewTripEnd("");

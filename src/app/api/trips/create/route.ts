@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
+import { parseEventKind } from "@/lib/event-kind";
 import { createTrip } from "@/lib/github";
 import type { CreateTripInput } from "@/lib/types";
 
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     const input: CreateTripInput = {
       name,
       title: typeof body.title === "string" ? body.title.trim() : undefined,
+      kind: parseEventKind(body.kind) ?? "trip",
       location:
         typeof body.location === "string" ? body.location.trim() : undefined,
       geoLocation:

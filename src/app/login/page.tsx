@@ -54,7 +54,9 @@ function LoginForm() {
         throw new Error(data.error ?? "Login failed");
       }
       await refresh();
-      router.replace(redirectTo);
+      router.replace(
+        !redirectTo || redirectTo === "/" ? "/dashboard" : redirectTo,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

@@ -17,6 +17,7 @@ import {
   listMediaCached,
 } from "@/lib/media-list-cache";
 import { sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
+import { getEventKind, isTripEvent } from "./event-kind";
 import type {
   CreateTripInput,
   GalleryPhoto,
@@ -349,6 +350,7 @@ function buildTrip(
     // Only the explicitly chosen cover — never the auto-fallback name.
     coverPhoto: metadata.coverPhoto,
     title: metadata.title ?? tripLabel(dir.name),
+    kind: getEventKind({ kind: metadata.kind, name: dir.name }),
     location: metadata.location,
     geoLocation: metadata.geoLocation,
     latitude: metadata.latitude,
@@ -462,30 +464,34 @@ export async function getFavoritesAlbumSummary() {
 }
 
 export async function listGeotaggedPhotos(): Promise<MapPhotoMarker[]> {
-  const photos = await listAllGalleryPhotos();
+  const entries = await listTripsWithPhotos();
 
-  return photos
-    .filter(
-      (photo) =>
-        photo.mediaType !== "video" &&
-        typeof photo.latitude === "number" &&
-        typeof photo.longitude === "number" &&
-        !Number.isNaN(photo.latitude) &&
-        !Number.isNaN(photo.longitude) &&
-        !isNullIslandCoords(photo.latitude, photo.longitude),
-    )
-    .map((photo) => ({
-      id: photo.path,
-      path: photo.path,
-      latitude: photo.latitude!,
-      longitude: photo.longitude!,
-      title: photo.caption?.trim() || photo.name.replace(/\.[^.]+$/, ""),
-      location: photo.location,
-      thumbnailUrl: photo.downloadUrl,
-      tripName: photo.tripName,
-      tripTitle: photo.tripTitle,
-      dateTaken: photo.dateTaken,
-    }));
+  return entries
+    .filter((entry) => isTripEvent(entry.trip))
+    .flatMap((entry) =>
+      entry.photos
+        .filter(
+          (photo) =>
+            photo.mediaType !== "video" &&
+            typeof photo.latitude === "number" &&
+            typeof photo.longitude === "number" &&
+            !Number.isNaN(photo.latitude) &&
+            !Number.isNaN(photo.longitude) &&
+            !isNullIslandCoords(photo.latitude, photo.longitude),
+        )
+        .map((photo) => ({
+          id: photo.path,
+          path: photo.path,
+          latitude: photo.latitude!,
+          longitude: photo.longitude!,
+          title: photo.caption?.trim() || photo.name.replace(/\.[^.]+$/, ""),
+          location: photo.location,
+          thumbnailUrl: photo.downloadUrl,
+          tripName: entry.trip.name,
+          tripTitle: entry.trip.title,
+          dateTaken: photo.dateTaken,
+        })),
+    );
 }
 
 export async function getTrip(tripName: string): Promise<Trip | null> {
@@ -548,6 +554,7 @@ export async function uploadFile(
 function metadataPayload(input: CreateTripInput): TripMetadata {
   return {
     title: input.title ?? tripLabel(input.name),
+    kind: getEventKind({ kind: input.kind, name: input.name }),
     location: input.location,
     geoLocation: input.geoLocation,
     latitude: input.latitude,

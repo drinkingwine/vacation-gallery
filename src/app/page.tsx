@@ -17,11 +17,26 @@ const DESTINATION_BLURBS: Record<string, string> = {
   "/people": "Find photos tagged with the people in them.",
   "/places": "Explore the archive by destination.",
   "/things": "Jump into subjects, objects, and motifs.",
+  "/stuff": "Odds and ends — wedding, Wheaton, and more.",
+  "/events": "Browse dedicated event albums.",
   "/timeline": "See trips laid out across the years.",
   "/map": "Pin geotagged photos on the world map.",
 };
 
-const homeDestinations = mainNavItems.filter((item) => item.href !== "/");
+const HOME_DESTINATION_ORDER = [
+  "/gallery",
+  "/people",
+  "/places",
+  "/things",
+  "/timeline",
+  "/map",
+  "/events",
+  "/stuff",
+] as const;
+
+const homeDestinations = HOME_DESTINATION_ORDER.map(
+  (href) => mainNavItems.find((item) => item.href === href)!,
+);
 
 function uniqueCoverUrls(items: { coverUrl: string | null }[]): string[] {
   const urls: string[] = [];
@@ -52,16 +67,22 @@ function pickDestinationImages({
   people,
   places,
   things,
+  stuff,
+  events,
 }: {
   trips: { coverUrl: string | null }[];
   people: { coverUrl: string | null }[];
   places: { coverUrl: string | null }[];
   things: { coverUrl: string | null }[];
+  stuff: { coverUrl: string | null }[];
+  events: { coverUrl: string | null }[];
 }): Record<string, string | null> {
   const tripCovers = uniqueCoverUrls(trips);
   const peopleCovers = uniqueCoverUrls(people);
   const placeCovers = uniqueCoverUrls(places);
   const thingCovers = uniqueCoverUrls(things);
+  const stuffCovers = uniqueCoverUrls(stuff);
+  const eventCovers = uniqueCoverUrls(events);
   const used = new Set<string>();
 
   return {
@@ -76,6 +97,14 @@ function pickDestinationImages({
     ),
     "/things": takeRandomUrl(
       thingCovers.length > 0 ? thingCovers : tripCovers,
+      used,
+    ),
+    "/stuff": takeRandomUrl(
+      stuffCovers.length > 0 ? stuffCovers : tripCovers,
+      used,
+    ),
+    "/events": takeRandomUrl(
+      eventCovers.length > 0 ? eventCovers : tripCovers,
       used,
     ),
     "/timeline": takeRandomUrl(tripCovers, used),
@@ -119,7 +148,7 @@ function DestinationCard({
             src={imageUrl}
             alt=""
             unoptimized
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-cover"
           />
         ) : (
@@ -160,8 +189,22 @@ export default function Home() {
     "things",
     { force: true },
   );
+  const { value: stuff, loading: stuffLoading } = useGalleryHomeSlice(
+    "stuff",
+    { force: true },
+  );
+  const { value: events, loading: eventsLoading } = useGalleryHomeSlice(
+    "events",
+    { force: true },
+  );
   const showLoading =
-    homeLoading || tripsLoading || peopleLoading || placesLoading || thingsLoading;
+    homeLoading ||
+    tripsLoading ||
+    peopleLoading ||
+    placesLoading ||
+    thingsLoading ||
+    stuffLoading ||
+    eventsLoading;
 
   const [imageBust] = useState(() => Date.now());
   const [destinationImages, setDestinationImages] = useState<
@@ -171,9 +214,9 @@ export default function Home() {
   useEffect(() => {
     if (showLoading) return;
     setDestinationImages(
-      pickDestinationImages({ trips, people, places, things }),
+      pickDestinationImages({ trips, people, places, things, stuff, events }),
     );
-  }, [showLoading, trips, people, places, things]);
+  }, [showLoading, trips, people, places, things, stuff, events]);
 
   useEffect(() => {
     if (showLoading) return;
@@ -237,7 +280,7 @@ export default function Home() {
           </h1>
         </header>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {homeDestinations.map((item, index) => {
             const rawUrl = destinationImages[item.href] ?? null;
             return (

@@ -6,7 +6,7 @@ import {
 import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
 
-const STORAGE_KEY = "gallery-home-cache-v8";
+const STORAGE_KEY = "gallery-home-cache-v13";
 
 type GalleryHomeCacheEntry = {
   trips: Trip[];
@@ -91,6 +91,14 @@ export function getCachedThings() {
   return getCachedGalleryHome()?.things ?? null;
 }
 
+export function getCachedStuff() {
+  return getCachedGalleryHome()?.stuff ?? null;
+}
+
+export function getCachedEvents() {
+  return getCachedGalleryHome()?.events ?? null;
+}
+
 export function invalidateGalleryHomeCache(): void {
   cache = null;
   inflight = null;
@@ -166,6 +174,16 @@ export async function loadPlaces(options?: { force?: boolean }) {
 export async function loadThings(options?: { force?: boolean }) {
   const data = await loadGalleryHome(options);
   return data.things;
+}
+
+export async function loadStuff(options?: { force?: boolean }) {
+  const data = await loadGalleryHome(options);
+  return data.stuff;
+}
+
+export async function loadEvents(options?: { force?: boolean }) {
+  const data = await loadGalleryHome(options);
+  return data.events;
 }
 
 /** Re-roll cover images from cached photos, or fetch if no cache yet. */

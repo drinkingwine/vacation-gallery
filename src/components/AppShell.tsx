@@ -98,7 +98,7 @@ export function AppShell({ children }: AppShellProps) {
       <FooterConfigProvider>
         <ConfirmProvider>
         <UploadControlContext.Provider value={{ openUpload }}>
-          <AppNavbar onUpload={isAdmin ? () => openUpload() : undefined} />
+          <AppNavbar />
           {children}
           <AppFooter />
 

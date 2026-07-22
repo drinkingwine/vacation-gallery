@@ -7,6 +7,11 @@ import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
 import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
 import { useNavbarConfig } from "@/components/navbar-config";
 import { formFieldClass } from "@/lib/form-styles";
+import {
+  EVENT_KIND_OPTIONS,
+  getEventKind,
+  type EventKind,
+} from "@/lib/event-kind";
 import { toDateInputValue } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
 
@@ -19,6 +24,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
   const tripHref = `/trips/${encodeURIComponent(trip.name)}`;
 
   const [title, setTitle] = useState(trip.title);
+  const [kind, setKind] = useState<EventKind>(getEventKind(trip));
   const [location, setLocation] = useState(trip.location ?? "");
   const [geoLocation, setGeoLocation] = useState(trip.geoLocation ?? "");
   const [latitude, setLatitude] = useState<number | null>(trip.latitude ?? null);
@@ -64,6 +70,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
+          kind,
           location: location.trim() || undefined,
           geoLocation: geoLocation.trim() || undefined,
           latitude: latitude ?? undefined,
@@ -91,10 +98,10 @@ export function EditTripForm({ trip }: EditTripFormProps) {
         <div className="mx-auto max-w-4xl space-y-6">
           <header className="space-y-1">
             <h1 className="font-serif text-3xl font-semibold text-zinc-900 dark:text-white">
-              Edit trip
+              Edit event
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Update this vacation album&apos;s details.
+              Update this album&apos;s details and type.
             </p>
           </header>
 
@@ -108,6 +115,28 @@ export function EditTripForm({ trip }: EditTripFormProps) {
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="space-y-4 p-5">
+                  <div>
+                    <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Event type
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {EVENT_KIND_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setKind(option.value)}
+                          className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                            kind === option.value
+                              ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                              : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       Folder name

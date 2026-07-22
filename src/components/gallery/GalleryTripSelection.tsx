@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useUploadModal } from "@/components/AppShell";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { GallerySelectionShell } from "@/components/gallery/GallerySelectionShell";
 import { LightGalleryTripPicker } from "@/components/gallery/LightGalleryTripPicker";
@@ -35,7 +34,6 @@ export function GalleryTripSelection() {
   const [deletingTrip, setDeletingTrip] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
-  const { openUpload } = useUploadModal();
 
   const handleDeleteTrip = async (trip: Trip) => {
     if (isFavoritesTrip(trip.name)) return;
@@ -99,24 +97,17 @@ export function GalleryTripSelection() {
           </p>
           <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
             {isAdmin
-              ? "Create a trip folder, then upload photos."
+              ? "Create an album from the dashboard, then upload photos."
               : "Sign in as admin to add trips and photos."}
           </p>
           {isAdmin ? (
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
-                href="/trips/new"
-                className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-              >
-                New trip
-              </Link>
-              <button
-                type="button"
-                onClick={() => openUpload()}
+                href="/dashboard"
                 className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
               >
-                Upload photos
-              </button>
+                Open dashboard
+              </Link>
             </div>
           ) : null}
         </div>

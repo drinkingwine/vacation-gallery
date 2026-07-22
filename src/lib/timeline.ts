@@ -1,4 +1,5 @@
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { isTripEvent } from "@/lib/event-kind";
 import type { Trip } from "@/lib/types";
 
 export type TripTimelineSpan = {
@@ -34,7 +35,7 @@ export function partitionTimelineTrips(trips: Trip[]) {
   const undated: Trip[] = [];
 
   for (const trip of trips) {
-    if (isFavoritesTrip(trip.name)) continue;
+    if (isFavoritesTrip(trip.name) || !isTripEvent(trip)) continue;
 
     const span = getTripTimelineSpan(trip);
     if (!span) {

@@ -35,6 +35,20 @@ export const galleryCopy = {
     empty: "No tagged things yet. Add subject tags when editing a photo.",
     noPhotos: (name: string) => `No photos tagged with ${name} yet.`,
   },
+  stuff: {
+    eyebrow: "Gallery / Stuff",
+    title: "Stuff Gallery",
+    description: "Browse odds-and-ends trips, sorted A–Z.",
+    empty: "No stuff trips yet.",
+    noPhotos: (name: string) => `No photos in ${name} yet.`,
+  },
+  events: {
+    eyebrow: "Gallery / Events",
+    title: "Events Gallery",
+    description: "Browse event albums, sorted A–Z.",
+    empty: "No event albums yet.",
+    noPhotos: (name: string) => `No photos in ${name} yet.`,
+  },
   filters: {
     all: "All",
     photo: "Photo",

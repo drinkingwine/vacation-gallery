@@ -1,4 +1,5 @@
 import { isFavoritesTrip } from "@/lib/favorites-trip";
+import { isTripEvent } from "@/lib/event-kind";
 import { totalMediaCount } from "@/lib/media-count";
 import { tripLabel } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
@@ -77,7 +78,13 @@ export function buildPlacesGalleryList(trips: Trip[]): PlaceSummary[] {
   const groups = new Map<string, Trip[]>();
 
   for (const trip of trips) {
-    if (isFavoritesTrip(trip.name) || totalMediaCount(trip) === 0) continue;
+    if (
+      isFavoritesTrip(trip.name) ||
+      !isTripEvent(trip) ||
+      totalMediaCount(trip) === 0
+    ) {
+      continue;
+    }
 
     const slug = getPlaceSlugFromTripName(trip.name);
     if (!slug) continue;

@@ -13,9 +13,20 @@ import {
   buildThingsGalleryList,
   galleryPhotosForThings,
 } from "@/lib/things-gallery";
+import {
+  buildStuffGalleryList,
+  galleryPhotosForStuff,
+} from "@/lib/stuff-gallery";
+import {
+  buildEventsGalleryList,
+  galleryPhotosForEvents,
+} from "@/lib/events-gallery";
+import { isTripEvent } from "@/lib/event-kind";
 import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
 import type { ThingSummary } from "@/lib/things-gallery";
+import type { StuffSummary } from "@/lib/stuff-gallery";
+import type { EventSummary } from "@/lib/events-gallery";
 import { sortTripsWithFavoritesFirst } from "@/lib/trip-meta";
 import type { GalleryPhoto, Trip } from "@/lib/types";
 
@@ -37,6 +48,8 @@ export type GalleryHomeData = {
   people: PersonSummary[];
   places: PlaceSummary[];
   things: ThingSummary[];
+  stuff: StuffSummary[];
+  events: EventSummary[];
 };
 
 function applyRandomFavoritesCover(
@@ -104,15 +117,48 @@ function applyRandomThingCovers(
   });
 }
 
+function applyRandomStuffCovers(
+  stuff: StuffSummary[],
+  photos: GalleryHomePhoto[],
+): StuffSummary[] {
+  const galleryPhotos = photos as GalleryPhoto[];
+
+  return stuff.map((item) => {
+    const matches = galleryPhotosForStuff(galleryPhotos, item.tripName);
+    return {
+      ...item,
+      coverUrl: pickRandomImageCoverUrl(matches) ?? item.coverUrl,
+    };
+  });
+}
+
+function applyRandomEventCovers(
+  events: EventSummary[],
+  photos: GalleryHomePhoto[],
+): EventSummary[] {
+  const galleryPhotos = photos as GalleryPhoto[];
+
+  return events.map((item) => {
+    const matches = galleryPhotosForEvents(galleryPhotos, item.tripName);
+    return {
+      ...item,
+      coverUrl: pickRandomImageCoverUrl(matches) ?? item.coverUrl,
+    };
+  });
+}
+
 export function buildGalleryHomeViews(
   trips: Trip[],
   photos: GalleryHomePhoto[],
 ): GalleryHomeData {
   const galleryPhotos = photos as GalleryPhoto[];
+  const tripEvents = trips.filter(
+    (trip) => isFavoritesTrip(trip.name) || isTripEvent(trip),
+  );
 
   return {
     trips: sortTripsWithFavoritesFirst(
-      applyRandomFavoritesCover(trips, photos),
+      applyRandomFavoritesCover(tripEvents, photos),
     ),
     people: applyRandomPeopleCovers(
       buildPeopleGalleryList(galleryPhotos),
@@ -123,5 +169,7 @@ export function buildGalleryHomeViews(
       buildThingsGalleryList(galleryPhotos),
       photos,
     ),
+    stuff: applyRandomStuffCovers(buildStuffGalleryList(trips), photos),
+    events: applyRandomEventCovers(buildEventsGalleryList(trips), photos),
   };
 }

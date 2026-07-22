@@ -1,5 +1,6 @@
 export interface TripMetadata {
   title?: string;
+  kind?: "trip" | "stuff" | "event";
   location?: string;
   geoLocation?: string;
   latitude?: number;
@@ -39,6 +40,7 @@ export interface Trip {
   coverUrl: string | null;
   coverPhoto?: string;
   title: string;
+  kind: "trip" | "stuff" | "event";
   location?: string;
   geoLocation?: string;
   latitude?: number;
@@ -63,6 +65,7 @@ export interface UploadFile {
 export interface CreateTripInput {
   name: string;
   title?: string;
+  kind?: "trip" | "stuff" | "event";
   location?: string;
   geoLocation?: string;
   latitude?: number;

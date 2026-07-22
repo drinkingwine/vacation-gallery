@@ -7,6 +7,7 @@ import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
 import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
 import { useAuth } from "@/components/AuthProvider";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
+import { EVENT_KIND_OPTIONS, type EventKind } from "@/lib/event-kind";
 import { formFieldClass } from "@/lib/form-styles";
 
 export function NewTripForm() {
@@ -15,6 +16,7 @@ export function NewTripForm() {
 
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<EventKind>("trip");
   const [location, setLocation] = useState("");
   const [geoLocation, setGeoLocation] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -68,6 +70,7 @@ export function NewTripForm() {
         body: JSON.stringify({
           name: name.trim(),
           title: title.trim() || undefined,
+          kind,
           location: location.trim() || undefined,
           geoLocation: geoLocation.trim() || undefined,
           latitude: latitude ?? undefined,
@@ -99,10 +102,10 @@ export function NewTripForm() {
         <div className="mx-auto max-w-4xl space-y-6">
           <header className="space-y-1">
             <h1 className="font-serif text-3xl font-semibold text-zinc-900 dark:text-white">
-              New trip
+              New event
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Create a folder for a new vacation album.
+              Create a folder for a trip, stuff, or event album.
             </p>
           </header>
 
@@ -116,6 +119,28 @@ export function NewTripForm() {
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="space-y-4 p-5">
+                  <div>
+                    <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Event type
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {EVENT_KIND_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setKind(option.value)}
+                          className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                            kind === option.value
+                              ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                              : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       Folder name
