@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CloudUpload, FolderPlus, HardDriveDownload } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useUploadModal } from "@/components/AppShell";
+import { Photos11JpegFixer } from "@/components/Photos11JpegFixer";
 import { cn } from "@/lib/utils";
 
 export function AdminDashboard() {
@@ -168,6 +169,8 @@ export function AdminDashboard() {
             );
           })}
         </div>
+
+        <Photos11JpegFixer />
 
         <div className="border-t border-zinc-200 pt-6 dark:border-zinc-800">
           <button
