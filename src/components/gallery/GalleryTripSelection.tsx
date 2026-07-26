@@ -21,6 +21,7 @@ import { galleryCopy } from "@/lib/gallery-copy";
 import {
   matchesTripCategoryFilter,
   TRIP_CATEGORY_FILTER_OPTIONS,
+  tripCategoryFilterLabel,
   type TripCategoryFilter,
 } from "@/lib/trip-category";
 import {
@@ -140,13 +141,7 @@ export function GalleryTripSelection() {
         filterEmpty ? (
           <div>
             <p className="font-serif text-xl text-zinc-800 dark:text-zinc-100">
-              No{" "}
-              {categoryFilter === "dive"
-                ? "dive trips"
-                : categoryFilter === "r&r"
-                  ? "R&R trips"
-                  : "trips"}{" "}
-              yet
+              No {tripCategoryFilterLabel(categoryFilter)} yet
             </p>
             <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
               {isAdmin

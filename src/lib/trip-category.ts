@@ -1,20 +1,23 @@
-export type TripCategory = "dive" | "r&r";
+export type TripCategory = "ralph" | "robin" | "r&r";
 
 export type TripCategoryFilter = "all" | TripCategory;
 
 export const TRIP_CATEGORY_OPTIONS = [
-  { value: "dive" as const, label: "Dive Trips" },
+  { value: "ralph" as const, label: "Ralph" },
+  { value: "robin" as const, label: "Robin" },
   { value: "r&r" as const, label: "R&R" },
 ] as const;
 
-/** Chip order on the Vacations page: Dive Trips · R&R · All */
+/** Chip order on the Vacations page: All · Ralph · Robin · R&R */
 export const TRIP_CATEGORY_FILTER_OPTIONS = [
-  ...TRIP_CATEGORY_OPTIONS,
   { value: "all" as const, label: "All" },
+  ...TRIP_CATEGORY_OPTIONS,
 ] as const;
 
 export function parseTripCategory(value: unknown): TripCategory | undefined {
-  if (value === "dive" || value === "r&r") return value;
+  if (value === "ralph" || value === "robin" || value === "r&r") return value;
+  // Legacy dive tag → Ralph
+  if (value === "dive") return "ralph";
   return undefined;
 }
 
@@ -37,8 +40,8 @@ export function parseTripCategories(value: unknown): TripCategory[] {
 }
 
 export function getTripCategories(trip: {
-  categories?: TripCategory[] | string[] | null;
-  category?: TripCategory | TripCategory[] | string | null;
+  categories?: ReadonlyArray<string> | null;
+  category?: string | ReadonlyArray<string> | null;
 }): TripCategory[] {
   if (trip.categories != null) return parseTripCategories(trip.categories);
   return parseTripCategories(trip.category);
@@ -46,8 +49,8 @@ export function getTripCategories(trip: {
 
 /** @deprecated Prefer getTripCategories — kept for single-value call sites. */
 export function getTripCategory(trip: {
-  categories?: TripCategory[] | string[] | null;
-  category?: TripCategory | TripCategory[] | string | null;
+  categories?: ReadonlyArray<string> | null;
+  category?: string | ReadonlyArray<string> | null;
 }): TripCategory | undefined {
   return getTripCategories(trip)[0];
 }
@@ -61,11 +64,18 @@ export function toggleTripCategory(
     : [...categories, value];
 }
 
-/** Dive / R&R match trips that include that tag. Untagged trips appear under All. */
+export function tripCategoryFilterLabel(filter: TripCategoryFilter): string {
+  if (filter === "all") return "trips";
+  if (filter === "ralph") return "Ralph trips";
+  if (filter === "robin") return "Robin trips";
+  return "R&R trips";
+}
+
+/** Ralph / Robin / R&R match trips that include that tag. Untagged trips appear under All. */
 export function matchesTripCategoryFilter(
   trip: {
-    categories?: TripCategory[] | string[] | null;
-    category?: TripCategory | TripCategory[] | string | null;
+    categories?: ReadonlyArray<string> | null;
+    category?: string | ReadonlyArray<string> | null;
   },
   filter: TripCategoryFilter,
 ): boolean {

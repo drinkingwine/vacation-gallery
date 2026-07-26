@@ -59,7 +59,7 @@ export function UploadModal({
   const [newTripTitle, setNewTripTitle] = useState("");
   const [newTripKind, setNewTripKind] = useState<EventKind>("trip");
   const [newTripCategories, setNewTripCategories] = useState<TripCategory[]>([
-    "dive",
+    "ralph",
   ]);
   const [newTripLocation, setNewTripLocation] = useState("");
   const [newTripStart, setNewTripStart] = useState("");
@@ -212,7 +212,7 @@ export function UploadModal({
         setNewTripName("");
         setNewTripTitle("");
         setNewTripKind("trip");
-        setNewTripCategories(["dive"]);
+        setNewTripCategories(["ralph"]);
         setNewTripLocation("");
         setNewTripStart("");
         setNewTripEnd("");
@@ -556,7 +556,7 @@ export function UploadModal({
                       setNewTripName("");
                       setNewTripTitle("");
                       setNewTripKind("trip");
-                      setNewTripCategories(["dive"]);
+                      setNewTripCategories(["ralph"]);
                       setNewTripLocation("");
                       setNewTripStart("");
                       setNewTripEnd("");

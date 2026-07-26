@@ -22,7 +22,7 @@ export function NewTripForm() {
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<EventKind>("trip");
-  const [categories, setCategories] = useState<TripCategory[]>(["dive"]);
+  const [categories, setCategories] = useState<TripCategory[]>(["ralph"]);
   const [location, setLocation] = useState("");
   const [geoLocation, setGeoLocation] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
