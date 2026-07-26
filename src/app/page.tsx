@@ -1,19 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Heart, type LucideIcon } from "lucide-react";
 import { CoverImage } from "@/components/gallery/CoverImage";
 import { Spinner } from "@/components/gallery/Spinner";
 import { useFooterConfig } from "@/components/footer-config";
 import { useGalleryHomeSlice } from "@/hooks/use-gallery-home-cache";
 import { useGalleryHomeInit } from "@/hooks/use-gallery-home-init";
+import { isFavoritesTrip } from "@/lib/favorites-trip";
 import { totalMediaCount } from "@/lib/media-count";
 import { isVideo } from "@/lib/media";
 import { prefetchMapDataWhenIdle } from "@/lib/map-data-cache";
-import { mainNavItems, type MainNavItem } from "@/lib/nav-items";
+import { mainNavItems } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
+const FAVORITES_HREF = "/gallery/favorites";
+
+type HomeDestination = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+};
+
 const DESTINATION_BLURBS: Record<string, string> = {
+  [FAVORITES_HREF]: "Saved photos and videos from across the collection.",
   "/gallery": "Browse trips and open albums by journey.",
   "/people": "Find photos tagged with the people in them.",
   "/places": "Explore the archive by destination.",
@@ -35,9 +46,12 @@ const HOME_DESTINATION_ORDER = [
   "/stuff",
 ] as const;
 
-const homeDestinations = HOME_DESTINATION_ORDER.map(
-  (href) => mainNavItems.find((item) => item.href === href)!,
-);
+const homeDestinations: HomeDestination[] = [
+  { label: "Favorites", href: FAVORITES_HREF, icon: Heart },
+  ...HOME_DESTINATION_ORDER.map(
+    (href) => mainNavItems.find((item) => item.href === href)!,
+  ),
+];
 
 function uniqueCoverUrls(items: { coverUrl: string | null }[]): string[] {
   const urls: string[] = [];
@@ -73,14 +87,16 @@ function pickDestinationImages({
   stuff,
   events,
 }: {
-  trips: { coverUrl: string | null }[];
+  trips: { name: string; coverUrl: string | null }[];
   people: { coverUrl: string | null }[];
   places: { coverUrl: string | null }[];
   things: { coverUrl: string | null }[];
   stuff: { coverUrl: string | null }[];
   events: { coverUrl: string | null }[];
 }): Record<string, string | null> {
-  const tripCovers = uniqueCoverUrls(trips);
+  const favoritesTrip = trips.find((trip) => isFavoritesTrip(trip.name));
+  const vacationTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
+  const tripCovers = uniqueCoverUrls(vacationTrips);
   const peopleCovers = uniqueCoverUrls(people);
   const placeCovers = uniqueCoverUrls(places);
   const thingCovers = uniqueCoverUrls(things);
@@ -88,7 +104,15 @@ function pickDestinationImages({
   const eventCovers = uniqueCoverUrls(events);
   const used = new Set<string>();
 
+  const favoritesCover =
+    favoritesTrip?.coverUrl && !isVideo(favoritesTrip.coverUrl)
+      ? favoritesTrip.coverUrl
+      : null;
+  if (favoritesCover) used.add(favoritesCover);
+
   return {
+    [FAVORITES_HREF]:
+      favoritesCover ?? takeRandomUrl(tripCovers, used),
     "/gallery": takeRandomUrl(tripCovers, used),
     "/people": takeRandomUrl(
       peopleCovers.length > 0 ? peopleCovers : tripCovers,
@@ -128,7 +152,7 @@ function DestinationCard({
   index,
   imageUrl,
 }: {
-  item: MainNavItem;
+  item: HomeDestination;
   index: number;
   imageUrl: string | null;
 }) {
@@ -214,6 +238,11 @@ export default function Home() {
     Record<string, string | null>
   >({});
 
+  const vacationTrips = useMemo(
+    () => trips.filter((trip) => !isFavoritesTrip(trip.name)),
+    [trips],
+  );
+
   useEffect(() => {
     if (showLoading) return;
     setDestinationImages(
@@ -226,12 +255,15 @@ export default function Home() {
     prefetchMapDataWhenIdle();
   }, [showLoading]);
 
-  const totalMedia = trips.reduce((sum, t) => sum + totalMediaCount(t), 0);
+  const totalMedia = vacationTrips.reduce(
+    (sum, t) => sum + totalMediaCount(t),
+    0,
+  );
 
   useFooterConfig({
     stats: showLoading
       ? "Loading…"
-      : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${trips.length} trip${trips.length !== 1 ? "s" : ""}`,
+      : `${totalMedia} item${totalMedia !== 1 ? "s" : ""} across ${vacationTrips.length} trip${vacationTrips.length !== 1 ? "s" : ""}`,
   });
 
   return (

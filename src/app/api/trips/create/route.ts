@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { parseEventKind } from "@/lib/event-kind";
 import { createTrip } from "@/lib/github";
+import { parseTripCategories } from "@/lib/trip-category";
 import type { CreateTripInput } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +30,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const kind = parseEventKind(body.kind) ?? "trip";
+    const categories =
+      kind === "trip"
+        ? parseTripCategories(body.categories ?? body.category)
+        : [];
+
     const input: CreateTripInput = {
       name,
       title: typeof body.title === "string" ? body.title.trim() : undefined,
-      kind: parseEventKind(body.kind) ?? "trip",
+      kind,
+      categories: categories.length > 0 ? categories : undefined,
       location:
         typeof body.location === "string" ? body.location.trim() : undefined,
       geoLocation:

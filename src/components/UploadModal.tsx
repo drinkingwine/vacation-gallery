@@ -9,6 +9,12 @@ import {
   type EventKind,
 } from "@/lib/event-kind";
 import {
+  parseTripCategories,
+  toggleTripCategory,
+  TRIP_CATEGORY_OPTIONS,
+  type TripCategory,
+} from "@/lib/trip-category";
+import {
   MAX_IMAGE_UPLOAD_BYTES,
   MAX_VIDEO_UPLOAD_BYTES,
   contentTypeForFilename,
@@ -52,6 +58,9 @@ export function UploadModal({
   const [newTripName, setNewTripName] = useState("");
   const [newTripTitle, setNewTripTitle] = useState("");
   const [newTripKind, setNewTripKind] = useState<EventKind>("trip");
+  const [newTripCategories, setNewTripCategories] = useState<TripCategory[]>([
+    "dive",
+  ]);
   const [newTripLocation, setNewTripLocation] = useState("");
   const [newTripStart, setNewTripStart] = useState("");
   const [newTripEnd, setNewTripEnd] = useState("");
@@ -175,6 +184,7 @@ export function UploadModal({
           name: newTripName,
           title: newTripTitle || undefined,
           kind: newTripKind,
+          categories: newTripKind === "trip" ? newTripCategories : undefined,
           location: newTripLocation || undefined,
           startDate: newTripStart || undefined,
           endDate: newTripEnd || undefined,
@@ -190,6 +200,7 @@ export function UploadModal({
           coverUrl: null,
           title: data.title ?? data.name.replace(/-/g, " "),
           kind: parseEventKind(data.kind) ?? "trip",
+          categories: parseTripCategories(data.categories ?? data.category),
           location: data.location,
           startDate: data.startDate,
           endDate: data.endDate,
@@ -201,6 +212,7 @@ export function UploadModal({
         setNewTripName("");
         setNewTripTitle("");
         setNewTripKind("trip");
+        setNewTripCategories(["dive"]);
         setNewTripLocation("");
         setNewTripStart("");
         setNewTripEnd("");
@@ -476,6 +488,31 @@ export function UploadModal({
                       </button>
                     ))}
                   </div>
+                  {newTripKind === "trip" ? (
+                    <div className="flex flex-wrap gap-2 sm:col-span-2">
+                      {TRIP_CATEGORY_OPTIONS.map((option) => {
+                        const active = newTripCategories.includes(option.value);
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() =>
+                              setNewTripCategories((current) =>
+                                toggleTripCategory(current, option.value),
+                              )
+                            }
+                            className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                              active
+                                ? "border-zinc-900 bg-zinc-900 text-white"
+                                : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                   <input
                     type="text"
                     value={newTripLocation}
@@ -519,6 +556,7 @@ export function UploadModal({
                       setNewTripName("");
                       setNewTripTitle("");
                       setNewTripKind("trip");
+                      setNewTripCategories(["dive"]);
                       setNewTripLocation("");
                       setNewTripStart("");
                       setNewTripEnd("");

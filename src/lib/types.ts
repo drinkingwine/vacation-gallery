@@ -1,6 +1,13 @@
 export interface TripMetadata {
   title?: string;
   kind?: "trip" | "stuff" | "event";
+  /**
+   * Vacation tags — dive and/or R&R. Prefer `categories`.
+   * Legacy single-string `category` is still read.
+   */
+  categories?: Array<"dive" | "r&r">;
+  /** @deprecated Use `categories` — still accepted when reading older trip.json files. */
+  category?: "dive" | "r&r" | Array<"dive" | "r&r">;
   location?: string;
   geoLocation?: string;
   latitude?: number;
@@ -41,6 +48,8 @@ export interface Trip {
   coverPhoto?: string;
   title: string;
   kind: "trip" | "stuff" | "event";
+  /** Dive and/or R&R tags for vacation trips. */
+  categories?: Array<"dive" | "r&r">;
   location?: string;
   geoLocation?: string;
   latitude?: number;
@@ -66,6 +75,7 @@ export interface CreateTripInput {
   name: string;
   title?: string;
   kind?: "trip" | "stuff" | "event";
+  categories?: Array<"dive" | "r&r">;
   location?: string;
   geoLocation?: string;
   latitude?: number;

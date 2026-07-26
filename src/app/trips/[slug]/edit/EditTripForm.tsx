@@ -12,6 +12,14 @@ import {
   getEventKind,
   type EventKind,
 } from "@/lib/event-kind";
+import { loadGalleryHome, patchCachedGalleryTrip } from "@/lib/gallery-home-cache";
+import {
+  getTripCategories,
+  toggleTripCategory,
+  TRIP_CATEGORY_OPTIONS,
+  type TripCategory,
+} from "@/lib/trip-category";
+import { invalidateTripPageCache } from "@/lib/trip-page-cache";
 import { toDateInputValue } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
 
@@ -25,6 +33,9 @@ export function EditTripForm({ trip }: EditTripFormProps) {
 
   const [title, setTitle] = useState(trip.title);
   const [kind, setKind] = useState<EventKind>(getEventKind(trip));
+  const [categories, setCategories] = useState<TripCategory[]>(() =>
+    getTripCategories(trip),
+  );
   const [location, setLocation] = useState(trip.location ?? "");
   const [geoLocation, setGeoLocation] = useState(trip.geoLocation ?? "");
   const [latitude, setLatitude] = useState<number | null>(trip.latitude ?? null);
@@ -71,6 +82,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
         body: JSON.stringify({
           title: title.trim(),
           kind,
+          categories: kind === "trip" ? categories : [],
           location: location.trim() || undefined,
           geoLocation: geoLocation.trim() || undefined,
           latitude: latitude ?? undefined,
@@ -83,6 +95,20 @@ export function EditTripForm({ trip }: EditTripFormProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Save failed");
 
+      invalidateTripPageCache(trip.name);
+      await loadGalleryHome({ force: true });
+      patchCachedGalleryTrip(trip.name, {
+        title: title.trim(),
+        kind,
+        categories: kind === "trip" ? categories : [],
+        location: location.trim() || undefined,
+        geoLocation: geoLocation.trim() || undefined,
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        description: description.trim() || undefined,
+      });
       router.push(tripHref);
       router.refresh();
     } catch (err) {
@@ -136,6 +162,40 @@ export function EditTripForm({ trip }: EditTripFormProps) {
                       ))}
                     </div>
                   </div>
+
+                  {kind === "trip" ? (
+                    <div>
+                      <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Tags
+                      </span>
+                      <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        Select one or both.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {TRIP_CATEGORY_OPTIONS.map((option) => {
+                          const active = categories.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                setCategories((current) =>
+                                  toggleTripCategory(current, option.value),
+                                )
+                              }
+                              className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                                active
+                                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">

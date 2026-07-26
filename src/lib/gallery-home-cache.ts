@@ -6,7 +6,7 @@ import {
 import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
 
-const STORAGE_KEY = "gallery-home-cache-v14";
+const STORAGE_KEY = "gallery-home-cache-v19";
 
 type GalleryHomeCacheEntry = {
   trips: Trip[];
@@ -16,7 +16,8 @@ type GalleryHomeCacheEntry = {
 
 let cache: GalleryHomeCacheEntry | null = null;
 let inflight: Promise<GalleryHomeData> | null = null;
-let inflightIsForce = false;
+/** Bumped on invalidate/force so stale in-flight fetches cannot repopulate cache. */
+let cacheGeneration = 0;
 
 function readStoredCache(): GalleryHomeCacheEntry | null {
   if (typeof window === "undefined") return null;
@@ -100,10 +101,24 @@ export function getCachedEvents() {
 }
 
 export function invalidateGalleryHomeCache(): void {
+  cacheGeneration += 1;
   cache = null;
   inflight = null;
-  inflightIsForce = false;
   clearStoredCache();
+}
+
+/** Merge fields onto a trip already in the home cache (e.g. right after edit). */
+export function patchCachedGalleryTrip(
+  tripName: string,
+  patch: Partial<Trip>,
+): GalleryHomeData | null {
+  const entry = hydrateCacheFromStorage();
+  if (!entry) return null;
+
+  const trips = entry.trips.map((trip) =>
+    trip.name === tripName ? { ...trip, ...patch } : trip,
+  );
+  return commitCache(buildCacheEntry(trips, entry.photos));
 }
 
 export function rerandomizeGalleryHomeCovers(): GalleryHomeData | null {
@@ -112,10 +127,11 @@ export function rerandomizeGalleryHomeCovers(): GalleryHomeData | null {
   return commitCache(buildCacheEntry(entry.trips, entry.photos));
 }
 
-async function fetchGalleryHome(options?: {
+async function fetchGalleryHome(options: {
   force?: boolean;
+  generation: number;
 }): Promise<GalleryHomeData> {
-  const url = options?.force
+  const url = options.force
     ? "/api/gallery/home?fresh=1"
     : "/api/gallery/home";
   const res = await fetch(url, { cache: "no-store" });
@@ -129,7 +145,14 @@ async function fetchGalleryHome(options?: {
     photos: GalleryHomePhoto[];
   };
 
-  return commitCache(buildCacheEntry(payload.trips, payload.photos));
+  const entry = buildCacheEntry(payload.trips, payload.photos);
+
+  // Superseded by a newer invalidate/force — keep newer cache if present.
+  if (options.generation !== cacheGeneration) {
+    return hydrateCacheFromStorage()?.views ?? entry.views;
+  }
+
+  return commitCache(entry);
 }
 
 export async function loadGalleryHome(options?: {
@@ -137,23 +160,27 @@ export async function loadGalleryHome(options?: {
 }): Promise<GalleryHomeData> {
   const force = options?.force ?? false;
 
-  if (force) {
-    cache = null;
-    clearStoredCache();
-    if (inflight && inflightIsForce) return inflight;
-  } else {
+  if (!force) {
     const existing = hydrateCacheFromStorage();
     if (existing) return existing.views;
     if (inflight) return inflight;
+  } else {
+    cacheGeneration += 1;
+    cache = null;
+    clearStoredCache();
+    // Never reuse an older in-flight request — it belongs to a prior generation
+    // and will refuse to commit, leaving the UI with an empty trips list.
+    inflight = null;
   }
 
-  inflightIsForce = force;
-  inflight = fetchGalleryHome({ force }).finally(() => {
-    inflight = null;
-    inflightIsForce = false;
+  const generation = cacheGeneration;
+  const request = fetchGalleryHome({ force, generation }).finally(() => {
+    if (inflight === request) {
+      inflight = null;
+    }
   });
-
-  return inflight;
+  inflight = request;
+  return request;
 }
 
 export async function loadTrips(options?: { force?: boolean }): Promise<Trip[]> {

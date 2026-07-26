@@ -86,12 +86,15 @@ export function AppShell({ children }: AppShellProps) {
 
   useEffect(() => {
     const refresh = () => {
-      invalidateGalleryHomeCache();
-      void fetchGalleryHome();
+      void loadGalleryHome({ force: true })
+        .then((data) => setTrips(data.trips))
+        .catch(() => {
+          // non-critical
+        });
     };
     window.addEventListener(GALLERY_REFRESH_EVENT, refresh);
     return () => window.removeEventListener(GALLERY_REFRESH_EVENT, refresh);
-  }, [fetchGalleryHome]);
+  }, []);
 
   return (
     <NavbarConfigProvider>

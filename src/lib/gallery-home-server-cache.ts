@@ -15,17 +15,22 @@ type CacheEntry = {
 
 let cache: CacheEntry | null = null;
 let inflight: Promise<GalleryHomeServerPayload> | null = null;
+/** Bumped on invalidate so stale in-flight fetches cannot repopulate cache. */
+let cacheGeneration = 0;
 
 export function invalidateGalleryHomeServerCache(): void {
+  cacheGeneration += 1;
   cache = null;
   inflight = null;
 }
 
-async function fetchGalleryHomePayload(): Promise<GalleryHomeServerPayload> {
+async function fetchGalleryHomePayload(
+  generation: number,
+): Promise<GalleryHomeServerPayload> {
   const { loadGalleryHomeData } = await import("@/lib/github");
   const { trips, photos } = await loadGalleryHomeData();
 
-  return {
+  const data: GalleryHomeServerPayload = {
     trips,
     photos: photos.map((photo) => ({
       downloadUrl: photo.downloadUrl,
@@ -38,6 +43,14 @@ async function fetchGalleryHomePayload(): Promise<GalleryHomeServerPayload> {
       dateTaken: photo.dateTaken,
     })),
   };
+
+  if (generation !== cacheGeneration) {
+    // Superseded — return newer cache when present, otherwise this payload.
+    return cache?.data ?? data;
+  }
+
+  cache = { at: Date.now(), data };
+  return data;
 }
 
 export async function getGalleryHomeServerPayload(): Promise<GalleryHomeServerPayload> {
@@ -47,14 +60,12 @@ export async function getGalleryHomeServerPayload(): Promise<GalleryHomeServerPa
 
   if (inflight) return inflight;
 
-  inflight = fetchGalleryHomePayload()
-    .then((data) => {
-      cache = { at: Date.now(), data };
-      return data;
-    })
-    .finally(() => {
+  const generation = cacheGeneration;
+  const request = fetchGalleryHomePayload(generation).finally(() => {
+    if (inflight === request) {
       inflight = null;
-    });
-
-  return inflight;
+    }
+  });
+  inflight = request;
+  return request;
 }

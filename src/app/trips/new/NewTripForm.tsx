@@ -9,6 +9,11 @@ import { useAuth } from "@/components/AuthProvider";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { EVENT_KIND_OPTIONS, type EventKind } from "@/lib/event-kind";
 import { formFieldClass } from "@/lib/form-styles";
+import {
+  toggleTripCategory,
+  TRIP_CATEGORY_OPTIONS,
+  type TripCategory,
+} from "@/lib/trip-category";
 
 export function NewTripForm() {
   const router = useRouter();
@@ -17,6 +22,7 @@ export function NewTripForm() {
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<EventKind>("trip");
+  const [categories, setCategories] = useState<TripCategory[]>(["dive"]);
   const [location, setLocation] = useState("");
   const [geoLocation, setGeoLocation] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -71,6 +77,7 @@ export function NewTripForm() {
           name: name.trim(),
           title: title.trim() || undefined,
           kind,
+          categories: kind === "trip" ? categories : undefined,
           location: location.trim() || undefined,
           geoLocation: geoLocation.trim() || undefined,
           latitude: latitude ?? undefined,
@@ -140,6 +147,40 @@ export function NewTripForm() {
                       ))}
                     </div>
                   </div>
+
+                  {kind === "trip" ? (
+                    <div>
+                      <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Tags
+                      </span>
+                      <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        Select one or both.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {TRIP_CATEGORY_OPTIONS.map((option) => {
+                          const active = categories.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                setCategories((current) =>
+                                  toggleTripCategory(current, option.value),
+                                )
+                              }
+                              className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                                active
+                                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">

@@ -18,6 +18,7 @@ import {
 } from "@/lib/media-list-cache";
 import { sortTripsWithFavoritesFirst, tripLabel } from "./trip-meta";
 import { getEventKind } from "./event-kind";
+import { getTripCategories, parseTripCategories } from "./trip-category";
 import type {
   CreateTripInput,
   GalleryPhoto,
@@ -354,6 +355,7 @@ function buildTrip(
     coverPhoto: metadata.coverPhoto,
     title: metadata.title ?? tripLabel(dir.name),
     kind: getEventKind({ kind: metadata.kind, name: dir.name }),
+    categories: getTripCategories(metadata),
     location: metadata.location,
     geoLocation: metadata.geoLocation,
     latitude: metadata.latitude,
@@ -555,9 +557,13 @@ export async function uploadFile(
 }
 
 function metadataPayload(input: CreateTripInput): TripMetadata {
+  const kind = getEventKind({ kind: input.kind, name: input.name });
+  const categories =
+    kind === "trip" ? parseTripCategories(input.categories) : [];
   return {
     title: input.title ?? tripLabel(input.name),
-    kind: getEventKind({ kind: input.kind, name: input.name }),
+    kind,
+    ...(categories.length > 0 ? { categories } : {}),
     location: input.location,
     geoLocation: input.geoLocation,
     latitude: input.latitude,

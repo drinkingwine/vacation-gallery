@@ -33,7 +33,7 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   const [value, setValue] = useState<Value>(() => [] as Value);
   const [loading, setLoading] = useState(true);
 
-  const sync = useCallback(() => {
+  const syncFromCache = useCallback(() => {
     const cached = getCachedGalleryHome();
     if (!cached) return;
     setValue(cached[slice] as Value);
@@ -42,21 +42,36 @@ export function useGalleryHomeSlice<T extends GalleryHomeSlice>(
   useEffect(() => {
     let cancelled = false;
 
-    setLoading(true);
-    sync();
-    void loadGalleryHome({ force }).finally(() => {
-      if (cancelled) return;
-      sync();
-      setLoading(false);
-    });
-    window.addEventListener(GALLERY_HOME_READY_EVENT, sync);
-    window.addEventListener(GALLERY_REFRESH_EVENT, sync);
+    const load = (nextForce: boolean) => {
+      setLoading(true);
+      syncFromCache();
+      void loadGalleryHome({ force: nextForce })
+        .then((data) => {
+          if (cancelled) return;
+          setValue(data[slice] as Value);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          syncFromCache();
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+
+    load(force);
+
+    const onReady = () => syncFromCache();
+    const onRefresh = () => load(true);
+
+    window.addEventListener(GALLERY_HOME_READY_EVENT, onReady);
+    window.addEventListener(GALLERY_REFRESH_EVENT, onRefresh);
     return () => {
       cancelled = true;
-      window.removeEventListener(GALLERY_HOME_READY_EVENT, sync);
-      window.removeEventListener(GALLERY_REFRESH_EVENT, sync);
+      window.removeEventListener(GALLERY_HOME_READY_EVENT, onReady);
+      window.removeEventListener(GALLERY_REFRESH_EVENT, onRefresh);
     };
-  }, [force, sync]);
+  }, [force, slice, syncFromCache]);
 
   return {
     value,

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteTrip, getTrip, getTripMetadata, patchTripMetadata } from "@/lib/github";
+import { deleteTrip, getTrip, getTripMetadata, updateTripMetadata } from "@/lib/github";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { parseEventKind } from "@/lib/event-kind";
+import { parseTripCategories } from "@/lib/trip-category";
 import { tripLabel } from "@/lib/trip-meta";
 import type { TripMetadata } from "@/lib/types";
 
@@ -72,13 +73,25 @@ export async function PATCH(
     const body = await req.json();
     const existing = await getTripMetadata(tripName);
     const kind = parseEventKind(body.kind) ?? existing.kind ?? "trip";
+    const categories =
+      kind === "trip"
+        ? parseTripCategories(
+            body.categories ?? body.category ?? existing.categories ?? existing.category,
+          )
+        : [];
+    const {
+      category: _legacyCategory,
+      categories: _existingCategories,
+      ...existingRest
+    } = existing;
     const metadata: TripMetadata = {
-      ...existing,
+      ...existingRest,
       title:
         typeof body.title === "string" && body.title.trim()
           ? body.title.trim()
           : tripLabel(tripName),
       kind,
+      ...(categories.length > 0 ? { categories } : {}),
       location:
         typeof body.location === "string" ? body.location.trim() || undefined : undefined,
       geoLocation:
@@ -97,7 +110,7 @@ export async function PATCH(
           : undefined,
     };
 
-    await patchTripMetadata(tripName, metadata);
+    await updateTripMetadata(tripName, metadata);
     return NextResponse.json({ success: true, ...metadata });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
