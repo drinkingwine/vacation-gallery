@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { formatMediaCountFromTrip, totalMediaCount } from "@/lib/media-count";
+import { totalMediaCount } from "@/lib/media-count";
 import { formatDateRange } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -57,9 +57,6 @@ export function LightGalleryTripPicker({
                 {trip.title}
               </Link>
               {meta ? <p className="vc-lg-album-caption-meta">{meta}</p> : null}
-              <p className="vc-lg-album-caption-meta">
-                {formatMediaCountFromTrip(trip)}
-              </p>
             </figcaption>
 
             {isAdmin && onDelete ? (

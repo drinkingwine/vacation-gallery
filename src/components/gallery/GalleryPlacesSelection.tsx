@@ -18,7 +18,6 @@ export function GalleryPlacesSelection() {
         title: place.title,
         coverUrl: place.coverUrl,
         count: place.tripCount,
-        countLabel: `${place.tripCount} ${place.tripCount === 1 ? "trip" : "trips"}`,
         meta: place.tripLocations,
       })),
     [places],

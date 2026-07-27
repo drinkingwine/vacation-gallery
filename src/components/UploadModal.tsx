@@ -27,7 +27,7 @@ import {
   fetchWithTimeout,
   makeUniqueFilename,
 } from "@/lib/upload-utils";
-import { extractPhotoExif } from "@/lib/photo-exif";
+import { extractPhotoExif, hasPhotoExifGps } from "@/lib/photo-exif";
 import { formatMediaCountFromTrip } from "@/lib/media-count";
 
 const MAX_FILES = 50;
@@ -338,13 +338,13 @@ export function UploadModal({
             body: JSON.stringify({
               path: presignData.path,
               trip: selectedTrip || undefined,
-              ...(exif
+              ...(hasPhotoExifGps(exif)
                 ? {
                     latitude: exif.latitude,
                     longitude: exif.longitude,
-                    dateTaken: exif.dateTaken,
                   }
                 : {}),
+              ...(exif?.dateTaken ? { dateTaken: exif.dateTaken } : {}),
             }),
           },
           60_000,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, MapPin } from "lucide-react";
 import { buildGeocodeQuery } from "@/lib/geocode-address";
 import { formFieldClass } from "@/lib/form-styles";
+import { rememberRecentLocation } from "@/lib/recent-locations";
 import { cn } from "@/lib/utils";
 
 export type GeoLocatorResult = {
@@ -28,9 +29,19 @@ type GeoLocatorProps = {
   onLocated?: (result: GeoLocatorResult) => void;
   selected?: GeoLocatorResult | null;
   className?: string;
+  description?: string;
+  /** When set, successful lookups are remembered for this trip only. */
+  tripName?: string | null;
 };
 
-export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLocatorProps) {
+export function GeoLocator({
+  onSelect,
+  onLocated,
+  selected,
+  className,
+  description = "Search by place name or street address, then apply it as the trip location.",
+  tripName = null,
+}: GeoLocatorProps) {
   const [mode, setMode] = useState<LookupMode>("place");
   const [placeQuery, setPlaceQuery] = useState("");
   const [street, setStreet] = useState("");
@@ -80,6 +91,9 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
           latitude: data.latitude,
           longitude: data.longitude,
         };
+        if (tripName) {
+          rememberRecentLocation(tripName, located);
+        }
         setResult(located);
         onLocated?.(located);
         return;
@@ -109,6 +123,9 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
         latitude: data.latitude,
         longitude: data.longitude,
       };
+      if (tripName) {
+        rememberRecentLocation(tripName, located);
+      }
       setResult(located);
       onLocated?.(located);
     } catch (lookupError) {
@@ -126,7 +143,7 @@ export function GeoLocator({ onSelect, onLocated, selected, className }: GeoLoca
       <div>
         <h3 className="text-sm font-medium text-zinc-900 dark:text-white">Geo locator</h3>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Search by place name or street address, then apply it as the trip location.
+          {description}
         </p>
       </div>
 

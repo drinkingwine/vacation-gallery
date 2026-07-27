@@ -324,6 +324,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
                     onSelect={handleLocationSelect}
                     onLocated={setPreviewLocation}
                     selected={selectedLocation}
+                    tripName={trip.name}
                   />
                 </div>
               </div>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTripMetadata, upsertPhotoMetadata } from "@/lib/github";
-import { isMedia, sanitizeMediaFilename } from "@/lib/media";
-import { headMedia } from "@/lib/r2";
+import { isImage, isMedia, sanitizeMediaFilename } from "@/lib/media";
+import { extractPhotoExif, hasPhotoExifGps } from "@/lib/photo-exif";
+import { fetchMediaForDownload, headMedia } from "@/lib/r2";
 import {
   formatCoordinates,
   isNullIslandCoords,
@@ -32,6 +33,24 @@ function parseLongitude(value: unknown): number | undefined {
   return value;
 }
 
+async function readUploadedImageGps(
+  path: string,
+): Promise<{ latitude: number; longitude: number } | null> {
+  if (!isImage(path)) return null;
+  try {
+    const media = await fetchMediaForDownload(path);
+    const exif = await extractPhotoExif(media.data);
+    if (!hasPhotoExifGps(exif)) return null;
+    return { latitude: exif.latitude, longitude: exif.longitude };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefer coordinates embedded in the photo. Only fall back to the trip's
+ * default lat/lng (and location label) when the image has no usable GPS.
+ */
 async function resolveUploadLocation(
   imageLatitude: number | undefined,
   imageLongitude: number | undefined,
@@ -61,7 +80,11 @@ async function resolveUploadLocation(
       : undefined;
   const tripLocation = tripMeta.location?.trim();
 
-  if (tripLatitude !== undefined && tripLongitude !== undefined) {
+  if (
+    tripLatitude !== undefined &&
+    tripLongitude !== undefined &&
+    !isNullIslandCoords(tripLatitude, tripLongitude)
+  ) {
     return {
       location: tripLocation || formatCoordinates(tripLatitude, tripLongitude),
       latitude: tripLatitude,
@@ -93,8 +116,8 @@ export async function POST(req: NextRequest) {
 
     await headMedia(path);
 
-    const latitude = parseLatitude(body.latitude);
-    const longitude = parseLongitude(body.longitude);
+    let latitude = parseLatitude(body.latitude);
+    let longitude = parseLongitude(body.longitude);
     const dateTaken =
       typeof body.dateTaken === "string" && body.dateTaken.trim()
         ? body.dateTaken.trim()
@@ -103,10 +126,22 @@ export async function POST(req: NextRequest) {
     const tripPath =
       trip ?? (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
-    const hasImageGps =
+    let hasImageGps =
       latitude !== undefined &&
       longitude !== undefined &&
       !isNullIslandCoords(latitude, longitude);
+
+    // Client compression strips EXIF from the stored file's body may omit GPS;
+    // if the browser didn't send coords, try reading GPS from the uploaded object
+    // only when the original bytes still contain EXIF (uncompressed uploads).
+    if (!hasImageGps) {
+      const uploadedGps = await readUploadedImageGps(path);
+      if (uploadedGps) {
+        latitude = uploadedGps.latitude;
+        longitude = uploadedGps.longitude;
+        hasImageGps = true;
+      }
+    }
 
     if (tripPath) {
       const locationMeta = await resolveUploadLocation(
@@ -120,13 +155,18 @@ export async function POST(req: NextRequest) {
       };
 
       if (Object.keys(patch).length > 0) {
+        // Image GPS always wins over any prior geo (including trip defaults).
         await upsertPhotoMetadata(tripPath, safeName, patch, {
           preserveExistingGeo: !hasImageGps,
         });
       }
     }
 
-    return NextResponse.json({ success: true, path });
+    return NextResponse.json({
+      success: true,
+      path,
+      usedImageGps: hasImageGps,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[API /upload/complete]", message);
