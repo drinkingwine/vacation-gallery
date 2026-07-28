@@ -136,7 +136,7 @@ export function GeoLocator({
     }
   };
 
-  const activeResult = selected ?? result;
+  const activeResult = result ?? selected;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -326,6 +326,15 @@ export function GeoLocator({
               >
                 Use this location
               </button>
+            ) : null}
+            {result &&
+            selected &&
+            (Math.abs(result.latitude - selected.latitude) > 0.0001 ||
+              Math.abs(result.longitude - selected.longitude) > 0.0001) ? (
+              <p className="self-center text-xs text-zinc-500 dark:text-zinc-400">
+                Lookup differs from the current photo coordinates — apply to
+                update.
+              </p>
             ) : null}
           </div>
         </div>

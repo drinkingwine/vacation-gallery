@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildGeocodeQuery,
   buildPlaceGeocodeQueryVariants,
+  extractPrimaryPlaceName,
   parseGeocodeAddressPartsFromSearchParams,
   pickBestGeocodeResult,
   pickBestGeocodeResultForQuery,
   isGeocodeResultCountryMismatch,
+  isCoarseGeocodeLabel,
   isWeakPlaceGeocodeMatch,
   resolveCountryCodeForRequest,
   resolveGeocodeRegionForRequest,
   scoreGeocodeResultForQuery,
   type PositionstackResult,
 } from "@/lib/geocode-address";
+import { findKnownPlace } from "@/lib/known-places";
 
 export const dynamic = "force-dynamic";
 
@@ -110,17 +113,34 @@ function googleResultToCandidate(input: {
     types?: string[];
   }>;
 }): PositionstackResult | null {
-  const { latitude, longitude, formatted_address, address_components } = input;
+  const { latitude, longitude, formatted_address, address_components, name } =
+    input;
   if (typeof latitude !== "number" || typeof longitude !== "number") {
     return null;
   }
-  if (!formatted_address?.trim()) return null;
+
+  const address = formatted_address?.trim() ?? "";
+  const placeName = name?.trim() ?? "";
+  if (!address && !placeName) return null;
+
+  // Overwater resorts often come back as country-only ("Malaysia") — keep the
+  // place name so scoring can tell Kapalai apart from Sipadan Island.
+  let label = address || placeName;
+  if (
+    placeName &&
+    address &&
+    !address.toLowerCase().includes(placeName.toLowerCase())
+  ) {
+    label = `${placeName}, ${address}`;
+  } else if (placeName && isCoarseGeocodeLabel(address)) {
+    label = address ? `${placeName}, ${address}` : placeName;
+  }
 
   const components = address_components ?? [];
   return {
     latitude,
     longitude,
-    label: formatted_address.trim(),
+    label,
     postal_code: componentValue(components, "postal_code"),
     region: componentValue(components, "administrative_area_level_1"),
     region_code: componentValue(
@@ -211,6 +231,38 @@ async function geocodeWithGooglePlaces(
   }
 
   return candidates;
+}
+
+function enrichCoarsePlaceLabel(
+  result: PositionstackResult,
+  query: string,
+): PositionstackResult {
+  const label = String(result.label ?? "").trim();
+  if (label && !isCoarseGeocodeLabel(label)) return result;
+
+  const placeName = extractPrimaryPlaceName(query).trim();
+  if (!placeName) return result;
+  if (label.toLowerCase().includes(placeName.toLowerCase())) return result;
+
+  return {
+    ...result,
+    label: label ? `${placeName}, ${label}` : placeName,
+  };
+}
+
+function pickCandidateForQuery(
+  results: PositionstackResult[],
+  originalQuery: string,
+  mode: "place" | "address",
+): PositionstackResult | null {
+  if (results.length === 0) return null;
+  const enriched = results.map((result) =>
+    enrichCoarsePlaceLabel(result, originalQuery),
+  );
+  if (mode === "place") {
+    return pickBestGeocodeResultForQuery(enriched, originalQuery);
+  }
+  return enriched[0] ?? null;
 }
 
 async function geocodeWithGoogle(
@@ -351,17 +403,6 @@ async function geocodeWithNominatim(
   return pickBestGeocodeResultForQuery(candidates, originalQuery);
 }
 
-function isCoarseGeocodeLabel(label: string): boolean {
-  const normalized = label.trim();
-  if (!normalized) return true;
-  // e.g. "77580 Puerto Morelos, Q.R., Mexico" — postal/locality only, no street.
-  if (/^\d{4,6}\s+\S+/.test(normalized) && !/\d+\s+\w+.*(st|ave|rd|hwy|carretera|km)\b/i.test(normalized)) {
-    const commaParts = normalized.split(",").map((part) => part.trim()).filter(Boolean);
-    return commaParts.length <= 3 && !/\b(carretera|federal|mz|lote|km)\b/i.test(normalized);
-  }
-  return false;
-}
-
 function considerCandidate(
   current: { result: PositionstackResult; score: number } | null,
   candidate: PositionstackResult | null,
@@ -371,17 +412,14 @@ function considerCandidate(
 ): { result: PositionstackResult; score: number } | null {
   if (!candidate) return current;
   if (isGeocodeResultCountryMismatch(candidate, originalQuery)) return current;
-  if (
-    mode === "place" &&
-    !options?.trustProviderRanking &&
-    isWeakPlaceGeocodeMatch(candidate, originalQuery)
-  ) {
+  if (mode === "place" && isWeakPlaceGeocodeMatch(candidate, originalQuery)) {
     return current;
   }
 
-  let score = options?.trustProviderRanking
-    ? 100
-    : scoreGeocodeResultForQuery(candidate, originalQuery);
+  let score = scoreGeocodeResultForQuery(candidate, originalQuery);
+  if (options?.trustProviderRanking) {
+    score += 20;
+  }
   score += options?.scoreBonus ?? 0;
   if (mode === "place" && isCoarseGeocodeLabel(String(candidate.label ?? ""))) {
     score -= 40;
@@ -419,6 +457,19 @@ export async function GET(request: NextRequest) {
     const queryVariants =
       mode === "place" ? buildPlaceGeocodeQueryVariants(query) : [query];
 
+    // Curated pins win for places Google/OSM routinely mis-locate.
+    if (mode === "place") {
+      const known = findKnownPlace(query);
+      if (known) {
+        return NextResponse.json({
+          success: true,
+          latitude: known.latitude,
+          longitude: known.longitude,
+          label: known.label,
+        });
+      }
+    }
+
     let best: { result: PositionstackResult; score: number } | null = null;
 
     // Places first for named resorts — returns full street addresses (Carretera Federal…).
@@ -429,13 +480,14 @@ export async function GET(request: NextRequest) {
           googleKey,
           countryCode,
         );
-        const candidate = results[0] ?? null;
+        const candidate = pickCandidateForQuery(results, query, mode);
         best = considerCandidate(best, candidate, query, mode, {
           trustProviderRanking: true,
           scoreBonus: 50,
         });
         if (
           best &&
+          best.score >= 40 &&
           !isCoarseGeocodeLabel(String(best.result.label ?? ""))
         ) {
           break;
@@ -454,12 +506,13 @@ export async function GET(request: NextRequest) {
           countryCode,
           mode,
         );
-        const candidate = results[0] ?? null;
+        const candidate = pickCandidateForQuery(results, query, mode);
         best = considerCandidate(best, candidate, query, mode, {
           trustProviderRanking: true,
         });
         if (
           best &&
+          best.score >= 40 &&
           !isCoarseGeocodeLabel(String(best.result.label ?? ""))
         ) {
           break;

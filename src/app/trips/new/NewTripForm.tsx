@@ -49,7 +49,7 @@ export function NewTripForm() {
         }
       : null;
 
-  const mapLocation = selectedLocation ?? previewLocation;
+  const mapLocation = previewLocation ?? selectedLocation;
 
   const handleLocationSelect = (result: GeoLocatorResult) => {
     setLocation(result.location);

@@ -201,7 +201,7 @@ export default function EditPhotoPageClient() {
         }
       : null;
 
-  const mapLocation = selectedLocation ?? previewLocation;
+  const mapLocation = previewLocation ?? selectedLocation;
 
   const recentLocations = useMemo(
     () =>

@@ -59,7 +59,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
         }
       : null;
 
-  const mapLocation = selectedLocation ?? previewLocation;
+  const mapLocation = previewLocation ?? selectedLocation;
 
   const handleLocationSelect = (result: GeoLocatorResult) => {
     setLocation(result.location);

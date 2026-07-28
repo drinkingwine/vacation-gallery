@@ -43,6 +43,9 @@ const PLACE_NOISE_WORDS = new Set([
   "inclusive",
   "adults",
   "only",
+  "dive",
+  "diving",
+  "scuba",
 ]);
 
 const US_STATE =
@@ -237,6 +240,14 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   micronesia: "FM",
   "federated states of micronesia": "FM",
   honduras: "HN",
+  malaysia: "MY",
+  malasia: "MY", // common misspelling
+  sabah: "MY",
+  sarawak: "MY",
+  singapore: "SG",
+  thailand: "TH",
+  vietnam: "VN",
+  maldives: "MV",
 };
 
 function normalizeCountryName(value: string): string {
@@ -298,11 +309,13 @@ export function buildPlaceGeocodeQueryVariants(query: string): string[] {
     .filter(Boolean);
   const primary = parts[0] ?? trimmed;
   const cleanedPrimary = stripPlaceNoiseWords(primary) || primary;
-  const middle = parts.length > 2 ? parts.slice(1, -1) : parts.slice(1);
+  // For "Place, Country" middle must be empty — only use true mid segments.
+  const middle = parts.length > 2 ? parts.slice(1, -1) : [];
   const country = parts.length > 1 ? parts[parts.length - 1]! : null;
 
   add(trimmed);
   add([cleanedPrimary, ...parts.slice(1)].filter(Boolean).join(", "));
+  add([cleanedPrimary, ...middle, country].filter(Boolean).join(", "));
   add([cleanedPrimary, ...middle, country].filter(Boolean).join(" "));
   add([cleanedPrimary, ...middle].filter(Boolean).join(", "));
   add([cleanedPrimary, ...middle].filter(Boolean).join(" "));
@@ -593,7 +606,7 @@ export function scoreGeocodeResultForQuery(
   return score;
 }
 
-/** Reject weak matches that miss the distinctive place name tokens. */
+/** Reject weak matches that miss distinctive place-name tokens. */
 export function isWeakPlaceGeocodeMatch(
   result: PositionstackResult,
   query: string,
@@ -605,7 +618,43 @@ export function isWeakPlaceGeocodeMatch(
   const region = String(result.region ?? "").toLowerCase();
   const haystack = `${label} ${region}`;
   const matched = primaryTokens.filter((token) => haystack.includes(token));
-  return matched.length === 0;
+
+  // "Sipadan Kapalai …" must not resolve to Sipadan Island alone.
+  if (primaryTokens.length <= 3) {
+    return matched.length < primaryTokens.length;
+  }
+
+  return matched.length < Math.ceil(primaryTokens.length * 0.6);
+}
+
+/** Country-only / postal-locality labels that hide the real place name. */
+export function isCoarseGeocodeLabel(label: string): boolean {
+  const normalized = label.trim();
+  if (!normalized) return true;
+
+  const parts = normalized
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 1) {
+    const single = parts[0]!.toLowerCase();
+    if (resolveCountryCode(single) || inferCountryCodeFromText(single)) {
+      return true;
+    }
+  }
+
+  // e.g. "77580 Puerto Morelos, Q.R., Mexico" — postal/locality only, no street.
+  if (
+    /^\d{4,6}\s+\S+/.test(normalized) &&
+    !/\d+\s+\w+.*(st|ave|rd|hwy|carretera|km)\b/i.test(normalized)
+  ) {
+    return (
+      parts.length <= 3 && !/\b(carretera|federal|mz|lote|km)\b/i.test(normalized)
+    );
+  }
+
+  return false;
 }
 
 export function pickBestGeocodeResultForQuery(
@@ -621,10 +670,24 @@ export function pickBestGeocodeResultForQuery(
   let bestScore = Number.NEGATIVE_INFINITY;
 
   for (const result of results) {
+    if (isGeocodeResultCountryMismatch(result, query)) continue;
+    if (isWeakPlaceGeocodeMatch(result, query)) continue;
     const score = scoreGeocodeResultForQuery(result, query);
     if (score > bestScore) {
       best = result;
       bestScore = score;
+    }
+  }
+
+  // Fall back to best score even if weak — caller may still reject it.
+  if (!best) {
+    for (const result of results) {
+      if (isGeocodeResultCountryMismatch(result, query)) continue;
+      const score = scoreGeocodeResultForQuery(result, query);
+      if (score > bestScore) {
+        best = result;
+        bestScore = score;
+      }
     }
   }
 
