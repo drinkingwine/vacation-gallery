@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Check } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { LightGalleryViewer } from "@/components/gallery/LightGalleryViewer";
 import {
@@ -38,6 +39,10 @@ type LightGalleryAlbumProps = {
   activeTag?: string | null;
   onToggleTag?: (item: GalleryItem) => void;
   taggingBusyId?: string | null;
+  /** Bulk select mode — click toggles selection instead of edit/lightbox. */
+  selectMode?: boolean;
+  selectedPaths?: ReadonlySet<string>;
+  onToggleSelect?: (item: GalleryItem) => void;
   /** Show tag overlays on thumbs (independent of tagging mode). */
   showTags?: boolean;
   /** Show download badges on thumbs. */
@@ -69,6 +74,9 @@ export function LightGalleryAlbum({
   activeTag = null,
   onToggleTag,
   taggingBusyId = null,
+  selectMode = false,
+  selectedPaths,
+  onToggleSelect,
   showTags = false,
   showDownloads = false,
 }: LightGalleryAlbumProps) {
@@ -119,17 +127,24 @@ export function LightGalleryAlbum({
     onSelectedIdChange?.(null);
   }, [onSelectedIdChange]);
 
-  const handleMediaClick = useCallback((index: number) => {
-    const item = photoItemsRef.current[index];
-    if (!item) return;
-    if (String(item.id) !== String(selectedIdRef.current)) {
-      onSelectedIdChange?.(item.id);
-    }
-    setDetailsOpen(true);
-  }, [onSelectedIdChange]);
+  const handleMediaClick = useCallback(
+    (index: number) => {
+      const item = photoItemsRef.current[index];
+      if (!item) return;
+      if (String(item.id) !== String(selectedIdRef.current)) {
+        onSelectedIdChange?.(item.id);
+      }
+      setDetailsOpen(true);
+    },
+    [onSelectedIdChange],
+  );
 
   const handleThumbClick = useCallback(
     (item: GalleryItem) => {
+      if (selectMode && onToggleSelect) {
+        onToggleSelect(item);
+        return;
+      }
       if (taggingMode && onToggleTag) {
         onToggleTag(item);
         return;
@@ -144,7 +159,16 @@ export function LightGalleryAlbum({
       }
       onSelectedIdChange?.(item.id);
     },
-    [isAdmin, onEdit, onSelectedIdChange, onToggleTag, onVideoOpen, taggingMode],
+    [
+      isAdmin,
+      onEdit,
+      onSelectedIdChange,
+      onToggleSelect,
+      onToggleTag,
+      onVideoOpen,
+      selectMode,
+      taggingMode,
+    ],
   );
 
   const handleDeleteItem = useCallback(
@@ -224,6 +248,7 @@ export function LightGalleryAlbum({
           const displayTags = getItemDisplayTags(item, 6);
           const hasActiveTag =
             Boolean(activeTag) && hasPhotoTag(item.tags ?? [], activeTag!);
+          const isSelected = Boolean(selectedPaths?.has(item.path));
 
           return (
             <figure
@@ -233,6 +258,9 @@ export function LightGalleryAlbum({
                 taggingMode &&
                   hasActiveTag &&
                   "ring-2 ring-amber-400/80 ring-offset-2 ring-offset-transparent",
+                selectMode &&
+                  isSelected &&
+                  "ring-2 ring-zinc-900 ring-offset-2 ring-offset-transparent dark:ring-white",
               )}
             >
               <div className="relative">
@@ -241,14 +269,17 @@ export function LightGalleryAlbum({
                   className="vc-lg-album-item"
                   data-media-type={item.type}
                   disabled={isBusy && taggingMode}
+                  aria-pressed={selectMode ? isSelected : undefined}
                   aria-label={
-                    taggingMode && activeTag
-                      ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
-                      : isAdmin && onEdit
-                        ? `Edit ${item.title}`
-                        : isVideo
-                          ? `Play ${item.title}`
-                          : item.title
+                    selectMode
+                      ? `${isSelected ? "Deselect" : "Select"} ${item.title}`
+                      : taggingMode && activeTag
+                        ? `${hasActiveTag ? "Remove" : "Add"} #${activeTag} on ${item.title}`
+                        : isAdmin && onEdit
+                          ? `Edit ${item.title}`
+                          : isVideo
+                            ? `Play ${item.title}`
+                            : item.title
                   }
                   onClick={() => handleThumbClick(item)}
                 >
@@ -271,10 +302,22 @@ export function LightGalleryAlbum({
                   {((taggingMode || showTags) && displayTags.length > 0) ? (
                     <PhotoTagOverlay tags={displayTags} />
                   ) : null}
+                  {selectMode ? (
+                    <span
+                      className={cn(
+                        "absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border text-white shadow-sm transition",
+                        isSelected
+                          ? "border-zinc-900 bg-zinc-900 dark:border-white dark:bg-white dark:text-zinc-900"
+                          : "border-white/80 bg-black/35",
+                      )}
+                    >
+                      {isSelected ? <Check className="h-3.5 w-3.5" /> : null}
+                    </span>
+                  ) : null}
                 </button>
 
                 <div className="pointer-events-none absolute inset-0 z-30">
-                  {isAdmin ? (
+                  {isAdmin && !selectMode ? (
                     <div className="pointer-events-auto absolute right-1.5 top-1.5">
                       <DeleteIconButton
                         onClick={(e) => {

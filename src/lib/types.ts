@@ -120,6 +120,15 @@ export type UpdatePhotoInput = {
   longitude?: number | null;
 };
 
+export type UpdatePhotosBulkInput = {
+  trip: string;
+  paths: string[];
+  addTag?: string;
+  location?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
 export type GalleryPhoto = Photo & {
   id: string;
   tripName: string;

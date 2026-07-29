@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Tags } from "lucide-react";
+import { CheckSquare, MapPin, Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
 import {
   GalleryGridControls,
   type GalleryGridMediaFilter,
@@ -26,6 +27,15 @@ import {
   hasPhotoTag,
   PRESET_PHOTO_TAG_SECTIONS,
 } from "@/lib/photo-tags";
+import {
+  locationsFromTripPhotos,
+  mergeRecentLocations,
+  readRecentLocations,
+  recentLocationKey,
+  recentLocationMatches,
+  rememberRecentLocation,
+  type RecentLocation,
+} from "@/lib/recent-locations";
 import { patchCachedTripPhoto } from "@/lib/trip-page-cache";
 import type { Photo, Trip } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -112,6 +122,17 @@ export function TripPhotoGallery({
     useState<GalleryGridMediaFilter>("all");
   const [taggingMode, setTaggingMode] = useState(false);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [pendingTag, setPendingTag] = useState<string | null>(null);
+  const [pendingLocation, setPendingLocation] =
+    useState<GeoLocatorResult | null>(null);
+  const [bulkApplying, setBulkApplying] = useState(false);
+  const [storedRecentLocations, setStoredRecentLocations] = useState<
+    RecentLocation[]
+  >([]);
   const [tagOverrides, setTagOverrides] = useState<Map<string, string[]>>(
     () => new Map(),
   );
@@ -142,7 +163,27 @@ export function TripPhotoGallery({
       setTaggingMode(false);
       setActiveTag(null);
     }
-  }, [isAdmin, taggingMode]);
+    if (!isAdmin && selectMode) {
+      setSelectMode(false);
+      setSelectedPaths(new Set());
+      setPendingTag(null);
+      setPendingLocation(null);
+    }
+  }, [isAdmin, selectMode, taggingMode]);
+
+  useEffect(() => {
+    if (!selectMode) return;
+    setStoredRecentLocations(readRecentLocations(tripName));
+  }, [selectMode, tripName, photos]);
+
+  const recentLocations = useMemo(
+    () =>
+      mergeRecentLocations(
+        storedRecentLocations,
+        locationsFromTripPhotos(photos, trip),
+      ),
+    [photos, storedRecentLocations, trip],
+  );
 
   const items = useMemo(() => {
     const built = photos.map((photo) =>
@@ -322,6 +363,118 @@ export function TripPhotoGallery({
     [activeTag, onPhotoChanged, taggingBusyId, tripName],
   );
 
+  const clearBulkSelection = useCallback(() => {
+    setSelectedPaths(new Set());
+    setPendingTag(null);
+    setPendingLocation(null);
+  }, []);
+
+  const handleToggleSelect = useCallback((item: GalleryItem) => {
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(item.path)) next.delete(item.path);
+      else next.add(item.path);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllVisible = useCallback(() => {
+    setSelectedPaths(new Set(filteredItems.map((item) => item.path)));
+  }, [filteredItems]);
+
+  const handleBulkApply = useCallback(async () => {
+    if (bulkApplying || selectedPaths.size === 0) return;
+    if (!pendingTag && !pendingLocation) {
+      alert("Choose a tag and/or a location to apply.");
+      return;
+    }
+
+    const paths = Array.from(selectedPaths);
+    setBulkApplying(true);
+
+    const previousTagOverrides = new Map(tagOverrides);
+    if (pendingTag) {
+      setTagOverrides((prev) => {
+        const next = new Map(prev);
+        for (const path of paths) {
+          const photo = photos.find((entry) => entry.path === path);
+          const current =
+            next.get(path) ?? photo?.tags ?? [];
+          if (!hasPhotoTag(current, pendingTag)) {
+            next.set(path, [...current, pendingTag]);
+          }
+        }
+        return next;
+      });
+    }
+
+    try {
+      const res = await fetch("/api/photos/bulk-update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trip: tripName,
+          paths,
+          ...(pendingTag ? { addTag: pendingTag } : {}),
+          ...(pendingLocation
+            ? {
+                location: pendingLocation.location,
+                latitude: pendingLocation.latitude,
+                longitude: pendingLocation.longitude,
+              }
+            : {}),
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Bulk update failed");
+
+      for (const path of paths) {
+        const photo = photos.find((entry) => entry.path === path);
+        const currentTags = photo?.tags ?? [];
+        const nextTags =
+          pendingTag && !hasPhotoTag(currentTags, pendingTag)
+            ? [...currentTags, pendingTag]
+            : currentTags;
+        patchCachedTripPhoto(tripName, path, {
+          ...(pendingTag ? { tags: nextTags } : {}),
+          ...(pendingLocation
+            ? {
+                location: pendingLocation.location,
+                latitude: pendingLocation.latitude,
+                longitude: pendingLocation.longitude,
+              }
+            : {}),
+        });
+      }
+
+      if (pendingLocation) {
+        setStoredRecentLocations(
+          rememberRecentLocation(tripName, pendingLocation),
+        );
+      }
+
+      invalidateGalleryHomeCache();
+      refreshGallery();
+      onPhotoChanged?.();
+      clearBulkSelection();
+    } catch (err) {
+      setTagOverrides(previousTagOverrides);
+      alert(err instanceof Error ? err.message : "Bulk update failed");
+    } finally {
+      setBulkApplying(false);
+    }
+  }, [
+    bulkApplying,
+    clearBulkSelection,
+    onPhotoChanged,
+    pendingLocation,
+    pendingTag,
+    photos,
+    selectedPaths,
+    tagOverrides,
+    tripName,
+  ]);
+
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -375,8 +528,36 @@ export function TripPhotoGallery({
           <button
             type="button"
             onClick={() => {
+              setSelectMode((on) => {
+                if (!on) {
+                  setTaggingMode(false);
+                  setActiveTag(null);
+                } else {
+                  clearBulkSelection();
+                }
+                return !on;
+              });
+            }}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] transition",
+              selectMode
+                ? "border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800",
+            )}
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            {selectMode ? "Selecting" : "Select"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setTaggingMode((on) => {
-                if (on) setActiveTag(null);
+                if (!on) {
+                  setSelectMode(false);
+                  clearBulkSelection();
+                } else {
+                  setActiveTag(null);
+                }
                 return !on;
               });
             }}
@@ -390,6 +571,180 @@ export function TripPhotoGallery({
             <Tags className="h-3.5 w-3.5" />
             {taggingMode ? "Tagging on" : "Tag"}
           </button>
+        </div>
+      ) : null}
+
+      {isAdmin && selectMode ? (
+        <div className="sticky top-28 z-20 space-y-4 rounded-2xl border border-zinc-200/80 bg-white/95 p-4 shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-950/95">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+              {selectedPaths.size === 0
+                ? "Click images to select"
+                : `${selectedPaths.size} selected`}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleSelectAllVisible}
+                disabled={filteredItems.length === 0 || bulkApplying}
+                className="rounded-full border border-zinc-200 px-3 py-1.5 text-[11px] font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Select all visible
+              </button>
+              <button
+                type="button"
+                onClick={clearBulkSelection}
+                disabled={
+                  (selectedPaths.size === 0 &&
+                    !pendingTag &&
+                    !pendingLocation) ||
+                  bulkApplying
+                }
+                className="rounded-full border border-zinc-200 px-3 py-1.5 text-[11px] font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+              Tag to add
+            </h4>
+            {PRESET_PHOTO_TAG_SECTIONS.map((section) => (
+              <div key={section.label}>
+                <h5 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                  {section.label}
+                </h5>
+                <div className="flex flex-wrap gap-1.5">
+                  {section.tags.map((tag) => {
+                    const active =
+                      pendingTag?.toLowerCase() === tag.toLowerCase();
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        disabled={bulkApplying}
+                        onClick={() =>
+                          setPendingTag(active ? null : tag)
+                        }
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+                          getPresetTagColorClasses(tag),
+                          active &&
+                            "ring-2 ring-zinc-900 ring-offset-1 ring-offset-white dark:ring-white dark:ring-offset-zinc-950",
+                        )}
+                      >
+                        {formatTagLabel(tag)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <h4 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+              Location
+            </h4>
+            {recentLocations.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {recentLocations.map((entry) => {
+                  const active = pendingLocation
+                    ? recentLocationMatches(
+                        entry,
+                        pendingLocation.latitude,
+                        pendingLocation.longitude,
+                        pendingLocation.location,
+                      )
+                    : false;
+                  const label =
+                    entry.location ||
+                    entry.geoLocation ||
+                    `${entry.latitude.toFixed(5)}, ${entry.longitude.toFixed(5)}`;
+                  return (
+                    <button
+                      key={recentLocationKey(entry)}
+                      type="button"
+                      disabled={bulkApplying}
+                      onClick={() =>
+                        setPendingLocation(
+                          active
+                            ? null
+                            : {
+                                location: entry.location,
+                                geoLocation: entry.geoLocation,
+                                latitude: entry.latitude,
+                                longitude: entry.longitude,
+                              },
+                        )
+                      }
+                      className={cn(
+                        "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-left text-[11px] transition",
+                        active
+                          ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-900",
+                      )}
+                    >
+                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                No recent trip locations yet — look one up below.
+              </p>
+            )}
+
+            <GeoLocator
+              tripName={tripName}
+              selected={pendingLocation}
+              onLocated={(result) => {
+                setPendingLocation(result);
+                setStoredRecentLocations(
+                  rememberRecentLocation(tripName, result),
+                );
+              }}
+              onSelect={(result) => {
+                setPendingLocation(result);
+                setStoredRecentLocations(
+                  rememberRecentLocation(tripName, result),
+                );
+              }}
+              description="Search a place, then use it as the bulk location for the selected photos."
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectMode(false);
+                clearBulkSelection();
+              }}
+              disabled={bulkApplying}
+              className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleBulkApply()}
+              disabled={
+                bulkApplying ||
+                selectedPaths.size === 0 ||
+                (!pendingTag && !pendingLocation)
+              }
+              className="rounded-full bg-zinc-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+            >
+              {bulkApplying
+                ? "Applying…"
+                : `Apply to ${selectedPaths.size || 0}`}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -479,6 +834,9 @@ export function TripPhotoGallery({
           activeTag={activeTag}
           onToggleTag={(item) => void handleToggleTag(item)}
           taggingBusyId={taggingBusyId}
+          selectMode={selectMode}
+          selectedPaths={selectedPaths}
+          onToggleSelect={handleToggleSelect}
           showTags={tagsVisible}
           showDownloads={downloadsVisible}
         />

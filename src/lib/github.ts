@@ -28,6 +28,7 @@ import type {
   Trip,
   TripMetadata,
   UpdatePhotoInput,
+  UpdatePhotosBulkInput,
 } from "./types";
 
 const GITHUB_API = "https://api.github.com";
@@ -807,6 +808,76 @@ export async function updatePhoto(input: UpdatePhotoInput): Promise<void> {
           : {}),
       });
       if (next) meta[currentName] = next;
+      else delete meta[currentName];
+    }
+  });
+}
+
+export async function updatePhotosBulk(
+  input: UpdatePhotosBulkInput,
+): Promise<void> {
+  const paths = input.paths
+    .map((path) => path.trim())
+    .filter(Boolean);
+  if (paths.length === 0) {
+    throw new Error("paths must include at least one photo");
+  }
+
+  const addTag = input.addTag?.trim().toLowerCase() || undefined;
+  const hasLocationPatch =
+    input.location !== undefined ||
+    input.latitude !== undefined ||
+    input.longitude !== undefined;
+
+  if (!addTag && !hasLocationPatch) {
+    throw new Error("addTag or location fields are required");
+  }
+
+  await mutatePhotosMetadata(input.trip, (meta) => {
+    for (const path of paths) {
+      const filename = path.split("/").pop();
+      if (!filename) continue;
+
+      const currentName = resolvePhotoMetaKey(meta, filename) ?? filename;
+      const entry = meta[currentName] ?? {};
+      let nextEntry: PhotoMetaEntry = { ...entry };
+
+      if (addTag) {
+        nextEntry = {
+          ...nextEntry,
+          tags: normalizePhotoTags([...(nextEntry.tags ?? []), addTag]),
+        };
+      }
+
+      if (hasLocationPatch) {
+        nextEntry = {
+          ...nextEntry,
+          ...(input.location !== undefined
+            ? { location: input.location?.trim() || undefined }
+            : {}),
+          ...(input.latitude !== undefined
+            ? {
+                latitude:
+                  typeof input.latitude === "number" &&
+                  Number.isFinite(input.latitude)
+                    ? input.latitude
+                    : undefined,
+              }
+            : {}),
+          ...(input.longitude !== undefined
+            ? {
+                longitude:
+                  typeof input.longitude === "number" &&
+                  Number.isFinite(input.longitude)
+                    ? input.longitude
+                    : undefined,
+              }
+            : {}),
+        };
+      }
+
+      const pruned = prunePhotoMetaEntry(nextEntry);
+      if (pruned) meta[currentName] = pruned;
       else delete meta[currentName];
     }
   });
