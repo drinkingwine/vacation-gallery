@@ -7,7 +7,7 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
   },
   {
     label: "Dive Buddies",
-    tags: ["can't remember name", "ione", "kirk", "neil", "pete", "ron", "tom"] as const,
+    tags: ["ione", "john", "kirk", "neil", "pete", "ron", "tom"] as const,
   },
   {
     label: "Pets",
@@ -77,10 +77,10 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-violet-300 bg-violet-100 text-violet-900 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-100",
   ione:
     "border-teal-300 bg-teal-100 text-teal-900 dark:border-teal-500/40 dark:bg-teal-500/15 dark:text-teal-100",
+  john:
+    "border-zinc-400 bg-zinc-100 text-zinc-900 dark:border-zinc-500/40 dark:bg-zinc-500/15 dark:text-zinc-100",
   neil: "border-cyan-300 bg-cyan-100 text-cyan-900 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-100",
   pete: "border-blue-300 bg-blue-100 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-100",
-  "can't remember name":
-    "border-zinc-400 bg-zinc-100 text-zinc-900 dark:border-zinc-500/40 dark:bg-zinc-500/15 dark:text-zinc-100",
   arthur:
     "border-stone-300 bg-stone-100 text-stone-900 dark:border-stone-500/40 dark:bg-stone-500/15 dark:text-stone-100",
   shannon:
@@ -155,7 +155,6 @@ export function hasPhotoTag(tags: string[], tag: string) {
 const TAG_LABEL_OVERRIDES: Record<string, string> = {
   "r&r": "R&R",
   "c&c": "C&C",
-  "can't remember name": "Can't Remember Name",
 };
 
 export function formatTagLabel(tag: string) {
