@@ -55,6 +55,10 @@ export type GalleryGridControlsProps = {
   onTagsVisibleChange?: (value: boolean) => void;
   downloadsVisible?: boolean;
   onDownloadsVisibleChange?: (value: boolean) => void;
+  onDownloadAll?: () => void;
+  downloadAllBusy?: boolean;
+  downloadAllDisabled?: boolean;
+  downloadAllProgress?: { done: number; total: number } | null;
   timestampsVisible?: boolean;
   onTimestampsVisibleChange?: (value: boolean) => void;
   untaggedOnly?: boolean;
@@ -79,6 +83,10 @@ export function GalleryGridControls({
   onTagsVisibleChange,
   downloadsVisible,
   onDownloadsVisibleChange,
+  onDownloadAll,
+  downloadAllBusy = false,
+  downloadAllDisabled = false,
+  downloadAllProgress = null,
   timestampsVisible,
   onTimestampsVisibleChange,
   untaggedOnly,
@@ -188,12 +196,67 @@ export function GalleryGridControls({
         ) : null}
 
         {typeof downloadsVisible === "boolean" && onDownloadsVisibleChange ? (
-          <ToggleChip
-            active={downloadsVisible}
-            onChange={onDownloadsVisibleChange}
-            onLabel={galleryCopy.grid.downloads.on}
-            offLabel={galleryCopy.grid.downloads.off}
-          />
+          <>
+            <ToggleChip
+              active={downloadsVisible}
+              onChange={onDownloadsVisibleChange}
+              onLabel={galleryCopy.grid.downloads.on}
+              offLabel={galleryCopy.grid.downloads.off}
+            />
+            {onDownloadAll ? (
+              <div className="flex min-w-0 flex-col gap-1 sm:min-w-36">
+                <button
+                  type="button"
+                  onClick={onDownloadAll}
+                  disabled={downloadAllBusy || downloadAllDisabled}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1 text-xs transition",
+                    downloadAllBusy || downloadAllDisabled
+                      ? "cursor-not-allowed border-border text-muted-foreground opacity-80"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {downloadAllBusy
+                    ? downloadAllProgress &&
+                      downloadAllProgress.total > 0 &&
+                      downloadAllProgress.done < downloadAllProgress.total
+                      ? galleryCopy.grid.downloads.allProgress(
+                          downloadAllProgress.done,
+                          downloadAllProgress.total,
+                        )
+                      : galleryCopy.grid.downloads.allBusy
+                    : galleryCopy.grid.downloads.all}
+                </button>
+                {downloadAllBusy &&
+                downloadAllProgress &&
+                downloadAllProgress.total > 0 ? (
+                  <div
+                    className="h-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={downloadAllProgress.total}
+                    aria-valuenow={downloadAllProgress.done}
+                    aria-label={galleryCopy.grid.downloads.allProgress(
+                      downloadAllProgress.done,
+                      downloadAllProgress.total,
+                    )}
+                  >
+                    <div
+                      className="h-full rounded-full bg-zinc-900 transition-[width] duration-200 dark:bg-white"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (downloadAllProgress.done /
+                            downloadAllProgress.total) *
+                            100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         {typeof timestampsVisible === "boolean" &&

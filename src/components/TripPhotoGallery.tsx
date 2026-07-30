@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { CheckSquare, MapPin, Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
 import {
   GalleryGridControls,
@@ -20,6 +21,8 @@ import { requestGalleryPhotoEdit, refreshGallery } from "@/lib/gallery-admin";
 import { galleryVideoWatchPath } from "@/lib/edit-paths";
 import { buildGalleryItem, itemHasAssignedTags } from "@/lib/gallery";
 import type { GalleryItem } from "@/lib/gallery";
+import { galleryCopy } from "@/lib/gallery-copy";
+import { downloadGalleryItemsAsZip } from "@/lib/gallery-download";
 import { parsePhotoTimestamp } from "@/lib/photo-timestamp";
 import {
   formatTagLabel,
@@ -115,6 +118,7 @@ export function TripPhotoGallery({
 }: TripPhotoGalleryProps) {
   const { isAdmin: authIsAdmin } = useAuth();
   const isAdmin = isAdminProp ?? authIsAdmin;
+  const confirm = useConfirm();
   const router = useRouter();
   const viewportWidth = useViewportWidth();
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
@@ -130,6 +134,11 @@ export function TripPhotoGallery({
   const [pendingLocation, setPendingLocation] =
     useState<GeoLocatorResult | null>(null);
   const [bulkApplying, setBulkApplying] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadAllProgress, setDownloadAllProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [storedRecentLocations, setStoredRecentLocations] = useState<
     RecentLocation[]
   >([]);
@@ -144,15 +153,20 @@ export function TripPhotoGallery({
   const mediaFilter = mediaFilterProp ?? internalMediaFilter;
   const setMediaFilter = onMediaFilterChange ?? setInternalMediaFilter;
 
+  const columnSliderMax = getColumnSliderMax(viewportWidth || 1024);
+
   useEffect(() => {
     setColumnCount(readStoredColumnCount());
   }, []);
 
-  useEffect(() => {
-    window.localStorage.setItem(COLUMN_STORAGE_KEY, String(columnCount));
-  }, [columnCount]);
-
-  const columnSliderMax = getColumnSliderMax(viewportWidth || 1024);
+  const handleColumnCountChange = useCallback(
+    (value: number) => {
+      const next = clampColumnCount(value, columnSliderMax);
+      setColumnCount(next);
+      window.localStorage.setItem(COLUMN_STORAGE_KEY, String(next));
+    },
+    [columnSliderMax],
+  );
 
   useEffect(() => {
     setTagOverrides(new Map());
@@ -242,6 +256,56 @@ export function TripPhotoGallery({
     }
     return next;
   }, [items, mediaFilter, tagFilter]);
+
+  const downloadablePhotos = useMemo(
+    () => filteredItems.filter((item) => item.type !== "video"),
+    [filteredItems],
+  );
+
+  const handleDownloadAll = useCallback(async () => {
+    if (downloadingAll) return;
+    if (downloadablePhotos.length === 0) {
+      alert(galleryCopy.grid.downloads.allEmpty);
+      return;
+    }
+
+    const affirmed = await confirm({
+      title: galleryCopy.grid.downloads.allConfirmTitle,
+      message: galleryCopy.grid.downloads.allConfirm(downloadablePhotos.length),
+      confirmLabel: galleryCopy.grid.downloads.allConfirmLabel,
+      cancelLabel: "Cancel",
+      destructive: false,
+    });
+    if (!affirmed) return;
+
+    setDownloadingAll(true);
+    setDownloadAllProgress({ done: 0, total: downloadablePhotos.length });
+    try {
+      const result = await downloadGalleryItemsAsZip(downloadablePhotos, {
+        zipName: trip?.title || tripName || "photos",
+        onProgress: (done, total) => setDownloadAllProgress({ done, total }),
+      });
+      if (result.failureCount > 0) {
+        alert(
+          galleryCopy.grid.downloads.allPartial(
+            result.successCount,
+            result.failureCount,
+          ),
+        );
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadingAll(false);
+      setDownloadAllProgress(null);
+    }
+  }, [
+    confirm,
+    downloadablePhotos,
+    downloadingAll,
+    trip?.title,
+    tripName,
+  ]);
 
   const mediaCounts = useMemo(() => {
     const base = tagFilter
@@ -515,10 +579,12 @@ export function TripPhotoGallery({
         onTagsVisibleChange={setTagsVisible}
         downloadsVisible={downloadsVisible}
         onDownloadsVisibleChange={setDownloadsVisible}
+        onDownloadAll={() => void handleDownloadAll()}
+        downloadAllBusy={downloadingAll}
+        downloadAllDisabled={downloadablePhotos.length === 0}
+        downloadAllProgress={downloadAllProgress}
         columnCount={columnCount}
-        onColumnCountChange={(value) =>
-          setColumnCount(clampColumnCount(value, columnSliderMax))
-        }
+        onColumnCountChange={handleColumnCountChange}
         columnSliderMax={columnSliderMax}
         displayColumnCount={displayColumnCount}
       />

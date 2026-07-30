@@ -76,6 +76,19 @@ export const galleryCopy = {
     downloads: {
       on: "Show Download Button",
       off: "Hide Download Button",
+      all: "Download All Photos",
+      allBusy: "Preparing ZIP…",
+      allProgress: (done: number, total: number) =>
+        `Downloading ${done} / ${total}`,
+      allConfirmTitle: "Download all photos?",
+      allConfirm: (count: number) =>
+        count === 1
+          ? "Download 1 photo as a ZIP file?"
+          : `Download ${count} photos as a ZIP file?`,
+      allConfirmLabel: "Download",
+      allEmpty: "No photos to download.",
+      allPartial: (success: number, failed: number) =>
+        `Downloaded ${success} photo${success === 1 ? "" : "s"}; ${failed} failed.`,
     },
     untagged: {
       only: "Untagged only",

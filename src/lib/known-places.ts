@@ -6,6 +6,11 @@ export type KnownPlace = {
   label: string;
   latitude: number;
   longitude: number;
+  /**
+   * Only match when the query is exactly an alias. Required for region-wide
+   * names, so "Omaha Beach, Normandy" still resolves to the beach.
+   */
+  exact?: boolean;
 };
 
 /**
@@ -40,6 +45,20 @@ export const KNOWN_PLACES: KnownPlace[] = [
     latitude: 4.11498,
     longitude: 118.62867,
   },
+  {
+    // Every geocoder answers a region query with a centroid stranded inland in
+    // the Orne (Google lands ~48.88, 0.17). Pin the D-Day coast instead.
+    aliases: [
+      "normandy",
+      "normandy france",
+      "normandie",
+      "normandie france",
+    ],
+    exact: true,
+    label: "Omaha Beach, Normandy, France",
+    latitude: 49.3697,
+    longitude: -0.8711,
+  },
 ];
 
 function normalizePlaceQuery(value: string): string {
@@ -65,10 +84,11 @@ export function findKnownPlace(query: string): PositionstackResult | null {
       const needle = normalizePlaceQuery(alias);
       if (!needle) continue;
 
-      const matched =
-        normalized === needle ||
-        normalized.includes(needle) ||
-        needle.includes(normalized);
+      const matched = place.exact
+        ? normalized === needle
+        : normalized === needle ||
+          normalized.includes(needle) ||
+          needle.includes(normalized);
 
       // Avoid ultra-short aliases matching unrelated queries (e.g. "kap").
       if (!matched) continue;

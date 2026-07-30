@@ -22,7 +22,10 @@ import {
   VideoTypeBadge,
 } from "@/components/gallery/PhotoOverlayIcons";
 import { galleryCopy } from "@/lib/gallery-copy";
-import { downloadGalleryItem } from "@/lib/gallery-download";
+import {
+  downloadGalleryItem,
+  downloadGalleryItemsAsZip,
+} from "@/lib/gallery-download";
 import type { GalleryItem } from "@/lib/gallery";
 import {
   getItemDisplayTags,
@@ -164,6 +167,11 @@ export function Gallery25({
   const viewportWidth = useViewportWidth();
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [downloadingItemId, setDownloadingItemId] = useState<string | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadAllProgress, setDownloadAllProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const handlePhotoEdit = useCallback((item: GalleryItem) => {
     const returnTo =
@@ -292,6 +300,50 @@ export function Gallery25({
       ? filtered.filter((item) => !itemHasAssignedTags(item))
       : filtered;
   }, [filter, effectiveUntaggedOnly, items]);
+
+  const downloadablePhotos = useMemo(
+    () => visibleItems.filter((item) => item.type !== "video"),
+    [visibleItems],
+  );
+
+  const handleDownloadAll = useCallback(async () => {
+    if (downloadingAll) return;
+    if (downloadablePhotos.length === 0) {
+      alert(galleryCopy.grid.downloads.allEmpty);
+      return;
+    }
+
+    const affirmed = await confirm({
+      title: galleryCopy.grid.downloads.allConfirmTitle,
+      message: galleryCopy.grid.downloads.allConfirm(downloadablePhotos.length),
+      confirmLabel: galleryCopy.grid.downloads.allConfirmLabel,
+      cancelLabel: "Cancel",
+      destructive: false,
+    });
+    if (!affirmed) return;
+
+    setDownloadingAll(true);
+    setDownloadAllProgress({ done: 0, total: downloadablePhotos.length });
+    try {
+      const result = await downloadGalleryItemsAsZip(downloadablePhotos, {
+        zipName: tripTitle || "photos",
+        onProgress: (done, total) => setDownloadAllProgress({ done, total }),
+      });
+      if (result.failureCount > 0) {
+        alert(
+          galleryCopy.grid.downloads.allPartial(
+            result.successCount,
+            result.failureCount,
+          ),
+        );
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadingAll(false);
+      setDownloadAllProgress(null);
+    }
+  }, [confirm, downloadablePhotos, downloadingAll, tripTitle]);
 
   const columnSliderMax = getColumnSliderMax(viewportWidth);
   const displayColumnCount = Math.min(
@@ -502,6 +554,10 @@ export function Gallery25({
             onTagsVisibleChange={setTagsVisible}
             downloadsVisible={downloadsVisible}
             onDownloadsVisibleChange={setDownloadsVisible}
+            onDownloadAll={() => void handleDownloadAll()}
+            downloadAllBusy={downloadingAll}
+            downloadAllDisabled={downloadablePhotos.length === 0}
+            downloadAllProgress={downloadAllProgress}
             timestampsVisible={timestampsVisible}
             onTimestampsVisibleChange={setTimestampsVisible}
             showUntaggedFilter={showUntaggedFilter}
