@@ -5,17 +5,25 @@ import { Suspense, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { SpotlightCard } from "@/components/SpotlightCard";
 
+type LoginMode = "choose" | "family" | "admin";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { refresh } = useAuth();
-  const [mode, setMode] = useState<"choose" | "admin">("choose");
+  const [mode, setMode] = useState<LoginMode>("choose");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const redirectTo = searchParams.get("from") || "/";
+
+  const resetCredentials = () => {
+    setUsername("");
+    setPassword("");
+    setError(null);
+  };
 
   const handleGuest = async () => {
     setLoading(true);
@@ -39,7 +47,10 @@ function LoginForm() {
     }
   };
 
-  const handleAdmin = async (e: React.FormEvent) => {
+  const handleCredentialLogin = async (
+    e: React.FormEvent,
+    loginMode: "family" | "admin",
+  ) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -47,16 +58,20 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "admin", username, password }),
+        body: JSON.stringify({ mode: loginMode, username, password }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? "Login failed");
       }
       await refresh();
-      router.replace(
-        !redirectTo || redirectTo === "/" ? "/dashboard" : redirectTo,
-      );
+      if (loginMode === "admin") {
+        router.replace(
+          !redirectTo || redirectTo === "/" ? "/dashboard" : redirectTo,
+        );
+      } else {
+        router.replace(redirectTo || "/");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -75,7 +90,7 @@ function LoginForm() {
             Welcome
           </h1>
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-            Browse as a guest or sign in as admin to upload.
+            Browse as a guest, sign in as family, or manage as admin.
           </p>
         </div>
 
@@ -106,7 +121,29 @@ function LoginForm() {
             <SpotlightCard>
               <button
                 type="button"
-                onClick={() => setMode("admin")}
+                onClick={() => {
+                  resetCredentials();
+                  setMode("family");
+                }}
+                disabled={loading}
+                className="w-full px-6 py-5 text-left transition disabled:opacity-60"
+              >
+                <p className="font-medium text-zinc-900 dark:text-white">
+                  Family sign in
+                </p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  Sign in with your family account
+                </p>
+              </button>
+            </SpotlightCard>
+
+            <SpotlightCard>
+              <button
+                type="button"
+                onClick={() => {
+                  resetCredentials();
+                  setMode("admin");
+                }}
                 disabled={loading}
                 className="w-full px-6 py-5 text-left transition disabled:opacity-60"
               >
@@ -120,7 +157,13 @@ function LoginForm() {
             </SpotlightCard>
           </div>
         ) : (
-          <form onSubmit={handleAdmin} className="mt-8 space-y-4">
+          <form
+            onSubmit={(e) => void handleCredentialLogin(e, mode)}
+            className="mt-8 space-y-4"
+          >
+            <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              {mode === "family" ? "Family sign in" : "Admin sign in"}
+            </p>
             <div>
               <label
                 htmlFor="username"
@@ -161,7 +204,7 @@ function LoginForm() {
                 type="button"
                 onClick={() => {
                   setMode("choose");
-                  setError(null);
+                  resetCredentials();
                 }}
                 className="flex-1 rounded-full border border-zinc-200 px-4 py-2.5 text-sm text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >

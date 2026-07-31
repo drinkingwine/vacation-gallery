@@ -9,10 +9,16 @@ import {
   paginateGalleryPhotos,
   sortGalleryPhotos,
 } from "@/lib/gallery-query";
-import { listAllGalleryPhotos } from "@/lib/github";
+import { listAllGalleryPhotos, listTrips } from "@/lib/github";
 import { galleryPhotosForPeople } from "@/lib/people-gallery";
 import { galleryPhotosForThings } from "@/lib/things-gallery";
 import { isPeoplePhotoTag, isThingPhotoTag } from "@/lib/photo-tags";
+import { getServerSession } from "@/lib/server-auth";
+import {
+  canViewTrip,
+  filterPhotosByTripAccess,
+  visibleTripNames,
+} from "@/lib/trip-access";
 import type { GallerySortOrder } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +41,26 @@ export async function GET(req: NextRequest) {
     const sortOrder: GallerySortOrder =
       params.get("sortOrder") === "oldest" ? "oldest" : "newest";
 
-    const allPhotos = await listAllGalleryPhotos();
+    const session = await getServerSession();
+    const [listedPhotos, trips] = await Promise.all([
+      listAllGalleryPhotos(),
+      listTrips(),
+    ]);
+
+    if (trip) {
+      const tripRecord = trips.find((entry) => entry.name === trip);
+      if (!tripRecord || !canViewTrip(tripRecord, session)) {
+        return NextResponse.json({
+          items: [],
+          page,
+          hasNext: false,
+          total: 0,
+        });
+      }
+    }
+
+    const allowed = visibleTripNames(trips, session);
+    const allPhotos = filterPhotosByTripAccess(listedPhotos, allowed);
     const sourcePhotos = tag
       ? isThingPhotoTag(tag)
         ? galleryPhotosForThings(allPhotos)

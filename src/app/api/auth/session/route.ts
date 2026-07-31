@@ -14,5 +14,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     authenticated: true,
     role: session.role,
+    userId: session.userId ?? null,
+    username: session.username ?? null,
+    displayName: session.displayName ?? null,
+    imageUrl: session.imageUrl ?? null,
   });
 }

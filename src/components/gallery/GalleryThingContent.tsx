@@ -10,8 +10,13 @@ import {
   sortGalleryPhotos,
 } from "@/lib/gallery-query";
 import { galleryCopy } from "@/lib/gallery-copy";
-import { listAllGalleryPhotos } from "@/lib/github";
+import { listAllGalleryPhotos, listTrips } from "@/lib/github";
 import { formatTagLabel } from "@/lib/photo-tags";
+import { getServerSession } from "@/lib/server-auth";
+import {
+  filterPhotosByTripAccess,
+  visibleTripNames,
+} from "@/lib/trip-access";
 import { galleryPhotosForThings } from "@/lib/things-gallery";
 
 const PAGE_SIZE = 24;
@@ -27,7 +32,14 @@ export async function GalleryThingContent({
 }: GalleryThingContentProps) {
   const normalizedTag = tag.trim().toLowerCase();
   const keyword = initialKeyword.trim();
-  const allPhotos = galleryPhotosForThings(await listAllGalleryPhotos());
+  const session = await getServerSession();
+  const [listedPhotos, trips] = await Promise.all([
+    listAllGalleryPhotos(),
+    listTrips(),
+  ]);
+  const allPhotos = galleryPhotosForThings(
+    filterPhotosByTripAccess(listedPhotos, visibleTripNames(trips, session)),
+  );
   const filtered = filterGalleryPhotos(
     filterGalleryPhotosByTag(
       filterGalleryPhotosByMediaType(allPhotos, "all"),

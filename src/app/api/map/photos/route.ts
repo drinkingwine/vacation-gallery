@@ -1,17 +1,28 @@
 import { NextResponse } from "next/server";
-import { listGeotaggedPhotos } from "@/lib/github";
+import { listGeotaggedPhotos, listTrips } from "@/lib/github";
 import { groupPhotosByLocation } from "@/lib/map";
+import { getServerSession } from "@/lib/server-auth";
+import {
+  filterPhotosByTripAccess,
+  visibleTripNames,
+} from "@/lib/trip-access";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const photos = await listGeotaggedPhotos();
-    const locations = groupPhotosByLocation(photos);
+    const session = await getServerSession();
+    const [photos, trips] = await Promise.all([
+      listGeotaggedPhotos(),
+      listTrips(),
+    ]);
+    const allowed = visibleTripNames(trips, session);
+    const visiblePhotos = filterPhotosByTripAccess(photos, allowed);
+    const locations = groupPhotosByLocation(visiblePhotos);
 
     return NextResponse.json({
       locations,
-      photoCount: photos.length,
+      photoCount: visiblePhotos.length,
       locationCount: locations.length,
     });
   } catch (err) {

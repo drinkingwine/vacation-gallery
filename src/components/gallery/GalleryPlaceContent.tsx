@@ -12,6 +12,12 @@ import {
 import { galleryCopy } from "@/lib/gallery-copy";
 import { listAllGalleryPhotos, listTrips } from "@/lib/github";
 import { findPlaceSummary } from "@/lib/places-gallery";
+import { getServerSession } from "@/lib/server-auth";
+import {
+  filterPhotosByTripAccess,
+  filterTripsForSession,
+  visibleTripNames,
+} from "@/lib/trip-access";
 
 const PAGE_SIZE = 24;
 
@@ -26,12 +32,17 @@ export async function GalleryPlaceContent({
 }: GalleryPlaceContentProps) {
   const normalizedSlug = placeSlug.trim().toLowerCase();
   const keyword = initialKeyword.trim();
-  const place = findPlaceSummary(await listTrips(), normalizedSlug);
+  const session = await getServerSession();
+  const trips = filterTripsForSession(await listTrips(), session);
+  const place = findPlaceSummary(trips, normalizedSlug);
   if (!place) {
     return null;
   }
 
-  const allPhotos = await listAllGalleryPhotos();
+  const allPhotos = filterPhotosByTripAccess(
+    await listAllGalleryPhotos(),
+    visibleTripNames(trips, session),
+  );
   const filtered = filterGalleryPhotos(
     filterGalleryPhotosByPlace(
       filterGalleryPhotosByMediaType(allPhotos, "all"),

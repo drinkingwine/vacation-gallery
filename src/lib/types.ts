@@ -1,3 +1,8 @@
+export type TripAccess = {
+  guest: boolean;
+  familyUserIds: string[];
+};
+
 export interface TripMetadata {
   title?: string;
   kind?: "trip" | "stuff" | "event";
@@ -21,6 +26,11 @@ export interface TripMetadata {
   endDate?: string;
   description?: string;
   coverPhoto?: string;
+  /**
+   * Who can browse this trip. Missing = open to guest and all family (legacy default).
+   * Guest and familyUserIds are independent; admin always has access.
+   */
+  access?: TripAccess;
 }
 
 export interface Photo {
@@ -62,6 +72,7 @@ export interface Trip {
   startDate?: string;
   endDate?: string;
   description?: string;
+  access?: TripAccess;
 }
 
 export type SortField = "name" | "size";
@@ -88,6 +99,7 @@ export interface CreateTripInput {
   startDate?: string;
   endDate?: string;
   description?: string;
+  access?: TripAccess;
 }
 
 export type UpdateTripInput = Omit<CreateTripInput, "name">;

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GeoLocator, type GeoLocatorResult } from "@/components/GeoLocator";
 import { LocationPreviewMap } from "@/components/map/LocationPreviewMap";
-import { useNavbarConfig } from "@/components/navbar-config";
+import type { FamilyUserPublic } from "@/lib/family-users";
 import { formFieldClass } from "@/lib/form-styles";
 import {
   EVENT_KIND_OPTIONS,
@@ -13,6 +13,7 @@ import {
   type EventKind,
 } from "@/lib/event-kind";
 import { loadGalleryHome, patchCachedGalleryTrip } from "@/lib/gallery-home-cache";
+import { normalizeTripAccess } from "@/lib/trip-access";
 import {
   getTripCategories,
   toggleTripCategory,
@@ -22,6 +23,7 @@ import {
 import { invalidateTripPageCache } from "@/lib/trip-page-cache";
 import { toDateInputValue } from "@/lib/trip-meta";
 import type { Trip } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type EditTripFormProps = {
   trip: Trip;
@@ -46,8 +48,58 @@ export function EditTripForm({ trip }: EditTripFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewLocation, setPreviewLocation] = useState<GeoLocatorResult | null>(null);
+  const [familyUsers, setFamilyUsers] = useState<FamilyUserPublic[]>([]);
+  const [familyUsersLoading, setFamilyUsersLoading] = useState(true);
+  const [familyUsersError, setFamilyUsersError] = useState<string | null>(null);
+  const [guestAccess, setGuestAccess] = useState(() => trip.access?.guest ?? true);
+  const [selectedFamilyUserIds, setSelectedFamilyUserIds] = useState<string[]>(
+    () => trip.access?.familyUserIds ?? [],
+  );
+  const [accessInitialized, setAccessInitialized] = useState(
+    () => trip.access != null,
+  );
 
-  useNavbarConfig({ backHref: tripHref, backLabel: "Back to trip" });
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setFamilyUsersLoading(true);
+      setFamilyUsersError(null);
+      try {
+        const res = await fetch("/api/family-users");
+        const data = (await res.json()) as {
+          users?: FamilyUserPublic[];
+          error?: string;
+        };
+        if (!res.ok) {
+          throw new Error(data.error ?? "Failed to load family users");
+        }
+        if (!cancelled) {
+          const users = data.users ?? [];
+          setFamilyUsers(users);
+          if (!accessInitialized) {
+            const normalized = normalizeTripAccess(
+              trip.access,
+              users.map((user) => user.id),
+            );
+            setGuestAccess(normalized.guest);
+            setSelectedFamilyUserIds(normalized.familyUserIds);
+            setAccessInitialized(true);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setFamilyUsersError(
+            err instanceof Error ? err.message : "Failed to load family users",
+          );
+        }
+      } finally {
+        if (!cancelled) setFamilyUsersLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessInitialized, trip.access]);
 
   const selectedLocation: GeoLocatorResult | null =
     latitude != null && longitude != null
@@ -68,12 +120,25 @@ export function EditTripForm({ trip }: EditTripFormProps) {
     setLongitude(result.longitude);
   };
 
+  const toggleFamilyUser = (userId: string) => {
+    setSelectedFamilyUserIds((current) =>
+      current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId],
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || saving) return;
 
     setSaving(true);
     setError(null);
+
+    const access = {
+      guest: guestAccess,
+      familyUserIds: selectedFamilyUserIds,
+    };
 
     try {
       const res = await fetch(`/api/trips/${encodeURIComponent(trip.name)}`, {
@@ -90,6 +155,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
           startDate: startDate || undefined,
           endDate: endDate || undefined,
           description: description.trim() || undefined,
+          access,
         }),
       });
       const data = await res.json();
@@ -108,6 +174,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         description: description.trim() || undefined,
+        access,
       });
       router.push(tripHref);
       router.refresh();
@@ -121,7 +188,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
   return (
     <>
       <main className="page-container main-offset mx-auto flex-1 px-0 pb-16">
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-6xl space-y-6">
           <header className="space-y-1">
             <h1 className="font-serif text-3xl font-semibold text-zinc-900 dark:text-white">
               Edit event
@@ -132,13 +199,29 @@ export function EditTripForm({ trip }: EditTripFormProps) {
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex justify-end gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <Link
+                href={tripHref}
+                className="rounded-xl px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </Link>
+              <button
+                type="submit"
+                disabled={saving || !title.trim()}
+                className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+              >
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+
             {error ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
                 {error}
               </div>
             ) : null}
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-3">
               <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="space-y-4 p-5">
                   <div>
@@ -328,6 +411,66 @@ export function EditTripForm({ trip }: EditTripFormProps) {
                   />
                 </div>
               </div>
+
+              <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="space-y-4 p-5">
+                  <div className="space-y-1">
+                    <h2 className="font-serif text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+                      Who can see this
+                    </h2>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      Toggle Guest and family accounts that may browse this
+                      album. Guest and family access are independent.
+                    </p>
+                  </div>
+
+                  {familyUsersLoading ? (
+                    <p className="text-sm text-zinc-500">Loading…</p>
+                  ) : familyUsersError ? (
+                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
+                      {familyUsersError}
+                    </p>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setGuestAccess((value) => !value)}
+                        aria-pressed={guestAccess}
+                        className={cn(
+                          "rounded-xl border p-3 text-left transition",
+                          guestAccess
+                            ? "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-500"
+                            : "border-zinc-200 bg-zinc-50/60 text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-300 dark:hover:border-zinc-600",
+                        )}
+                      >
+                        <p className="truncate font-medium">Guest</p>
+                      </button>
+
+                      {familyUsers.map((user) => {
+                        const selected = selectedFamilyUserIds.includes(user.id);
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => toggleFamilyUser(user.id)}
+                            aria-pressed={selected}
+                            className={cn(
+                              "rounded-xl border p-3 text-left transition",
+                              selected
+                                ? "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-500"
+                                : "border-zinc-200 bg-zinc-50/60 text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-300 dark:hover:border-zinc-600",
+                            )}
+                          >
+                            <p className="truncate font-medium">
+                              {user.displayName}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <LocationPreviewMap
@@ -335,22 +478,6 @@ export function EditTripForm({ trip }: EditTripFormProps) {
               longitude={mapLocation?.longitude}
               label={mapLocation?.geoLocation ?? mapLocation?.location}
             />
-
-            <div className="flex justify-end gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <Link
-                href={tripHref}
-                className="rounded-xl px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={saving || !title.trim()}
-                className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
-              >
-                {saving ? "Saving…" : "Save changes"}
-              </button>
-            </div>
           </form>
         </div>
       </main>

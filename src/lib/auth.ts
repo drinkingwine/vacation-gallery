@@ -1,12 +1,21 @@
-export type Role = "guest" | "admin";
+export type Role = "guest" | "family" | "admin";
 
-export interface Session {
+export interface SessionIdentity {
+  userId?: string;
+  username?: string;
+  displayName?: string;
+  imageUrl?: string;
+}
+
+export interface Session extends SessionIdentity {
   role: Role;
   exp: number;
 }
 
 export const SESSION_COOKIE = "vc_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+const VALID_ROLES = new Set<Role>(["guest", "family", "admin"]);
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -54,10 +63,19 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export async function createSessionToken(role: Role): Promise<string> {
+export { timingSafeEqual };
+
+export async function createSessionToken(
+  role: Role,
+  identity?: SessionIdentity,
+): Promise<string> {
   const payload: Session = {
     role,
     exp: Date.now() + SESSION_MAX_AGE * 1000,
+    ...(identity?.userId ? { userId: identity.userId } : {}),
+    ...(identity?.username ? { username: identity.username } : {}),
+    ...(identity?.displayName ? { displayName: identity.displayName } : {}),
+    ...(identity?.imageUrl ? { imageUrl: identity.imageUrl } : {}),
   };
   const encoded = toBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
   const signature = await hmacSign(encoded, getSecret());
@@ -80,7 +98,9 @@ export async function parseSessionToken(
       new TextDecoder().decode(fromBase64Url(encoded)),
     ) as Session;
 
-    if (!session.role || !session.exp || session.exp < Date.now()) return null;
+    if (!VALID_ROLES.has(session.role) || !session.exp || session.exp < Date.now()) {
+      return null;
+    }
     return session;
   } catch {
     return null;
@@ -110,6 +130,8 @@ export function requiresAdmin(pathname: string, method: string): boolean {
   if (pathname.startsWith("/api/trips/create")) return true;
   if (pathname.startsWith("/api/photos/delete")) return true;
   if (pathname.startsWith("/api/photos/update")) return true;
+  if (pathname.startsWith("/api/photos/bulk-update")) return true;
+  if (pathname.startsWith("/api/family-users")) return true;
   if (method === "DELETE" && /^\/api\/trips\/[^/]+$/.test(pathname)) return true;
   if (method === "PATCH" && /^\/api\/trips\/[^/]+$/.test(pathname)) return true;
   if (method === "POST" && /^\/api\/trips\/[^/]+\/cover$/.test(pathname)) {

@@ -34,6 +34,7 @@ import type {
 const GITHUB_API = "https://api.github.com";
 const TRIP_META_FILE = "trip.json";
 const PHOTOS_META_FILE = "photos-meta.json";
+const FAMILY_USERS_FILE = "family-users.json";
 
 interface GHConfig {
   token: string;
@@ -364,6 +365,7 @@ function buildTrip(
     startDate: metadata.startDate,
     endDate: metadata.endDate,
     description: metadata.description,
+    access: metadata.access,
   };
 }
 
@@ -929,4 +931,161 @@ export async function deleteTrip(tripName: string): Promise<void> {
   for (const file of files) {
     await deleteFile(file.path, file.sha);
   }
+}
+
+export type FamilyUserRecord = {
+  id: string;
+  username: string;
+  displayName: string;
+  passwordHash: string;
+  passwordSalt: string;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type FamilyUsersFile = {
+  users: FamilyUserRecord[];
+};
+
+const familyUsersLock: { current: Promise<void> } = {
+  current: Promise.resolve(),
+};
+
+async function withFamilyUsersLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prior = familyUsersLock.current;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  familyUsersLock.current = prior.then(
+    () => gate,
+    () => gate,
+  );
+  await prior;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
+function parseFamilyUsersFile(raw: string | null): FamilyUsersFile {
+  if (!raw) return { users: [] };
+  try {
+    const parsed = JSON.parse(raw) as FamilyUsersFile;
+    if (!parsed || !Array.isArray(parsed.users)) return { users: [] };
+    return {
+      users: parsed.users.filter(
+        (user) =>
+          user &&
+          typeof user.id === "string" &&
+          typeof user.username === "string" &&
+          typeof user.passwordHash === "string" &&
+          typeof user.passwordSalt === "string",
+      ),
+    };
+  } catch {
+    return { users: [] };
+  }
+}
+
+async function saveFamilyUsersFile(
+  data: FamilyUsersFile,
+  existingSha?: string,
+): Promise<void> {
+  const content = Buffer.from(JSON.stringify(data, null, 2)).toString("base64");
+  await uploadFile(
+    FAMILY_USERS_FILE,
+    content,
+    "Update family users",
+    existingSha,
+  );
+}
+
+export async function listFamilyUserRecords(): Promise<FamilyUserRecord[]> {
+  const file = await getGithubFile(FAMILY_USERS_FILE);
+  return parseFamilyUsersFile(file.content).users;
+}
+
+export async function createFamilyUserRecord(
+  record: FamilyUserRecord,
+): Promise<FamilyUserRecord> {
+  return withFamilyUsersLock(async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const file = await getGithubFile(FAMILY_USERS_FILE);
+      const data = parseFamilyUsersFile(file.content);
+      if (data.users.some((user) => user.username === record.username)) {
+        throw new Error("That username is already taken.");
+      }
+      if (data.users.some((user) => user.id === record.id)) {
+        throw new Error("Family user id already exists.");
+      }
+      data.users.push(record);
+      try {
+        await saveFamilyUsersFile(data, file.sha);
+        return record;
+      } catch (err) {
+        if (isGithubConflict(err) && attempt < 4) continue;
+        throw err;
+      }
+    }
+    throw new Error("Failed to create family user after retries.");
+  });
+}
+
+export async function updateFamilyUserRecord(
+  id: string,
+  patch: Partial<FamilyUserRecord>,
+  options?: { clearImageUrl?: boolean },
+): Promise<FamilyUserRecord | null> {
+  return withFamilyUsersLock(async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const file = await getGithubFile(FAMILY_USERS_FILE);
+      const data = parseFamilyUsersFile(file.content);
+      const index = data.users.findIndex((user) => user.id === id);
+      if (index < 0) return null;
+
+      const current = data.users[index]!;
+      const next: FamilyUserRecord = {
+        ...current,
+        ...patch,
+        id: current.id,
+        username: current.username,
+      };
+      if (options?.clearImageUrl) {
+        delete next.imageUrl;
+      }
+      data.users[index] = next;
+
+      try {
+        await saveFamilyUsersFile(data, file.sha);
+        return next;
+      } catch (err) {
+        if (isGithubConflict(err) && attempt < 4) continue;
+        throw err;
+      }
+    }
+    throw new Error("Failed to update family user after retries.");
+  });
+}
+
+export async function deleteFamilyUserRecord(id: string): Promise<boolean> {
+  return withFamilyUsersLock(async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const file = await getGithubFile(FAMILY_USERS_FILE);
+      const data = parseFamilyUsersFile(file.content);
+      const nextUsers = data.users.filter((user) => user.id !== id);
+      if (nextUsers.length === data.users.length) return false;
+
+      try {
+        await saveFamilyUsersFile({ users: nextUsers }, file.sha);
+        return true;
+      } catch (err) {
+        if (isGithubConflict(err) && attempt < 4) continue;
+        throw err;
+      }
+    }
+    throw new Error("Failed to delete family user after retries.");
+  });
 }

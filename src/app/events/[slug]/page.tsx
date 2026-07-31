@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { TripAlbumPage } from "@/components/TripAlbumPage";
 import { listTrips } from "@/lib/github";
 import { findEventSummary } from "@/lib/events-gallery";
+import { getServerSession } from "@/lib/server-auth";
+import { filterTripsForSession } from "@/lib/trip-access";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,11 @@ type EventsPageProps = {
 export default async function EventSlugPage({ params }: EventsPageProps) {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug).trim().toLowerCase();
-  const event = findEventSummary(await listTrips(), slug);
+  const session = await getServerSession();
+  const event = findEventSummary(
+    filterTripsForSession(await listTrips(), session),
+    slug,
+  );
   if (!event) {
     notFound();
   }

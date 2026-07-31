@@ -6,9 +6,10 @@ import {
 import { notifyGalleryHomeReady } from "@/lib/gallery-admin";
 import type { Trip } from "@/lib/types";
 
-const STORAGE_KEY = "gallery-home-cache-v21";
+const STORAGE_KEY = "gallery-home-cache-v22";
 
 type GalleryHomeCacheEntry = {
+  identity: string;
   trips: Trip[];
   photos: GalleryHomePhoto[];
   views: GalleryHomeData;
@@ -18,13 +19,19 @@ let cache: GalleryHomeCacheEntry | null = null;
 let inflight: Promise<GalleryHomeData> | null = null;
 /** Bumped on invalidate/force so stale in-flight fetches cannot repopulate cache. */
 let cacheGeneration = 0;
+let viewerIdentity = "anon";
 
 function readStoredCache(): GalleryHomeCacheEntry | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as GalleryHomeCacheEntry;
+    const parsed = JSON.parse(raw) as GalleryHomeCacheEntry;
+    if (!parsed || parsed.identity !== viewerIdentity) {
+      clearStoredCache();
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -45,7 +52,13 @@ function clearStoredCache(): void {
 }
 
 function hydrateCacheFromStorage(): GalleryHomeCacheEntry | null {
-  if (cache) return cache;
+  if (cache) {
+    if (cache.identity !== viewerIdentity) {
+      cache = null;
+    } else {
+      return cache;
+    }
+  }
   cache = readStoredCache();
   return cache;
 }
@@ -55,6 +68,7 @@ function buildCacheEntry(
   photos: GalleryHomePhoto[],
 ): GalleryHomeCacheEntry {
   return {
+    identity: viewerIdentity,
     trips,
     photos,
     views: buildGalleryHomeViews(trips, photos),
@@ -66,6 +80,18 @@ function commitCache(entry: GalleryHomeCacheEntry): GalleryHomeData {
   writeStoredCache(entry);
   notifyGalleryHomeReady();
   return entry.views;
+}
+
+/** Bind cache to the current session identity; clears on change. */
+export function setGalleryHomeViewerIdentity(identity: string): void {
+  const next = identity || "anon";
+  if (next === viewerIdentity) return;
+  viewerIdentity = next;
+  invalidateGalleryHomeCache();
+}
+
+export function getGalleryHomeViewerIdentity(): string {
+  return viewerIdentity;
 }
 
 export function getCachedGalleryHome(): GalleryHomeData | null {

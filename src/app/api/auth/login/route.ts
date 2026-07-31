@@ -5,6 +5,7 @@ import {
   SESSION_MAX_AGE,
   verifyAdminCredentials,
 } from "@/lib/auth";
+import { verifyFamilyCredentials } from "@/lib/family-users";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,35 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
+    if (mode === "family") {
+      const username = typeof body.username === "string" ? body.username : "";
+      const password = typeof body.password === "string" ? body.password : "";
+
+      const user = await verifyFamilyCredentials(username, password);
+      if (!user) {
+        return NextResponse.json(
+          { error: "Invalid username or password" },
+          { status: 401 },
+        );
+      }
+
+      const token = await createSessionToken("family", {
+        userId: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        imageUrl: user.imageUrl,
+      });
+      const response = NextResponse.json({
+        role: "family",
+        userId: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        imageUrl: user.imageUrl ?? null,
+      });
+      setSessionCookie(response, token);
+      return response;
+    }
+
     if (mode === "admin") {
       const username = typeof body.username === "string" ? body.username : "";
       const password = typeof body.password === "string" ? body.password : "";
@@ -41,8 +71,15 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const token = await createSessionToken("admin");
-      const response = NextResponse.json({ role: "admin" });
+      const token = await createSessionToken("admin", {
+        username: username.trim(),
+        displayName: "Admin",
+      });
+      const response = NextResponse.json({
+        role: "admin",
+        username: username.trim(),
+        displayName: "Admin",
+      });
       setSessionCookie(response, token);
       return response;
     }

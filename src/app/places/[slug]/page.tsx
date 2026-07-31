@@ -5,6 +5,8 @@ import { GalleryPlaceContent } from "@/components/gallery/GalleryPlaceContent";
 import { GallerySkeleton } from "@/components/gallery/GallerySkeleton";
 import { listTrips } from "@/lib/github";
 import { findPlaceSummary } from "@/lib/places-gallery";
+import { getServerSession } from "@/lib/server-auth";
+import { filterTripsForSession } from "@/lib/trip-access";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,11 @@ export default async function PlacePage({
   const placeSlug = decodeURIComponent(rawSlug).trim().toLowerCase();
   const query = await searchParams;
   const keyword = typeof query.q === "string" ? query.q : "";
-  const place = findPlaceSummary(await listTrips(), placeSlug);
+  const session = await getServerSession();
+  const place = findPlaceSummary(
+    filterTripsForSession(await listTrips(), session),
+    placeSlug,
+  );
 
   if (!place) {
     notFound();

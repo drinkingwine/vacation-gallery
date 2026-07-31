@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CloudUpload, FolderPlus, HardDriveDownload } from "lucide-react";
+import { FolderInput, FolderPlus, HardDriveDownload } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { useUploadModal } from "@/components/AppShell";
+import { FamilyAccountsPanel } from "@/components/FamilyAccountsPanel";
 import { Photos11JpegFixer } from "@/components/Photos11JpegFixer";
 import { cn } from "@/lib/utils";
 
 export function AdminDashboard() {
   const router = useRouter();
   const { isAdmin, loading: authLoading, logout } = useAuth();
-  const { openUpload } = useUploadModal();
+  const [jpegFixerOpen, setJpegFixerOpen] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [backupNotice, setBackupNotice] = useState<{
     type: "success" | "error";
@@ -80,23 +80,23 @@ export function AdminDashboard() {
       icon: FolderPlus,
     },
     {
-      title: "Upload photos",
-      description: "Add photos or videos to an existing album.",
-      onClick: () => openUpload(),
-      icon: CloudUpload,
-    },
-    {
       title: backingUp ? "Backing up…" : "Backup to R2",
       description: "Copy all media into the backup bucket.",
       onClick: () => void handleBackup(),
       disabled: backingUp,
       icon: HardDriveDownload,
     },
+    {
+      title: "Photos 11 JPEG fix",
+      description: "Re-encode JPEGs so Apple Photos can import them.",
+      onClick: () => setJpegFixerOpen((open) => !open),
+      icon: FolderInput,
+    },
   ] as const;
 
   return (
     <main className="page-container main-offset mx-auto flex-1 px-4 pb-16 sm:px-0">
-      <div className="mx-auto max-w-3xl space-y-8">
+      <div className="mx-auto max-w-5xl space-y-8">
         <header className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
             Admin
@@ -105,7 +105,7 @@ export function AdminDashboard() {
             Dashboard
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Manage albums, uploads, and backups.
+            Manage albums, uploads, backups, and family accounts.
           </p>
         </header>
 
@@ -123,7 +123,7 @@ export function AdminDashboard() {
           </div>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           {actions.map((action) => {
             const Icon = action.icon;
             const className = cn(
@@ -170,7 +170,9 @@ export function AdminDashboard() {
           })}
         </div>
 
-        <Photos11JpegFixer />
+        {jpegFixerOpen ? <Photos11JpegFixer /> : null}
+
+        <FamilyAccountsPanel />
 
         <div className="border-t border-zinc-200 pt-6 dark:border-zinc-800">
           <button

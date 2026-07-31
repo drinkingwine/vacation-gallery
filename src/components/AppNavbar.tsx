@@ -38,7 +38,16 @@ function IconButton({
 export function AppNavbar() {
   const pathname = usePathname();
   const { backHref, backLabel } = useNavbarConfigState();
-  const { isAdmin, logout, loading, authenticated } = useAuth();
+  const {
+    isAdmin,
+    isFamily,
+    displayName,
+    username,
+    imageUrl,
+    logout,
+    loading,
+    authenticated,
+  } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountRef = useRef<HTMLDivElement | null>(null);
@@ -141,7 +150,10 @@ export function AppNavbar() {
               onMouseLeave={closeAccount}
             >
               <IconButton
-                className={cn(glassIcon, isAdmin && "overflow-hidden p-0")}
+                className={cn(
+                  glassIcon,
+                  (isAdmin || (isFamily && imageUrl)) && "overflow-hidden p-0",
+                )}
                 aria-label={authenticated ? "Account" : "Sign in"}
                 onClick={() => setAccountOpen((open) => !open)}
               >
@@ -150,6 +162,13 @@ export function AppNavbar() {
                   <img
                     src="/ralph.jpg"
                     alt="Admin"
+                    className="h-full w-full object-cover"
+                  />
+                ) : isFamily && imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={imageUrl}
+                    alt={displayName || username || "Family"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -170,7 +189,11 @@ export function AppNavbar() {
                           Signed in
                         </p>
                         <p className="mt-1 text-sm font-semibold">
-                          {isAdmin ? "Admin" : "Guest"}
+                          {isAdmin
+                            ? "Admin"
+                            : isFamily
+                              ? displayName || username || "Family"
+                              : "Guest"}
                         </p>
                       </div>
                       {isAdmin ? (
@@ -192,7 +215,9 @@ export function AppNavbar() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <p className="text-sm">Browse trips or sign in as admin.</p>
+                      <p className="text-sm">
+                        Browse as a guest, or sign in as family or admin.
+                      </p>
                       <Link
                         href={loginHref}
                         className="flex h-9 w-full items-center justify-center rounded-full border border-zinc-900 bg-zinc-900 text-xs uppercase tracking-[0.2em] text-white transition hover:bg-zinc-800 dark:border-white dark:bg-white dark:text-zinc-900"

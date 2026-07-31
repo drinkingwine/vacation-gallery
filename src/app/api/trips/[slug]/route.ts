@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteTrip, getTrip, getTripMetadata, updateTripMetadata } from "@/lib/github";
 import { FAVORITES_TRIP_NAME } from "@/lib/favorites-trip";
 import { parseEventKind } from "@/lib/event-kind";
+import { getServerSession } from "@/lib/server-auth";
+import { canViewTrip, parseTripAccess } from "@/lib/trip-access";
 import { parseTripCategories } from "@/lib/trip-category";
 import { tripLabel } from "@/lib/trip-meta";
 import type { TripMetadata } from "@/lib/types";
@@ -17,6 +19,11 @@ export async function GET(
     const trip = await getTrip(decodeURIComponent(slug));
 
     if (!trip) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    }
+
+    const session = await getServerSession();
+    if (!canViewTrip(trip, session)) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -84,6 +91,8 @@ export async function PATCH(
       categories: _existingCategories,
       ...existingRest
     } = existing;
+    const parsedAccess =
+      body.access !== undefined ? parseTripAccess(body.access) : undefined;
     const metadata: TripMetadata = {
       ...existingRest,
       title:
@@ -109,6 +118,14 @@ export async function PATCH(
           ? body.description.trim() || undefined
           : undefined,
     };
+
+    if (body.access !== undefined) {
+      if (parsedAccess) {
+        metadata.access = parsedAccess;
+      } else {
+        delete metadata.access;
+      }
+    }
 
     await updateTripMetadata(tripName, metadata);
     return NextResponse.json({ success: true, ...metadata });
