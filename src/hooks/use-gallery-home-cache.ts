@@ -13,8 +13,7 @@ export type GalleryHomeSlice =
   | "people"
   | "places"
   | "things"
-  | "stuff"
-  | "events";
+  | "stuff";
 
 type UseGalleryHomeSliceOptions = {
   /** When true, bypass cache and refetch from the API. */

@@ -79,7 +79,7 @@ export async function PATCH(
 
     const body = await req.json();
     const existing = await getTripMetadata(tripName);
-    const kind = parseEventKind(body.kind) ?? existing.kind ?? "trip";
+    const kind = parseEventKind(body.kind) ?? parseEventKind(existing.kind) ?? "trip";
     const categories =
       kind === "trip"
         ? parseTripCategories(

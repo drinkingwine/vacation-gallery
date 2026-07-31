@@ -30,7 +30,6 @@ const DESTINATION_BLURBS: Record<string, string> = {
   "/places": "Explore the archive by destination.",
   "/things": "Jump into subjects, objects, and motifs.",
   "/stuff": "Odds and ends — wedding, Wheaton, and more.",
-  "/events": "Browse dedicated event albums.",
   "/timeline": "See trips laid out across the years.",
   "/map": "Pin geotagged photos on the world map.",
 };
@@ -42,7 +41,6 @@ const HOME_DESTINATION_ORDER = [
   "/things",
   "/timeline",
   "/map",
-  "/events",
   "/stuff",
 ] as const;
 
@@ -85,14 +83,12 @@ function pickDestinationImages({
   places,
   things,
   stuff,
-  events,
 }: {
   trips: { name: string; coverUrl: string | null }[];
   people: { coverUrl: string | null }[];
   places: { coverUrl: string | null }[];
   things: { coverUrl: string | null }[];
   stuff: { coverUrl: string | null }[];
-  events: { coverUrl: string | null }[];
 }): Record<string, string | null> {
   const favoritesTrip = trips.find((trip) => isFavoritesTrip(trip.name));
   const vacationTrips = trips.filter((trip) => !isFavoritesTrip(trip.name));
@@ -101,7 +97,6 @@ function pickDestinationImages({
   const placeCovers = uniqueCoverUrls(places);
   const thingCovers = uniqueCoverUrls(things);
   const stuffCovers = uniqueCoverUrls(stuff);
-  const eventCovers = uniqueCoverUrls(events);
   const used = new Set<string>();
 
   const favoritesCover =
@@ -128,10 +123,6 @@ function pickDestinationImages({
     ),
     "/stuff": takeRandomUrl(
       stuffCovers.length > 0 ? stuffCovers : tripCovers,
-      used,
-    ),
-    "/events": takeRandomUrl(
-      eventCovers.length > 0 ? eventCovers : tripCovers,
       used,
     ),
     "/timeline": takeRandomUrl(tripCovers, used),
@@ -220,18 +211,13 @@ export default function Home() {
     "stuff",
     { force: true },
   );
-  const { value: events, loading: eventsLoading } = useGalleryHomeSlice(
-    "events",
-    { force: true },
-  );
   const showLoading =
     homeLoading ||
     tripsLoading ||
     peopleLoading ||
     placesLoading ||
     thingsLoading ||
-    stuffLoading ||
-    eventsLoading;
+    stuffLoading;
 
   const [imageBust] = useState(() => Date.now());
   const [destinationImages, setDestinationImages] = useState<
@@ -246,9 +232,9 @@ export default function Home() {
   useEffect(() => {
     if (showLoading) return;
     setDestinationImages(
-      pickDestinationImages({ trips, people, places, things, stuff, events }),
+      pickDestinationImages({ trips, people, places, things, stuff }),
     );
-  }, [showLoading, trips, people, places, things, stuff, events]);
+  }, [showLoading, trips, people, places, things, stuff]);
 
   useEffect(() => {
     if (showLoading) return;

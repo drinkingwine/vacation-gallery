@@ -42,13 +42,6 @@ export const galleryCopy = {
     empty: "No stuff trips yet.",
     noPhotos: (name: string) => `No photos in ${name} yet.`,
   },
-  events: {
-    eyebrow: "Gallery / Events",
-    title: "Events Gallery",
-    description: "Browse event albums, sorted A–Z.",
-    empty: "No event albums yet.",
-    noPhotos: (name: string) => `No photos in ${name} yet.`,
-  },
   filters: {
     all: "All",
     photo: "Photo",

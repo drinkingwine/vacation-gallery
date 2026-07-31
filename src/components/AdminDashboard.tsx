@@ -75,7 +75,7 @@ export function AdminDashboard() {
   const actions = [
     {
       title: "New album",
-      description: "Create a trip, stuff, or event folder.",
+      description: "Create a trip or stuff folder.",
       href: "/trips/new",
       icon: FolderPlus,
     },

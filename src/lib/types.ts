@@ -5,7 +5,7 @@ export type TripAccess = {
 
 export interface TripMetadata {
   title?: string;
-  kind?: "trip" | "stuff" | "event";
+  kind?: "trip" | "stuff";
   /**
    * Vacation tags — Ralph, Robin, and/or R&R. Prefer `categories`.
    * Legacy single-string `category` (including old `"dive"`) is still read.
@@ -62,7 +62,7 @@ export interface Trip {
   coverUrl: string | null;
   coverPhoto?: string;
   title: string;
-  kind: "trip" | "stuff" | "event";
+  kind: "trip" | "stuff";
   /** Ralph, Robin, and/or R&R tags for vacation trips. */
   categories?: Array<"ralph" | "robin" | "r&r">;
   location?: string;
@@ -90,7 +90,7 @@ export interface UploadFile {
 export interface CreateTripInput {
   name: string;
   title?: string;
-  kind?: "trip" | "stuff" | "event";
+  kind?: "trip" | "stuff";
   categories?: Array<"ralph" | "robin" | "r&r">;
   location?: string;
   geoLocation?: string;

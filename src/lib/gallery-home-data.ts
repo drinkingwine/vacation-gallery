@@ -17,10 +17,6 @@ import {
   buildStuffGalleryList,
   galleryPhotosForStuff,
 } from "@/lib/stuff-gallery";
-import {
-  buildEventsGalleryList,
-  galleryPhotosForEvents,
-} from "@/lib/events-gallery";
 import { isTripEvent } from "@/lib/event-kind";
 import type { PersonSummary } from "@/lib/people-gallery";
 import type { PlaceSummary } from "@/lib/places-gallery";
@@ -47,7 +43,6 @@ export type GalleryHomeData = {
   places: PlaceSummary[];
   things: ThingSummary[];
   stuff: Trip[];
-  events: Trip[];
 };
 
 function applyRandomFavoritesCover(
@@ -130,21 +125,6 @@ function applyRandomStuffCovers(
   });
 }
 
-function applyRandomEventCovers(
-  events: Trip[],
-  photos: GalleryHomePhoto[],
-): Trip[] {
-  const galleryPhotos = photos as GalleryPhoto[];
-
-  return events.map((trip) => {
-    const matches = galleryPhotosForEvents(galleryPhotos, trip.name);
-    return {
-      ...trip,
-      coverUrl: pickRandomImageCoverUrl(matches) ?? trip.coverUrl,
-    };
-  });
-}
-
 export function buildGalleryHomeViews(
   trips: Trip[],
   photos: GalleryHomePhoto[],
@@ -168,6 +148,5 @@ export function buildGalleryHomeViews(
       photos,
     ),
     stuff: applyRandomStuffCovers(buildStuffGalleryList(trips), photos),
-    events: applyRandomEventCovers(buildEventsGalleryList(trips), photos),
   };
 }

@@ -191,7 +191,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
         <div className="mx-auto max-w-6xl space-y-6">
           <header className="space-y-1">
             <h1 className="font-serif text-3xl font-semibold text-zinc-900 dark:text-white">
-              Edit event
+              Edit album
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Update this album&apos;s details and type.
@@ -226,7 +226,7 @@ export function EditTripForm({ trip }: EditTripFormProps) {
                 <div className="space-y-4 p-5">
                   <div>
                     <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Event type
+                      Album type
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {EVENT_KIND_OPTIONS.map((option) => (

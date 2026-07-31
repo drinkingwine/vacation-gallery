@@ -3,13 +3,11 @@ export {
   getCachedPlaces,
   getCachedThings,
   getCachedStuff,
-  getCachedEvents,
   invalidateGalleryHomeCache as invalidateGalleryListCaches,
   loadPeople,
   loadPlaces,
   loadThings,
   loadStuff,
-  loadEvents,
   prefetchGalleryHome as prefetchGalleryLists,
   prefetchGalleryHomeWhenIdle as prefetchGalleryListsWhenIdle,
 } from "@/lib/gallery-home-cache";

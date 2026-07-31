@@ -109,10 +109,10 @@ export function NewTripForm() {
         <div className="mx-auto max-w-4xl space-y-6">
           <header className="space-y-1">
             <h1 className="font-serif text-3xl font-semibold text-zinc-900 dark:text-white">
-              New event
+              New album
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Create a folder for a trip, stuff, or event album.
+              Create a folder for a trip or stuff album.
             </p>
           </header>
 
@@ -128,7 +128,7 @@ export function NewTripForm() {
                 <div className="space-y-4 p-5">
                   <div>
                     <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Event type
+                      Album type
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {EVENT_KIND_OPTIONS.map((option) => (

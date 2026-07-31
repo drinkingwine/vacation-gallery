@@ -1,15 +1,16 @@
 import { isFavoritesTrip } from "@/lib/favorites-trip";
 
-export type EventKind = "trip" | "stuff" | "event";
+export type EventKind = "trip" | "stuff";
 
 export const EVENT_KIND_OPTIONS = [
   { value: "trip", label: "Trip" },
   { value: "stuff", label: "Stuff" },
-  { value: "event", label: "Event" },
 ] as const;
 
 export function parseEventKind(value: unknown): EventKind | undefined {
-  if (value === "trip" || value === "stuff" || value === "event") return value;
+  if (value === "trip" || value === "stuff") return value;
+  // Legacy albums saved as "event" fold into Stuff.
+  if (value === "event") return "stuff";
   return undefined;
 }
 
@@ -27,13 +28,6 @@ export function isStuffEvent(trip: {
   name?: string;
 }): boolean {
   return getEventKind(trip) === "stuff";
-}
-
-export function isEventAlbum(trip: {
-  kind?: EventKind | string | null;
-  name?: string;
-}): boolean {
-  return getEventKind(trip) === "event";
 }
 
 export function isTripEvent(trip: {
