@@ -3,7 +3,26 @@ export const FAVORITE_TAG = "favorite";
 export const PRESET_PHOTO_TAG_SECTIONS = [
   {
     label: "Family",
-    tags: ["allison", "keith", "r&r", "ralph", "robin", "rosemary"] as const,
+    tags: ["allison", "r&r", "ralph", "robin", "rosemary", "stassie"] as const,
+  },
+  {
+    label: "Kids",
+    tags: [
+      "aaron",
+      "bella",
+      "joseph",
+      "matthew",
+      "samantha",
+      "sara",
+    ] as const,
+  },
+  {
+    label: "Wives",
+    tags: ["gloria", "joanne", "robin"] as const,
+  },
+  {
+    label: "Siblings",
+    tags: ["keith", "kennith", "renee"] as const,
   },
   {
     label: "Dive Buddies",
@@ -18,7 +37,7 @@ export const PRESET_PHOTO_TAG_SECTIONS = [
     tags: ["c&c", "chris", "claire"] as const,
   },
   {
-    label: "Old Friends",
+    label: "Robin's Friends",
     tags: ["baby", "izzy"] as const,
   },
   {
@@ -44,10 +63,6 @@ export const PRESET_PHOTO_TAGS = PRESET_PHOTO_TAG_SECTIONS.flatMap(
   (section) => section.tags,
 );
 
-export const PEOPLE_PHOTO_TAGS = PRESET_PHOTO_TAG_SECTIONS.filter(
-  (section) => section.label !== "Things",
-).flatMap((section) => section.tags);
-
 export const THING_PHOTO_TAG_SECTION = PRESET_PHOTO_TAG_SECTIONS.find(
   (section) => section.label === "Things",
 )!;
@@ -55,8 +70,16 @@ export const THING_PHOTO_TAG_SECTION = PRESET_PHOTO_TAG_SECTIONS.find(
 export const THING_PHOTO_TAGS = THING_PHOTO_TAG_SECTION.tags;
 
 export type PresetPhotoTag = (typeof PRESET_PHOTO_TAGS)[number];
-export type PeoplePhotoTag = (typeof PEOPLE_PHOTO_TAGS)[number];
 export type ThingPhotoTag = (typeof THING_PHOTO_TAGS)[number];
+export type PeoplePhotoTag = Exclude<PresetPhotoTag, ThingPhotoTag>;
+
+export const PEOPLE_PHOTO_TAGS = [
+  ...new Set(
+    PRESET_PHOTO_TAG_SECTIONS.filter(
+      (section) => section.label !== "Things",
+    ).flatMap((section) => section.tags),
+  ),
+] as PeoplePhotoTag[];
 
 const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
   ralph:
@@ -65,12 +88,34 @@ const PRESET_TAG_COLOR_CLASSES: Record<PresetPhotoTag, string> = {
     "border-rose-300 bg-rose-100 text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100",
   rosemary:
     "border-green-300 bg-green-100 text-green-900 dark:border-green-500/40 dark:bg-green-500/15 dark:text-green-100",
+  stassie:
+    "border-orange-400 bg-orange-50 text-orange-950 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-100",
   keith:
     "border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100",
   allison:
     "border-purple-300 bg-purple-100 text-purple-900 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-100",
   "r&r":
     "border-pink-300 bg-pink-100 text-pink-900 dark:border-pink-500/40 dark:bg-pink-500/15 dark:text-pink-100",
+  aaron:
+    "border-sky-400 bg-sky-50 text-sky-950 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-100",
+  sara:
+    "border-pink-400 bg-pink-50 text-pink-950 dark:border-pink-500/40 dark:bg-pink-500/15 dark:text-pink-100",
+  matthew:
+    "border-indigo-400 bg-indigo-50 text-indigo-950 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-100",
+  samantha:
+    "border-fuchsia-400 bg-fuchsia-50 text-fuchsia-950 dark:border-fuchsia-500/40 dark:bg-fuchsia-500/15 dark:text-fuchsia-100",
+  joseph:
+    "border-blue-400 bg-blue-50 text-blue-950 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-100",
+  bella:
+    "border-rose-400 bg-rose-50 text-rose-950 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100",
+  gloria:
+    "border-violet-400 bg-violet-50 text-violet-950 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-100",
+  joanne:
+    "border-amber-400 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100",
+  renee:
+    "border-teal-400 bg-teal-50 text-teal-950 dark:border-teal-500/40 dark:bg-teal-500/15 dark:text-teal-100",
+  kennith:
+    "border-slate-400 bg-slate-50 text-slate-950 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-100",
   tom: "border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-100",
   ron: "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100",
   kirk:
